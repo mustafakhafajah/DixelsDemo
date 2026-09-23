@@ -1,19 +1,21 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { extractRoles } from '../auth/roles'
+import { apiRequest } from '../api/client'
 
+/* Admins and booking users share one app shell; the role only gates what's inside it. */
 function AuthCallbackPage() {
   const auth = useAuth()
   const navigate = useNavigate()
+  const recorded = useRef(false)
 
   useEffect(() => {
-    if (auth.isLoading || auth.error) return
-
-    if (auth.isAuthenticated && auth.user) {
-      const roles = extractRoles(auth.user.profile.role)
-      navigate(roles.includes('admin') ? '/app/admin' : '/app/user', { replace: true })
+    if (auth.isLoading || auth.error || !auth.isAuthenticated || !auth.user) return
+    if (!recorded.current) {
+      recorded.current = true
+      apiRequest(auth.user.access_token, 'POST', '/api/app/activity-log/record-sign-in').catch(() => undefined)
     }
+    navigate('/app/dashboard', { replace: true })
   }, [auth.isLoading, auth.isAuthenticated, auth.error, auth.user, navigate])
 
   if (auth.error) {

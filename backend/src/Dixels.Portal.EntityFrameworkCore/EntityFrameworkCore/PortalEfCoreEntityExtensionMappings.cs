@@ -16,6 +16,9 @@ public static class PortalEfCoreEntityExtensionMappings
 
         OneTimeRunner.Run(() =>
         {
+                ObjectExtensionManager.Instance
+                    .MapEfCoreProperty<IdentityUser, System.Guid?>("TeamId", (_, _) => { });
+
                 /* You can configure extra properties for the
                  * entities defined in the modules used by your application.
                  *

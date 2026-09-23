@@ -15,6 +15,7 @@ using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
+using Volo.Abp.AspNetCore.ExceptionHandling;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.Localization;
 using Volo.Abp.AspNetCore.Mvc.UI;
@@ -113,8 +114,20 @@ public class PortalWebModule : AbpModule
         ConfigureAutoApiControllers();
         ConfigureSwaggerServices(context.Services);
         ConfigureCors(context, configuration);
+        ConfigureErrorStatusCodes();
 
         context.Services.AddMapperlyObjectMapper<PortalWebModule>();
+    }
+
+    private void ConfigureErrorStatusCodes()
+    {
+        Configure<AbpExceptionHttpStatusCodeOptions>(options =>
+        {
+            foreach (var (code, status) in PortalDomainErrorCodes.StatusCodes)
+            {
+                options.Map(code, status);
+            }
+        });
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context)

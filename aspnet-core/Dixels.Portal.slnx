@@ -1,0 +1,35 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Dixels.Portal.Application.Contracts/Dixels.Portal.Application.Contracts.csproj" />
+    <Project Path="src/Dixels.Portal.Application/Dixels.Portal.Application.csproj" />
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <Project Path="src/Dixels.Portal.DbMigrator/Dixels.Portal.DbMigrator.csproj" />
+    <Project Path="src/Dixels.Portal.Domain.Shared/Dixels.Portal.Domain.Shared.csproj" />
+    <Project Path="src/Dixels.Portal.Domain/Dixels.Portal.Domain.csproj" />
+    <Project Path="src/Dixels.Portal.EntityFrameworkCore/Dixels.Portal.EntityFrameworkCore.csproj" />
+    <Project Path="src/Dixels.Portal.HttpApi.Client/Dixels.Portal.HttpApi.Client.csproj" />
+    
+    
+    <Project Path="src/Dixels.Portal.HttpApi/Dixels.Portal.HttpApi.csproj" />
+    
+    
+    <Project Path="src/Dixels.Portal.Web/Dixels.Portal.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Dixels.Portal.Application.Tests/Dixels.Portal.Application.Tests.csproj" />
+    <Project Path="test/Dixels.Portal.Domain.Tests/Dixels.Portal.Domain.Tests.csproj" />
+    <Project Path="test/Dixels.Portal.EntityFrameworkCore.Tests/Dixels.Portal.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="test/Dixels.Portal.HttpApi.Client.ConsoleTestApp/Dixels.Portal.HttpApi.Client.ConsoleTestApp.csproj" />
+    
+    <Project Path="test/Dixels.Portal.TestBase/Dixels.Portal.TestBase.csproj" />
+    <Project Path="test/Dixels.Portal.Web.Tests/Dixels.Portal.Web.Tests.csproj" />
+  </Folder>
+</Solution>

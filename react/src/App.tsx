@@ -1,11 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
+import { pingBackend } from './api'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [backendStatus, setBackendStatus] = useState('Checking backend...')
+
+  useEffect(() => {
+    pingBackend()
+      .then((data) => setBackendStatus(`✅ ${data.message}`))
+      .catch((err) => setBackendStatus(`❌ Could not reach backend: ${err.message}`))
+  }, [])
 
   return (
     <>
@@ -19,6 +27,9 @@ function App() {
           <h1>Get started</h1>
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+          </p>
+          <p>
+            <code>{backendStatus}</code>
           </p>
         </div>
         <button

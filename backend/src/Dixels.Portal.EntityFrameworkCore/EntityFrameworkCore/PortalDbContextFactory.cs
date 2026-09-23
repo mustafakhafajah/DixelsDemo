@@ -17,7 +17,7 @@ public class PortalDbContextFactory : IDesignTimeDbContextFactory<PortalDbContex
         var configuration = BuildConfiguration();
 
         var builder = new DbContextOptionsBuilder<PortalDbContext>()
-            .UseSqlServer(configuration.GetConnectionString("Default"));
+            .UseNpgsql(configuration.GetConnectionString("Default"));
 
         return new PortalDbContext(builder.Options);
     }
@@ -26,7 +26,8 @@ public class PortalDbContextFactory : IDesignTimeDbContextFactory<PortalDbContex
     {
         var builder = new ConfigurationBuilder()
             .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../Dixels.Portal.DbMigrator/"))
-            .AddJsonFile("appsettings.json", optional: false);
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.secrets.json", optional: true);
 
         return builder.Build();
     }

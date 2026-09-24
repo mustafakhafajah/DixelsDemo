@@ -1,15 +1,14 @@
 import { parseUtc } from '../lib/dateUtils'
 
 export type EstateStatus = 'Active' | 'Inactive'
-export type SpaceType = 'MeetingRoom' | 'Equipment' | 'Desk' | 'Studio'
 export type MaintenanceScopeType = 'Space' | 'Floor' | 'Building'
 export type Lifecycle = 'scheduled' | 'in_progress' | 'ended' | 'cancelled'
 
-export const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
-  MeetingRoom: 'Meeting room',
-  Equipment: 'Equipment',
-  Desk: 'Desk',
-  Studio: 'Studio',
+/* An admin-managed kind of space ("Meeting room", "Desk", ...). */
+export interface SpaceType {
+  id: string
+  name: string
+  spaceCount: number
 }
 
 export interface Building {
@@ -50,12 +49,14 @@ export interface Constraints {
 export interface Space {
   id: string
   name: string
-  type: SpaceType
+  typeId: string
+  typeName: string
   status: EstateStatus
   buildingId: string
   buildingName: string
   floorId: string
   floorName: string
+  /* Always the building's time zone. */
   timeZone: string
   capacity: number
   note: string | null

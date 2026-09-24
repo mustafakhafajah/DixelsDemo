@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Dixels.Portal.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -13,9 +14,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace Dixels.Portal.Migrations
 {
     [DbContext(typeof(PortalDbContext))]
-    partial class PortalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260924113343_Add_SpaceTypes_And_Inherit_Building_TimeZone")]
+    partial class Add_SpaceTypes_And_Inherit_Building_TimeZone
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2536,7 +2539,7 @@ namespace Dixels.Portal.Migrations
 
                             b1.HasKey("IdentityUserPasskeyCredentialId");
 
-                            b1.ToTable("AbpUserPasskeys", (string)null);
+                            b1.ToTable("AbpUserPasskeys");
 
                             b1
                                 .ToJson("Data")

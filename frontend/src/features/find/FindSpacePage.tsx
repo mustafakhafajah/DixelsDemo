@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useBookings, useBuildings, useFloors, useMaintenance, useSpaces } from '../../api/hooks'
-import { SPACE_TYPE_LABELS, type ScheduleItem, type Space, type SpaceType } from '../../api/types'
+import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { Loading, plural } from '../../components/bits'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
@@ -18,7 +18,8 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
   const floors = useFloors().data ?? []
   const floorNames = [...new Set(floors.filter((x) => x.status === 'Active' && (!f.buildingId || x.buildingId === f.buildingId)).map((x) => x.name))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  const types = [...new Set(spaces.map((s) => s.type))] as SpaceType[]
+  /* Only types some space actually has, as id → name. */
+  const types = [...new Map(spaces.map((s) => [s.typeId, s.typeName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))
   const endMin = (((f.customEnd ?? f.time + 60) % 1440) + 1440) % 1440
   const setDur = (d: FindDuration) => f.patch({ duration: d, customEnd: d === 'custom' && f.customEnd == null ? f.time + 60 : f.customEnd })
 
@@ -75,9 +76,9 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
           <div>
             <label className="lbl">Space type</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {types.map((t) => (
-                <button key={t} type="button" className={`type-pill${f.types.includes(t) ? ' active' : ''}`} onClick={() => f.toggleType(t)}>
-                  {SPACE_TYPE_LABELS[t]}
+              {types.map(([id, name]) => (
+                <button key={id} type="button" className={`type-pill${f.types.includes(id) ? ' active' : ''}`} onClick={() => f.toggleType(id)}>
+                  {name}
                 </button>
               ))}
             </div>
@@ -110,7 +111,7 @@ export function FindSpacePage() {
     .filter((s) => !f.buildingId || s.buildingId === f.buildingId)
     .filter((s) => !f.floorName || s.floorName === f.floorName)
     .filter((s) => !f.minCapacity || s.capacity >= f.minCapacity)
-    .filter((s) => !f.types.length || f.types.includes(s.type))
+    .filter((s) => !f.types.length || f.types.includes(s.typeId))
     .filter((s) => !q || s.name.toLowerCase().includes(q))
 
   const durMin = f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
@@ -185,7 +186,7 @@ export function FindSpacePage() {
                   <div key={s.id} className="rt-row">
                     <div className="rt-roominfo">
                       <div className="rt-roomname">{s.name}</div>
-                      <div className="rt-roommeta">{SPACE_TYPE_LABELS[s.type]}{s.capacity ? ` · ${s.capacity} seats` : ''}</div>
+                      <div className="rt-roommeta">{s.typeName}{s.capacity ? ` · ${s.capacity} seats` : ''}</div>
                     </div>
                     <div className="rt-track" style={{ width: trackW }}>
                       {band}{nowLine}

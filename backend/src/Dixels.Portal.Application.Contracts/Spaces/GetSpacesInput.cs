@@ -12,5 +12,5 @@ public class GetSpacesInput : PagedResultRequestDto
     public Guid? FloorId { get; set; }
     /* Case-insensitive "contains". */
     public string? Name { get; set; }
-    public SpaceType? Type { get; set; }
+    public Guid? TypeId { get; set; }
 }

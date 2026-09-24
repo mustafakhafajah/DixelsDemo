@@ -2,7 +2,7 @@
 .app-shell {
   --ink: #161b22; --paper: #f2f3f1; --surface: #ffffff; --surface-2: #fafaf9;
   --line: #dce0db; --line-strong: #c3c9c1;
-  --accent: #6d3fc0; --accent-dark: #4b2e83; --accent-soft: #f1eafb;
+  --accent: #9c6ca4; --accent-dark: #7a4d82; --accent-soft: #f5eef6;
   --copper: #a97425; --copper-soft: #faf1e3;
   --rust: #a5402f; --rust-soft: #faeae7; --rust-line: #e6bdb3;
   --slate: #5c6670; --slate-2: #8a939b;
@@ -32,7 +32,7 @@
 .app-shell .nav-link:hover { background: rgba(255,255,255,.06); color: #fff; }
 .app-shell .nav-link.active { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; opacity: .8; }
-.app-shell .nav-link.active svg { opacity: 1; color: #b79ce8; }
+.app-shell .nav-link.active svg { opacity: 1; color: #c9a8ce; }
 .app-shell .nav-count { margin-left: auto; font-size: 11px; color: #69737c; font-family: 'IBM Plex Mono', monospace; }
 .app-shell .nav-primary { font-size: 14px; padding: 11px 10px; }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
@@ -115,6 +115,12 @@
 .app-shell a:focus-visible, .app-shell button:focus-visible, .app-shell input:focus-visible, .app-shell select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .app-shell ::-webkit-scrollbar { width: 10px; height: 10px; }
 .app-shell ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+
+/* ── REQUIRED FIELDS ── */
+.app-shell .lbl.req { font-weight: 700; color: var(--ink); }
+.app-shell .req-mark { color: var(--rust); font-weight: 700; margin-left: 3px; }
+.app-shell .req-note { font-size: 11.5px; color: var(--slate); margin: 0 0 -4px; }
+.app-shell .req-note .req-mark { margin: 0 2px 0 0; }
 
 /* ── REGISTRY FILTERS + PAGINATION ── */
 .app-shell .filter-bar { display: flex; gap: 12px; align-items: flex-end; padding: 12px 16px 14px; flex-wrap: wrap; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); }
@@ -215,7 +221,7 @@
 .app-shell .rt-roomname { font-size: 12.5px; font-weight: 600; }
 .app-shell .rt-roommeta { font-size: 11px; color: var(--slate); margin-top: 2px; }
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
-.app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: rgba(109,63,192,.12); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
+.app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: rgba(156,108,164,.14); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
 .app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
 .app-shell .rt-free { position: absolute; top: 5px; bottom: 5px; cursor: pointer; border-radius: 5px; z-index: 1; }
 .app-shell .rt-free:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }

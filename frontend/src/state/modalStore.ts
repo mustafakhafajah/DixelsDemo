@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Booking, Building, Floor, MaintenanceScopeType, Space } from '../api/types'
+import type { Booking, Building, Floor, MaintenanceScopeType, Space, SpaceType } from '../api/types'
 
 export interface BookingPrefill {
   spaceId?: string
@@ -24,6 +24,7 @@ type Overlay =
   | { kind: 'building'; editing: Building | null }
   | { kind: 'floor'; editing: Floor | null }
   | { kind: 'space'; editing: Space | null }
+  | { kind: 'spaceType'; editing: SpaceType | null }
   | { kind: 'maintenance'; target: MaintenanceTarget }
 
 interface ModalState {
@@ -48,6 +49,7 @@ export const modals = {
   building: (editing: Building | null = null) => useModalStore.getState().open({ kind: 'building', editing }),
   floor: (editing: Floor | null = null) => useModalStore.getState().open({ kind: 'floor', editing }),
   space: (editing: Space | null = null) => useModalStore.getState().open({ kind: 'space', editing }),
+  spaceType: (editing: SpaceType | null = null) => useModalStore.getState().open({ kind: 'spaceType', editing }),
   maintenance: (target: MaintenanceTarget) => useModalStore.getState().open({ kind: 'maintenance', target }),
   close: () => useModalStore.getState().close(),
 }

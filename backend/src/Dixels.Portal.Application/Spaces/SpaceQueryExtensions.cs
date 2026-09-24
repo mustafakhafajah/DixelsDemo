@@ -18,7 +18,7 @@ public static class SpaceQueryExtensions
             .WhereIf(input.BuildingId.HasValue, s => s.BuildingId == input.BuildingId)
             .WhereIf(input.FloorId.HasValue, s => s.FloorId == input.FloorId)
             .WhereIf(!string.IsNullOrEmpty(name), s => s.Name.ToLower().Contains(name!))
-            .WhereIf(input.Type.HasValue, s => s.Type == input.Type);
+            .WhereIf(input.TypeId.HasValue, s => s.TypeId == input.TypeId);
     }
 
     /* "SP-3F2A1B9C", "sp-3f2a", "3f2a1b9c-..." all become a lower-case GUID prefix. */

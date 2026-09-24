@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import dixelsLogo from '../assets/dixels-logo.png'
-import { useBookings, useBuildings, useFloors, useSpaces } from '../api/hooks'
+import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { initials } from '../components/bits'
 import { Toasts } from '../components/Toasts'
 import { dayAt, todayKey } from '../lib/dateUtils'
@@ -17,7 +17,11 @@ const PAGE_META: Record<string, [string, string]> = {
   buildings: ['Buildings', 'The estate every floor and space belongs to.'],
   floors: ['Floors', 'Every floor across every building, and what cleaning applies to it.'],
   spaces: ['Spaces', 'The units people can book, and who may book them.'],
+  'space-types': ['Space types', 'The kinds of space an admin can give a space.'],
 }
+
+/* "New booking" only where booking is the task at hand. */
+const BOOKING_VIEWS = new Set(['find', 'bookings'])
 
 const Icon = {
   find: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4L14 14" strokeLinecap="round" /></svg>,
@@ -36,6 +40,7 @@ function Sidebar() {
   const spaces = useSpaces()
   const buildings = useBuildings()
   const floors = useFloors()
+  const spaceTypes = useSpaceTypes()
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
 
@@ -63,6 +68,7 @@ function Sidebar() {
                 <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.status === 'Active').length ?? ''}</span></NavLink>
+                <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
               </div>
             </div>
           )}
@@ -100,7 +106,7 @@ function Topbar() {
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>
+      {BOOKING_VIEWS.has(view) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}
     </header>
   )
 }

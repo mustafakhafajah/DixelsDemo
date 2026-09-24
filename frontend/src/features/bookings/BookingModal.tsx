@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ApiError, errorText } from '../../api/client'
 import { useBookings, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
-import { SPACE_TYPE_LABELS, type Booking, type Space } from '../../api/types'
+import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
-import { ErrorLine, shortId } from '../../components/bits'
+import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
 import { Modal } from '../../components/Sheet'
 import { DEFAULT_MAX_HOURS, DEFAULT_MIN_MINUTES } from '../../lib/constants'
 import { addDays, addMin, dayAt, dayKey, durationLabel, fromDateTime, hm, isoZ, roundUp30, stampOffset } from '../../lib/dateUtils'
@@ -180,18 +180,23 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         </>
       )}
     >
+      <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> Required field</p>
       <div>
-        <label className="lbl" htmlFor="m-date">Date</label>
-        <input type="date" id="m-date" className="inp mono" value={date} onChange={(e) => setDate(e.target.value)} />
+        <label className="lbl req" htmlFor="m-date">Date<RequiredMark /></label>
+        <input type="date" id="m-date" className="inp mono" required value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label className="lbl" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>Start <span className="utcchip">UTC +00:00</span></label>
-          <input type="time" id="m-start" className="inp mono" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Start<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
+          </label>
+          <input type="time" id="m-start" className="inp mono" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
         </div>
         <div>
-          <label className="lbl" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>End <span className="utcchip">UTC +00:00</span></label>
-          <input type="time" id="m-end" className="inp mono" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>End<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
+          </label>
+          <input type="time" id="m-end" className="inp mono" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
       </div>
       <div style={{ marginTop: -6 }}>
@@ -220,14 +225,14 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       )}
 
       <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-        <label className="lbl" htmlFor="m-space">Space</label>
-        <select id="m-space" className="inp" value={spaceId} disabled={!!editing || !options.length}
+        <label className="lbl req" htmlFor="m-space">Space<RequiredMark /></label>
+        <select id="m-space" className="inp" required value={spaceId} disabled={!!editing || !options.length}
           onChange={(e) => setChosenSpaceId(e.target.value)}>
           {options.map(({ space: s, reason }) => <option key={s.id} value={s.id}>{s.name}{reason}</option>)}
         </select>
         <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '6px 0 0' }}>
           {space
-            ? `${SPACE_TYPE_LABELS[space.type]} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
+            ? `${space.typeName} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
             : spacesQ.isLoading ? 'Loading spaces…' : 'No spaces are free for this time — try a different window.'}
         </p>
         <ErrorLine error={spaceError} />

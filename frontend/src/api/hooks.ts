@@ -21,7 +21,7 @@ import {
   type Window,
 } from './types'
 
-const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces']]
+const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces'], ['space-types']]
 
 function useEnabled() {
   return !!useAuth().user?.access_token
@@ -77,6 +77,15 @@ export function useSpaces() {
   })
 }
 
+export function useSpaceTypes() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['space-types'],
+    queryFn: async () => (await api<ListResult<SpaceType>>('GET', '/api/app/space-type')).items,
+    enabled: useEnabled(),
+  })
+}
+
 export interface SpaceRegistryQuery {
   page: number
   pageSize: number
@@ -84,7 +93,7 @@ export interface SpaceRegistryQuery {
   buildingId?: string
   floorId?: string
   name?: string
-  type?: SpaceType
+  typeId?: string
 }
 
 /* Server-side paged and filtered, so the registry stays fast with thousands of spaces. */
@@ -99,7 +108,7 @@ export function useSpaceRegistry(q: SpaceRegistryQuery) {
       BuildingId: q.buildingId,
       FloorId: q.floorId,
       Name: q.name,
-      Type: q.type,
+      TypeId: q.typeId,
     }),
     enabled: useEnabled(),
     /* Keep showing the current page while the next one loads, instead of flashing "Loading…". */
@@ -316,11 +325,10 @@ export interface FloorInput {
 
 export interface SpaceInput {
   name: string
-  type: SpaceType
+  typeId: string
   status: EstateStatus
   buildingId: string
   floorId: string
-  timeZone: string
   capacity: number
   note: string
   openHourOverride: number | null
@@ -353,3 +361,11 @@ export const useSaveSpace = () =>
 export const useSetStatus = () =>
   useEstateMutation<{ kind: 'building' | 'floor' | 'space'; id: string; status: EstateStatus }>((api, { kind, id, status }) =>
     api('POST', `/api/app/${kind}/${id}/set-status`, { status }))
+
+export const useSaveSpaceType = () =>
+  useEstateMutation<{ id?: string; name: string }>((api, { id, name }) =>
+    id ? api<SpaceType>('PUT', `/api/app/space-type/${id}`, { name }) : api<SpaceType>('POST', '/api/app/space-type', { name }))
+
+/* Only allowed when no space uses the type; the server answers space_type.in_use otherwise. */
+export const useDeleteSpaceType = () =>
+  useEstateMutation<string>((api, id) => api('DELETE', `/api/app/space-type/${id}`))

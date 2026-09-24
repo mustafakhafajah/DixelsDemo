@@ -4,14 +4,14 @@ using Volo.Abp.Domain.Entities.Auditing;
 
 namespace Dixels.Portal.Spaces;
 
+/* No time zone of its own: a space is always in its building's time zone. */
 public class Space : FullAuditedAggregateRoot<Guid>
 {
     public string Name { get; set; } = null!;
-    public SpaceType Type { get; set; }
+    public Guid TypeId { get; set; }
     public EstateStatus Status { get; set; }
     public Guid BuildingId { get; set; }
     public Guid FloorId { get; set; }
-    public string TimeZone { get; set; } = "UTC";
     public int Capacity { get; set; }
     public string? Note { get; set; }
     public int? OpenHourOverride { get; set; }
@@ -21,10 +21,11 @@ public class Space : FullAuditedAggregateRoot<Guid>
 
     protected Space() { }
 
-    public Space(Guid id, string name, Guid buildingId, Guid floorId) : base(id)
+    public Space(Guid id, string name, Guid buildingId, Guid floorId, Guid typeId) : base(id)
     {
         Name = name;
         BuildingId = buildingId;
         FloorId = floorId;
+        TypeId = typeId;
     }
 }

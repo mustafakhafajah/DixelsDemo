@@ -29,6 +29,11 @@ export function ErrorLine({ error }: { error: { code: string; message: string } 
   )
 }
 
+/* The "*" after a required field's label; pair it with className="lbl req" on the label. */
+export function RequiredMark() {
+  return <span className="req-mark" aria-hidden="true">*</span>
+}
+
 export function Loading({ label = 'Loading…' }: { label?: string }) {
   return <p style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12.5, color: 'var(--slate)', margin: 0 }}>{label}</p>
 }

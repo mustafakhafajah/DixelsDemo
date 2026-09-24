@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
-import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace } from '../../api/hooks'
-import { SPACE_TYPE_LABELS, type Building, type EstateStatus, type Floor, type Space, type SpaceType } from '../../api/types'
-import { ErrorLine, shortId } from '../../components/bits'
+import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
+import type { Building, EstateStatus, Floor, Space, SpaceType } from '../../api/types'
+import { ErrorLine, plural, shortId } from '../../components/bits'
 import { Modal } from '../../components/Sheet'
 import { modals } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
@@ -192,14 +192,14 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
 export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
+  const types = useSpaceTypes().data ?? []
   const save = useSaveSpace()
   const [name, setName] = useState(editing?.name ?? '')
-  const [type, setType] = useState<SpaceType>(editing?.type ?? 'MeetingRoom')
+  const [typeId, setTypeId] = useState(editing?.typeId ?? '')
   const [capacity, setCapacity] = useState(String(editing?.capacity ?? 0))
   const [status, setStatus] = useState<EstateStatus>(editing?.status ?? 'Active')
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
-  const [tz, setTz] = useState<string | null>(editing?.timeZone ?? null)
   const [note, setNote] = useState(editing?.note ?? '')
   const [ov, setOv] = useState<[string, string, string, string]>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),
@@ -216,12 +216,13 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
     f?.openHourOverride ?? b.openHour, f?.closeHourOverride ?? b.closeHour,
     f?.minBookingMinutesOverride ?? b.minBookingMinutes, f?.maxBookingHoursOverride ?? b.maxBookingHours,
   ] as [number, number, number, number] : null
-  const effTz = tz ?? b?.timeZone ?? 'UTC'
+  const effTypeId = typeId || types[0]?.id || ''
 
   const submit = () => {
     if (!name.trim()) return setError({ code: 'validation.missing_field', message: 'Give the space a name.' })
     if (!b) return setError({ code: 'validation.missing_field', message: 'Pick a building. Add one first if the list is empty.' })
     if (!f) return setError({ code: 'validation.missing_field', message: `${b.name} has no floors yet. Add a floor to it first.` })
+    if (!effTypeId) return setError({ code: 'validation.invalid_space_type', message: 'Pick a space type. Add one on the Space types page first.' })
     const [o, c, mi, ma] = ov.map(numOrNull)
     const [bo, bc, bmi, bma] = bounds!
     if (o != null && o < bo) return setError({ code: 'validation.narrowing_violation', message: `Space cannot open earlier (${o}) than its floor (${bo}).` })
@@ -232,7 +233,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
     save.mutateAsync({
       id: editing?.id,
       body: {
-        name: name.trim(), type, status, buildingId: b.id, floorId: f.id, timeZone: effTz.trim() || 'UTC',
+        name: name.trim(), typeId: effTypeId, status, buildingId: b.id, floorId: f.id,
         capacity: Math.max(0, Number(capacity) || 0), note: note.trim(),
         openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma,
       },
@@ -252,8 +253,8 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 12 }}>
         <Field id="sp-type" label="Type">
-          <select id="sp-type" className="inp" value={type} onChange={(e) => setType(e.target.value as SpaceType)}>
-            {(Object.keys(SPACE_TYPE_LABELS) as SpaceType[]).map((t) => <option key={t} value={t}>{SPACE_TYPE_LABELS[t]}</option>)}
+          <select id="sp-type" className="inp" value={effTypeId} onChange={(e) => setTypeId(e.target.value)}>
+            {types.length ? types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="">No types yet</option>}
           </select>
         </Field>
         <Field id="sp-capacity" label="Capacity">
@@ -267,7 +268,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 12 }}>
         <Field id="sp-building" label="Building">
-          <select id="sp-building" className="inp" value={effBuildingId} onChange={(e) => { setBuildingId(e.target.value); setFloorId(''); if (!editing) setTz(null) }}>
+          <select id="sp-building" className="inp" value={effBuildingId} onChange={(e) => { setBuildingId(e.target.value); setFloorId('') }}>
             {buildings.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
         </Field>
@@ -276,13 +277,44 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
             {bFloors.length ? bFloors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>) : <option value="">—</option>}
           </select>
         </Field>
-        <Field id="sp-tz" label="Local timezone">
-          <input id="sp-tz" className="inp mono" value={effTz} onChange={(e) => setTz(e.target.value)} />
+        {/* A space always uses its building's time zone; it is changed on the building. */}
+        <Field id="sp-tz" label="Time zone (building)">
+          <input id="sp-tz" className="inp mono" value={b?.timeZone ?? ''} readOnly disabled title="Set on the building" />
         </Field>
       </div>
       <OverrideFields prefix="sp" values={ov} onChange={setOv} inherits={bounds} />
       <Field id="sp-note" label="Description">
         <input id="sp-note" className="inp" placeholder="Seats 8 · whiteboard wall" value={note} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <ErrorLine error={error} />
+    </Modal>
+  )
+}
+
+/* ─── Space type ─── */
+
+export function SpaceTypeFormModal({ editing }: { editing: SpaceType | null }) {
+  const save = useSaveSpaceType()
+  const [name, setName] = useState(editing?.name ?? '')
+  const [error, setError] = useState<FieldError>(null)
+
+  const submit = () => {
+    if (!name.trim()) return setError({ code: 'validation.missing_field', message: 'Give the space type a name.' })
+    save.mutateAsync({ id: editing?.id, name: name.trim() }).then(() => {
+      toast('ok', editing ? 'Space type renamed' : 'Space type added',
+        editing ? `${editing.name} is now ${name.trim()}.` : `${name.trim()} can now be picked for any space.`)
+      modals.close()
+    }, (e) => setError(errorText(e)))
+  }
+
+  const used = editing ? `Used by ${plural(editing.spaceCount, 'space')}; they all show the new name.` : 'A kind of space, like "Phone booth" or "Lab".'
+  return (
+    <Modal width={420} title={editing ? 'Edit space type' : 'Add a space type'} subtitle={used}
+      onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add type'} busy={save.isPending} />}>
+      <Field id="st-name" label="Name">
+        <input id="st-name" className="inp" placeholder="e.g. Phone booth" value={name} autoFocus maxLength={64}
+          onChange={(e) => { setName(e.target.value); setError(null) }}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />
       </Field>
       <ErrorLine error={error} />
     </Modal>

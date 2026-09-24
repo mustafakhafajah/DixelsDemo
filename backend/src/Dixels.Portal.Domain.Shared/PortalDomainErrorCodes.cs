@@ -16,6 +16,7 @@ public static class PortalDomainErrorCodes
     public const string InvalidHours = "validation.invalid_hours";
     public const string NarrowingViolation = "validation.narrowing_violation";
     public const string InvalidFloor = "validation.invalid_floor";
+    public const string InvalidSpaceType = "validation.invalid_space_type";
 
     public const string SpaceNotFound = "space.not_found";
     public const string SpaceInactive = "space.inactive";
@@ -25,6 +26,9 @@ public static class PortalDomainErrorCodes
     public const string BuildingDuplicate = "building.duplicate";
     public const string FloorInactive = "floor.inactive";
     public const string FloorDuplicate = "floor.duplicate";
+    public const string SpaceTypeNotFound = "space_type.not_found";
+    public const string SpaceTypeDuplicate = "space_type.duplicate";
+    public const string SpaceTypeInUse = "space_type.in_use";
 
     public const string AccessForbidden = "access.forbidden";
 
@@ -49,6 +53,7 @@ public static class PortalDomainErrorCodes
         [InvalidHours] = HttpStatusCode.BadRequest,
         [NarrowingViolation] = HttpStatusCode.BadRequest,
         [InvalidFloor] = HttpStatusCode.BadRequest,
+        [InvalidSpaceType] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceInactive] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,
@@ -57,6 +62,9 @@ public static class PortalDomainErrorCodes
         [BuildingDuplicate] = HttpStatusCode.Conflict,
         [FloorInactive] = HttpStatusCode.Conflict,
         [FloorDuplicate] = HttpStatusCode.Conflict,
+        [SpaceTypeNotFound] = HttpStatusCode.NotFound,
+        [SpaceTypeDuplicate] = HttpStatusCode.Conflict,
+        [SpaceTypeInUse] = HttpStatusCode.Conflict,
         [AccessForbidden] = HttpStatusCode.Forbidden,
         [BookingNotFound] = HttpStatusCode.NotFound,
         [BookingConflict] = HttpStatusCode.Conflict,

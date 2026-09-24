@@ -8,12 +8,10 @@ public class CreateUpdateSpaceDto
 {
     [Required, StringLength(SpaceConsts.MaxNameLength)]
     public string Name { get; set; } = null!;
-    public SpaceType Type { get; set; }
+    [Required] public Guid TypeId { get; set; }
     public EstateStatus Status { get; set; }
     [Required] public Guid BuildingId { get; set; }
     [Required] public Guid FloorId { get; set; }
-    [StringLength(SpaceConsts.MaxTimeZoneLength)]
-    public string? TimeZone { get; set; }
     [Range(0, 999)] public int Capacity { get; set; }
     [StringLength(SpaceConsts.MaxNoteLength)]
     public string? Note { get; set; }

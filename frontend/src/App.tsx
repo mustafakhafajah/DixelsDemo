@@ -9,9 +9,8 @@ import { oidcConfig } from './auth/oidcConfig'
 import { BookingsPage } from './features/bookings/BookingsPage'
 import { DashboardPage as AppDashboardPage } from './features/dashboard/DashboardPage'
 import { FindSpacePage } from './features/find/FindSpacePage'
-import { BuildingsPage, FloorsPage, SpacesPage } from './features/spaces/EstatePages'
+import { BuildingsPage, FloorsPage, SpacesPage, SpaceTypesPage } from './features/spaces/EstatePages'
 import AuthCallbackPage from './pages/AuthCallbackPage'
-import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
 
 function App() {
@@ -26,7 +25,6 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/callback" element={<AuthCallbackPage />} />
             <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
               <Route index element={<Navigate to="find" replace />} />
@@ -36,6 +34,7 @@ function App() {
               <Route path="buildings" element={<RequireAdmin><BuildingsPage /></RequireAdmin>} />
               <Route path="floors" element={<RequireAdmin><FloorsPage /></RequireAdmin>} />
               <Route path="spaces" element={<RequireAdmin><SpacesPage /></RequireAdmin>} />
+              <Route path="space-types" element={<RequireAdmin><SpaceTypesPage /></RequireAdmin>} />
               <Route path="*" element={<Navigate to="find" replace />} />
             </Route>
           </Routes>

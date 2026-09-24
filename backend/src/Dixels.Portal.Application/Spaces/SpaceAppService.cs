@@ -7,6 +7,7 @@ using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Permissions;
+using Dixels.Portal.SpaceTypes;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -21,18 +22,20 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Booking, Guid> _bookings;
+    private readonly IRepository<SpaceType, Guid> _types;
     private readonly SpaceDtoMapper _mapper;
 
     /* A registry page never shows more than this many rows, whatever the client asks for. */
     private const int MaxPageSize = 100;
 
     public SpaceAppService(IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors,
-        IRepository<Building, Guid> buildings, IRepository<Booking, Guid> bookings, SpaceDtoMapper mapper)
+        IRepository<Building, Guid> buildings, IRepository<Booking, Guid> bookings, IRepository<SpaceType, Guid> types, SpaceDtoMapper mapper)
     {
         _spaces = spaces;
         _floors = floors;
         _buildings = buildings;
         _bookings = bookings;
+        _types = types;
         _mapper = mapper;
     }
 
@@ -86,8 +89,8 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     public async Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input)
     {
         var (name, building, floor) = await ValidateAsync(input, null);
-        var space = new Space(GuidGenerator.Create(), name, building.Id, floor.Id);
-        Apply(space, input, building);
+        var space = new Space(GuidGenerator.Create(), name, building.Id, floor.Id, input.TypeId);
+        Apply(space, input);
         await _spaces.InsertAsync(space, autoSave: true);
         return await _mapper.MapAsync(space);
     }
@@ -100,7 +103,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         space.Name = name;
         space.BuildingId = building.Id;
         space.FloorId = floor.Id;
-        Apply(space, input, building);
+        Apply(space, input);
         await _spaces.UpdateAsync(space, autoSave: true);
         return await _mapper.MapAsync(space);
     }
@@ -127,6 +130,8 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         var lower = name.ToLower();
         if (await _spaces.AnyAsync(s => s.Name.ToLower() == lower && s.Id != excludeId))
             throw new BusinessException(PortalDomainErrorCodes.SpaceDuplicateName, "Another space already uses that name.");
+        if (!await _types.AnyAsync(t => t.Id == input.TypeId))
+            throw new BusinessException(PortalDomainErrorCodes.InvalidSpaceType, "Pick a space type. Add one on the Space types page if none fits.");
 
         EstateOverrideRules.EnsureOnlyNarrows("Space", "its floor", "its floor's",
             ConstraintResolver.ResolveBounds(building, floor),
@@ -134,12 +139,11 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         return (name, building, floor);
     }
 
-    private static void Apply(Space s, CreateUpdateSpaceDto input, Building building)
+    private static void Apply(Space s, CreateUpdateSpaceDto input)
     {
-        s.Type = input.Type;
+        s.TypeId = input.TypeId;
         s.Status = input.Status;
         s.Capacity = Math.Max(0, input.Capacity);
-        s.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? building.TimeZone : input.TimeZone.Trim();
         s.Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
         s.OpenHourOverride = input.OpenHourOverride;
         s.CloseHourOverride = input.CloseHourOverride;

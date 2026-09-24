@@ -21,7 +21,7 @@ public class ConstraintResolverTests
 
     private static Floor FloorOf(Building b) => new(Guid.NewGuid(), b.Id, "3");
 
-    private static Space SpaceOn(Building b, Floor f) => new(Guid.NewGuid(), "Conference Room A", b.Id, f.Id);
+    private static Space SpaceOn(Building b, Floor f) => new(Guid.NewGuid(), "Conference Room A", b.Id, f.Id, Guid.NewGuid());
 
     [Fact]
     public void Everything_inherits_the_building_when_nothing_is_overridden()

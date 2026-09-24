@@ -4,6 +4,7 @@ using Dixels.Portal.EntityFrameworkCore.Configurations;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
+using Dixels.Portal.SpaceTypes;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -32,6 +33,7 @@ public class PortalDbContext :
 {
     public DbSet<Building> Buildings { get; set; }
     public DbSet<Floor> Floors { get; set; }
+    public DbSet<SpaceType> SpaceTypes { get; set; }
     public DbSet<Space> Spaces { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<MaintenanceWindow> MaintenanceWindows { get; set; }
@@ -92,6 +94,7 @@ public class PortalDbContext :
     {
         builder.ApplyConfiguration(new BuildingConfiguration());
         builder.ApplyConfiguration(new FloorConfiguration());
+        builder.ApplyConfiguration(new SpaceTypeConfiguration());
         builder.ApplyConfiguration(new SpaceConfiguration());
         builder.ApplyConfiguration(new BookingConfiguration());
         builder.ApplyConfiguration(new MaintenanceWindowConfiguration());

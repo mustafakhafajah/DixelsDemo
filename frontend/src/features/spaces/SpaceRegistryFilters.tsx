@@ -1,21 +1,21 @@
 import type { Building, Floor, SpaceType } from '../../api/types'
-import { SPACE_TYPE_LABELS } from '../../api/types'
 
 export interface SpaceRegistryFilterValues {
   code: string
   buildingId: string
   floorId: string
   name: string
-  type: SpaceType | ''
+  typeId: string
 }
 
-export const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { code: '', buildingId: '', floorId: '', name: '', type: '' }
+export const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { code: '', buildingId: '', floorId: '', name: '', typeId: '' }
 
-export function SpaceRegistryFilters({ value, onChange, buildings, floors }: {
+export function SpaceRegistryFilters({ value, onChange, buildings, floors, types }: {
   value: SpaceRegistryFilterValues
   onChange: (v: SpaceRegistryFilterValues) => void
   buildings: Building[]
   floors: Floor[]
+  types: SpaceType[]
 }) {
   const set = (p: Partial<SpaceRegistryFilterValues>) => onChange({ ...value, ...p })
   /* With a building picked, only its floors make sense; without one, label floors with their building. */
@@ -53,9 +53,9 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors }: {
       </div>
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="sf-type">Type</label>
-        <select id="sf-type" className="inp" value={value.type} onChange={(e) => set({ type: e.target.value as SpaceType | '' })}>
+        <select id="sf-type" className="inp" value={value.typeId} onChange={(e) => set({ typeId: e.target.value })}>
           <option value="">All types</option>
-          {(Object.keys(SPACE_TYPE_LABELS) as SpaceType[]).map((t) => <option key={t} value={t}>{SPACE_TYPE_LABELS[t]}</option>)}
+          {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
       <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_SPACE_FILTERS)}>Clear filters</button>

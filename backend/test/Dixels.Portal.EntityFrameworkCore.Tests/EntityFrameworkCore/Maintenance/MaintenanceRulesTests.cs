@@ -5,6 +5,7 @@ using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
+using Dixels.Portal.SpaceTypes;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -93,8 +94,8 @@ public class MaintenanceRulesTests : PortalEntityFrameworkCoreTestBase
             var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {tag}"), autoSave: true);
             var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
             var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2"), autoSave: true);
-            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 1 {tag}", building.Id, floor1.Id), autoSave: true);
-            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 2 {tag}", building.Id, floor2.Id), autoSave: true);
+            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 1 {tag}", building.Id, floor1.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 2 {tag}", building.Id, floor2.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
             return new Estate(building, floor1, a, b);
         });
 }

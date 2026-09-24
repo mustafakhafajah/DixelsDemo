@@ -6,6 +6,7 @@ using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Spaces;
+using Dixels.Portal.SpaceTypes;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Volo.Abp.Domain.Repositories;
@@ -69,14 +70,14 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
         await WithUnitOfWorkAsync(async () =>
         {
             var s = await _spaces.GetAsync(e.Floor2Spaces[0].Id);
-            s.Type = SpaceType.Studio;
+            s.TypeId = DefaultSpaceTypes.Studio;
             await _spaces.UpdateAsync(s, autoSave: true);
         });
 
         (await _service.GetPagedListAsync(new GetSpacesInput { FloorId = e.Floor2.Id })).TotalCount.ShouldBe(3);
         (await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, Name = $"ROOM 2-{e.Tag}" }))
             .TotalCount.ShouldBe(3);
-        var studios = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, Type = SpaceType.Studio });
+        var studios = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, TypeId = DefaultSpaceTypes.Studio });
         studios.Items.Single().Id.ShouldBe(e.Floor2Spaces[0].Id);
     }
 
@@ -165,7 +166,7 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
                 var list = new List<Space>();
                 for (var i = 0; i < n; i++)
                     list.Add(await _spaces.InsertAsync(
-                        new Space(Guid.NewGuid(), $"Room {f.Name}-{tag}-{i:00}", building.Id, f.Id) { Type = SpaceType.MeetingRoom },
+                        new Space(Guid.NewGuid(), $"Room {f.Name}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
                         autoSave: true));
                 return list;
             }

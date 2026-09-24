@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, EstateStatus, Floor, Space, SpaceType } from '../../api/types'
-import { ErrorLine, plural, shortId } from '../../components/bits'
+import { ErrorLine, plural, RequiredMark, shortId } from '../../components/bits'
 import { Modal } from '../../components/Sheet'
 import { modals } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
@@ -21,37 +21,58 @@ function Footer({ onSave, label, busy }: { onSave: () => void; label: string; bu
   )
 }
 
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
-  return <div><label className="lbl" htmlFor={id}>{label}</label>{children}</div>
+/* required: bold label with a "*" after the text (styles in appShell.css). */
+function Field({ id, label, required, children }: { id: string; label: string; required?: boolean; children: ReactNode }) {
+  return (
+    <div>
+      <label className={`lbl${required ? ' req' : ''}`} htmlFor={id}>{label}{required && <RequiredMark />}</label>
+      {children}
+    </div>
+  )
 }
 
-/* Open/close/min/max overrides, with "Inherits X" placeholders from the parent level. */
-function OverrideFields({ prefix, values, onChange, inherits }: {
+/* Open/close/min/max overrides. An override may only narrow what the parent allows (the same rule
+ * the server enforces), so each field shows the range it may take, e.g. "min 8 · max 19".
+ * Ranges react to the other fields: open must stay before close, min length within max length. */
+function OverrideFields({ prefix, values, onChange, inherits, parent }: {
   prefix: string
   values: [string, string, string, string]
   onChange: (v: [string, string, string, string]) => void
   inherits: [number, number, number, number] | null
+  /* "building" or "floor", for the hint. */
+  parent: string
 }) {
   const set = (i: number, v: string) => { const next = [...values] as [string, string, string, string]; next[i] = v; onChange(next) }
-  const ph = (i: number) => (inherits ? `Inherits ${inherits[i]}` : '')
+  const [o, c, mi, ma] = values.map(numOrNull)
+  const ranges = inherits ? (() => {
+    const [pOpen, pClose, pMin, pMax] = inherits
+    return [
+      [pOpen, (c ?? pClose) - 1],
+      [(o ?? pOpen) + 1, pClose],
+      [pMin, (ma ?? pMax) * 60],
+      [Math.max(1, Math.ceil((mi ?? pMin) / 60)), pMax],
+    ] as [number, number][]
+  })() : null
+  const ph = (i: number) => (ranges ? `min ${ranges[i][0]} · max ${ranges[i][1]}` : '')
+  const input = (i: number, suffix: string) => (
+    <input type="number" id={`${prefix}-${suffix}`} className="inp mono" value={values[i]} placeholder={ph(i)}
+      min={ranges?.[i][0]} max={ranges?.[i][1]} onChange={(e) => set(i, e.target.value)} />
+  )
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id={`${prefix}-open`} label="Open hour override">
-          <input type="number" id={`${prefix}-open`} className="inp mono" min={0} max={23} value={values[0]} placeholder={ph(0)} onChange={(e) => set(0, e.target.value)} />
-        </Field>
-        <Field id={`${prefix}-close`} label="Close hour override">
-          <input type="number" id={`${prefix}-close`} className="inp mono" min={1} max={24} value={values[1]} placeholder={ph(1)} onChange={(e) => set(1, e.target.value)} />
-        </Field>
+        <Field id={`${prefix}-open`} label="Open hour override">{input(0, 'open')}</Field>
+        <Field id={`${prefix}-close`} label="Close hour override">{input(1, 'close')}</Field>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id={`${prefix}-min`} label="Min duration override (minutes)">
-          <input type="number" id={`${prefix}-min`} className="inp mono" min={5} value={values[2]} placeholder={ph(2)} onChange={(e) => set(2, e.target.value)} />
-        </Field>
-        <Field id={`${prefix}-max`} label="Max duration override (hours)">
-          <input type="number" id={`${prefix}-max`} className="inp mono" min={1} value={values[3]} placeholder={ph(3)} onChange={(e) => set(3, e.target.value)} />
-        </Field>
+        <Field id={`${prefix}-min`} label="Min duration override (minutes)">{input(2, 'min')}</Field>
+        <Field id={`${prefix}-max`} label="Max duration override (hours)">{input(3, 'max')}</Field>
       </div>
+      {inherits && (
+        <p style={{ fontSize: 11.5, color: 'var(--slate)', marginTop: -6 }}>
+          Leave a field empty to use the {parent}'s value: open {inherits[0]}:00–{inherits[1]}:00, bookings {inherits[2]} min to {inherits[3]} h.
+        </p>
+      )}
     </>
   )
 }
@@ -91,26 +112,27 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
   return (
     <Modal title={editing ? 'Edit building' : 'Add a building'} subtitle="One record is one physical building." onClose={modals.close}
       footer={<Footer onSave={submit} label="Save building" busy={save.isPending} />}>
+      <p className="req-note"><RequiredMark /> Required field</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: 12 }}>
-        <Field id="bld-name" label="Name">
+        <Field id="bld-name" label="Name" required>
           <input id="bld-name" className="inp" placeholder="e.g. Riverside Studio" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
         </Field>
-        <Field id="bld-status" label="Status">
+        <Field id="bld-status" label="Status" required>
           <select id="bld-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
             <option value="Active">Active</option><option value="Inactive">Inactive</option>
           </select>
         </Field>
       </div>
-      <Field id="bld-tz" label="Local timezone">
+      <Field id="bld-tz" label="Local timezone" required>
         <input id="bld-tz" className="inp mono" placeholder="UTC" value={tz} onChange={(e) => setTz(e.target.value)} />
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="bld-open" label="Open hour (UTC)"><input type="number" id="bld-open" className="inp mono" min={0} max={23} value={open} onChange={(e) => setOpen(e.target.value)} /></Field>
-        <Field id="bld-close" label="Close hour (UTC)"><input type="number" id="bld-close" className="inp mono" min={1} max={24} value={close} onChange={(e) => setClose(e.target.value)} /></Field>
+        <Field id="bld-open" label="Open hour (UTC)" required><input type="number" id="bld-open" className="inp mono" min={0} max={23} value={open} onChange={(e) => setOpen(e.target.value)} /></Field>
+        <Field id="bld-close" label="Close hour (UTC)" required><input type="number" id="bld-close" className="inp mono" min={1} max={24} value={close} onChange={(e) => setClose(e.target.value)} /></Field>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="bld-min" label="Min duration (minutes)"><input type="number" id="bld-min" className="inp mono" min={5} step={5} value={min} onChange={(e) => setMin(e.target.value)} /></Field>
-        <Field id="bld-max" label="Max duration (hours)"><input type="number" id="bld-max" className="inp mono" min={1} step={1} value={max} onChange={(e) => setMax(e.target.value)} /></Field>
+        <Field id="bld-min" label="Min duration (minutes)" required><input type="number" id="bld-min" className="inp mono" min={5} step={5} value={min} onChange={(e) => setMin(e.target.value)} /></Field>
+        <Field id="bld-max" label="Max duration (hours)" required><input type="number" id="bld-max" className="inp mono" min={1} step={1} value={max} onChange={(e) => setMax(e.target.value)} /></Field>
       </div>
       <div>
         <label className="lbl" htmlFor="bld-holiday">Holidays</label>
@@ -165,22 +187,23 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
   return (
     <Modal width={460} title={editing ? 'Edit floor' : 'Add a floor'} subtitle="Inherits its building's hours and duration unless overridden below."
       onClose={modals.close} footer={<Footer onSave={submit} label="Save floor" busy={save.isPending} />}>
+      <p className="req-note"><RequiredMark /> Required field</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="flr-building" label="Building">
+        <Field id="flr-building" label="Building" required>
           <select id="flr-building" className="inp" value={effBuildingId} disabled={!!editing} onChange={(e) => setBuildingId(e.target.value)}>
             {buildings.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
         </Field>
-        <Field id="flr-name" label="Floor">
+        <Field id="flr-name" label="Floor" required>
           <input id="flr-name" className="inp mono" placeholder="e.g. 5" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
         </Field>
       </div>
-      <Field id="flr-status" label="Status">
+      <Field id="flr-status" label="Status" required>
         <select id="flr-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
           <option value="Active">Active</option><option value="Inactive">Inactive</option>
         </select>
       </Field>
-      <OverrideFields prefix="flr" values={ov} onChange={setOv}
+      <OverrideFields prefix="flr" parent="building" values={ov} onChange={setOv}
         inherits={b ? [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours] : null} />
       <ErrorLine error={error} />
     </Modal>
@@ -248,11 +271,12 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
     <Modal title={editing ? 'Edit space' : 'Add a space'}
       subtitle={editing ? `${shortId(editing.id, 'SP')} · changes apply to new bookings straight away` : 'One record is one physical unit.'}
       onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add space'} busy={save.isPending} />}>
-      <Field id="sp-name" label="Name">
+      <p className="req-note"><RequiredMark /> Required field</p>
+      <Field id="sp-name" label="Name" required>
         <input id="sp-name" className="inp" placeholder="e.g. Conference Room D" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 12 }}>
-        <Field id="sp-type" label="Type">
+        <Field id="sp-type" label="Type" required>
           <select id="sp-type" className="inp" value={effTypeId} onChange={(e) => setTypeId(e.target.value)}>
             {types.length ? types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="">No types yet</option>}
           </select>
@@ -260,19 +284,19 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
         <Field id="sp-capacity" label="Capacity">
           <input type="number" id="sp-capacity" className="inp mono" min={0} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
         </Field>
-        <Field id="sp-status" label="Status">
+        <Field id="sp-status" label="Status" required>
           <select id="sp-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
             <option value="Active">Active — bookable</option><option value="Inactive">Inactive — not bookable</option>
           </select>
         </Field>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 12 }}>
-        <Field id="sp-building" label="Building">
+        <Field id="sp-building" label="Building" required>
           <select id="sp-building" className="inp" value={effBuildingId} onChange={(e) => { setBuildingId(e.target.value); setFloorId('') }}>
             {buildings.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select>
         </Field>
-        <Field id="sp-floor" label="Floor">
+        <Field id="sp-floor" label="Floor" required>
           <select id="sp-floor" className="inp" value={effFloorId} onChange={(e) => setFloorId(e.target.value)}>
             {bFloors.length ? bFloors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>) : <option value="">—</option>}
           </select>
@@ -282,7 +306,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
           <input id="sp-tz" className="inp mono" value={b?.timeZone ?? ''} readOnly disabled title="Set on the building" />
         </Field>
       </div>
-      <OverrideFields prefix="sp" values={ov} onChange={setOv} inherits={bounds} />
+      <OverrideFields prefix="sp" parent="floor" values={ov} onChange={setOv} inherits={bounds} />
       <Field id="sp-note" label="Description">
         <input id="sp-note" className="inp" placeholder="Seats 8 · whiteboard wall" value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
@@ -311,7 +335,8 @@ export function SpaceTypeFormModal({ editing }: { editing: SpaceType | null }) {
   return (
     <Modal width={420} title={editing ? 'Edit space type' : 'Add a space type'} subtitle={used}
       onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add type'} busy={save.isPending} />}>
-      <Field id="st-name" label="Name">
+      <p className="req-note"><RequiredMark /> Required field</p>
+      <Field id="st-name" label="Name" required>
         <input id="st-name" className="inp" placeholder="e.g. Phone booth" value={name} autoFocus maxLength={64}
           onChange={(e) => { setName(e.target.value); setError(null) }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />

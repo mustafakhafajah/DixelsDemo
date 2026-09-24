@@ -28,6 +28,6 @@ export function useBookingActions() {
         () => toast('ok', 'Booking ended', `Ended at ${hm(new Date())} UTC. The rest of the window is free.`),
         fail('Could not end booking')),
     cancelMaintenance: (id: string) =>
-      cancelMaint.mutateAsync(id).then(() => toast('ok', 'Cleaning cancelled', 'The window is bookable again.'), fail('Request rejected')),
+      cancelMaint.mutateAsync(id).then(() => toast('ok', 'Time unblocked', 'It can be booked again.'), fail('Request rejected')),
   }
 }

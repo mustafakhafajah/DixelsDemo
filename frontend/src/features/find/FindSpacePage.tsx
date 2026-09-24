@@ -197,7 +197,7 @@ export function FindSpacePage() {
                       ))}
                       {segs.map((g) => {
                         const it = g.item
-                        const who = it.kind === 'maintenance' ? it.note || 'Cleaning' : it.ownerUserId === userId ? 'You' : it.ownerName
+                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerUserId === userId ? 'You' : it.ownerName
                         return (
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
                             style={{ left: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}

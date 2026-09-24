@@ -22,9 +22,9 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
     const isMaint = i.kind === 'maintenance'
     const mine = !isMaint && i.ownerUserId === session.userId
     const may = !isMaint && (mine || session.isAdmin)
-    const primary = isMaint ? (multiSpace ? i.spaceName : i.note || 'Cleaning') : multiSpace ? i.spaceName : mine ? 'You' : i.ownerName
+    const primary = isMaint ? (multiSpace ? i.spaceName : i.note || 'Blocked') : multiSpace ? i.spaceName : mine ? 'You' : i.ownerName
     const secondary = isMaint
-      ? multiSpace ? i.note || 'Cleaning' : i.scopeLabel
+      ? multiSpace ? i.note || 'Blocked' : i.scopeLabel
       : multiSpace ? (mine ? 'You' : i.ownerName) : i.spaceName
     return (
       <div key={i.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
@@ -34,7 +34,7 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
           <span style={{ display: 'block', fontSize: 13, fontWeight: 600 }}>{primary}</span>
           <span style={{ display: 'block', fontSize: 11.5, color: 'var(--slate)' }}>{secondary}</span>
         </span>
-        {isMaint ? <span className="pill pill-inactive"><span className="dot" />Cleaning</span> : <StatusPill item={i} />}
+        {isMaint ? <span className="pill pill-inactive"><span className="dot" />Blocked</span> : <StatusPill item={i} />}
         <span onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6 }}>
           {isMaint && session.isAdmin && i.status === 'Active' && state !== 'ended' && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(i.id)}>Cancel</button>

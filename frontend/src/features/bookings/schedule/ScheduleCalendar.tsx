@@ -34,7 +34,7 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const today = todayKey()
 
   const label = (i: ScheduleItem) => i.kind === 'maintenance'
-    ? multiSpace ? `Cleaning · ${i.spaceName}` : i.note || 'Cleaning'
+    ? multiSpace ? `${i.note || 'Blocked'} · ${i.spaceName}` : i.note || 'Blocked'
     : multiSpace ? i.spaceName : i.ownerUserId === userId ? 'You' : i.ownerName
 
   return (
@@ -156,9 +156,9 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                 {slots}
                 {segs.map((g) => {
                   const it = g.item
-                  const who = it.kind === 'maintenance' ? it.note || 'Cleaning' : it.ownerName
+                  const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerName
                   const label = it.kind === 'maintenance'
-                    ? multiSpace ? `Cleaning · ${it.spaceName}` : who
+                    ? multiSpace ? `${who} · ${it.spaceName}` : who
                     : multiSpace ? it.spaceName : it.ownerUserId === userId ? 'You' : who
                   const w = 100 / g.lanes
                   const h = Math.max(17, ((g.e - g.s) / 60) * pph - 1)

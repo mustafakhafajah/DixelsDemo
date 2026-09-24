@@ -9,7 +9,7 @@ using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Maintenance;
 
-/* An admin schedules cleaning for a space, a whole floor or a whole building;
+/* An admin blocks time (cleaning, renovation, ...) for a space, a whole floor or a whole building;
  * this decides which spaces that covers. */
 public class MaintenanceScopeResolver : DomainService
 {

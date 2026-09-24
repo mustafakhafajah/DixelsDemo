@@ -70,14 +70,16 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
                 throw new BusinessException(PortalDomainErrorCodes.EndBeforeStart, "End must be after start.");
         }
 
-        var note = string.IsNullOrWhiteSpace(input.Note) ? "Cleaning" : input.Note.Trim();
+        var note = string.IsNullOrWhiteSpace(input.Note) ? "Blocked" : input.Note.Trim();
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
         var created = 0;
         var affected = 0;
+        var cancelled = 0;
         foreach (var o in input.Occurrences)
         {
             var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             affected += await CountAffectedAsync(spaceIds, s, e);
+            if (input.CancelAffectedBookings) cancelled += await CancelAffectedAsync(spaceIds, s, e);
             foreach (var spaceId in spaceIds)
             {
                 var m = new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
@@ -92,7 +94,10 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
             }
         }
 
-        return new ScheduleMaintenanceResultDto { SeriesId = seriesId, Created = created, AffectedBookingsCount = affected };
+        return new ScheduleMaintenanceResultDto
+        {
+            SeriesId = seriesId, Created = created, AffectedBookingsCount = affected, CancelledBookingsCount = cancelled,
+        };
     }
 
     [Authorize(PortalPermissions.Maintenance.Manage)]
@@ -109,7 +114,18 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
 
     private async Task<MaintenanceWindow> GetWindowAsync(Guid id)
         => await _maintenance.FindAsync(id)
-           ?? throw new BusinessException(PortalDomainErrorCodes.MaintenanceNotFound, "No cleaning entry with that ID.");
+           ?? throw new BusinessException(PortalDomainErrorCodes.MaintenanceNotFound, "No blocked time with that ID.");
+
+    /* Only bookings that have not started: a meeting already in progress is never cut off. */
+    private async Task<int> CancelAffectedAsync(List<Guid> spaceIds, DateTime s, DateTime e)
+    {
+        var now = Clock.Now;
+        var hit = await _bookings.GetListAsync(new OverlappingBookingsSpecification(s, e)
+            .ToExpression().And(b => spaceIds.Contains(b.SpaceId) && b.StartUtc > now));
+        foreach (var b in hit) b.Cancel();
+        await _bookings.UpdateManyAsync(hit, autoSave: true);
+        return hit.Count;
+    }
 
     private async Task<int> CountAffectedAsync(List<Guid> spaceIds, DateTime s, DateTime e)
         => await _bookings.CountAsync(new OverlappingBookingsSpecification(s, e)

@@ -6,7 +6,7 @@ import { addDays, dayAt } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
 import { useScheduleStore } from '../../../state/scheduleStore'
 
-/* Items a schedule instance shows (mock: scopeBookings): one user's bookings, plus cleaning on those spaces. */
+/* Items a schedule instance shows (mock: scopeBookings): one user's bookings, plus blocked time on those spaces. */
 export function useScheduleData(id: ScheduleId) {
   const cfg = useScheduleStore((s) => s.configs[id])
   const session = useSession()

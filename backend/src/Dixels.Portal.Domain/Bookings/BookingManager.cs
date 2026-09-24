@@ -122,7 +122,7 @@ public class BookingManager : DomainService
             .ToExpression().And(x => x.SpaceId == ctx.Space.Id));
         if (m != null)
             throw new BusinessException(PortalDomainErrorCodes.SpaceUnderMaintenance,
-                    $"{ctx.Space.Name} is scheduled for cleaning {Hm(m.StartUtc)}–{Hm(m.EndUtc)} and can't be booked then.")
+                    $"{ctx.Space.Name} is blocked ({m.Note ?? "blocked time"}) from {Stamp(m.StartUtc, m.EndUtc)} and can't be booked then.")
                 .WithData("maintenanceId", m.Id)
                 .WithData("scope", m.ScopeType.ToString());
     }
@@ -165,4 +165,9 @@ public class BookingManager : DomainService
     }
 
     private static string Hm(DateTime d) => d.ToString("HH:mm");
+
+    /* "09:00 to 11:00" on one day, "2026-10-01 09:00 to 2026-10-21 18:00" across days (blocked time can be long). */
+    private static string Stamp(DateTime s, DateTime e) => s.Date == e.Date
+        ? $"{Hm(s)} to {Hm(e)}"
+        : $"{s:yyyy-MM-dd HH:mm} to {e:yyyy-MM-dd HH:mm}";
 }

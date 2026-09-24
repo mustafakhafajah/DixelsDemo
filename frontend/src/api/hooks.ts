@@ -285,10 +285,11 @@ export function useScheduleMaintenance() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: MaintenanceScopeInput & { note?: string }) =>
-      api<{ seriesId: string | null; created: number; affectedBookingsCount: number }>(
+    mutationFn: (input: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean }) =>
+      api<{ seriesId: string | null; created: number; affectedBookingsCount: number; cancelledBookingsCount: number }>(
         'POST', '/api/app/maintenance-window/schedule', input),
-    onSuccess: () => invalidate([['maintenance'], ['maintenance-window']]),
+    /* Blocking can cancel bookings, so booking views refresh too. */
+    onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ...BOOKING_KEYS]),
   })
 }
 

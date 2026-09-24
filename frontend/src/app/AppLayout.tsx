@@ -15,7 +15,7 @@ const PAGE_META: Record<string, [string, string]> = {
   dashboard: ['Dashboard', 'Your day at a glance.'],
   bookings: ['Bookings', 'A calendar view of your bookings.'],
   buildings: ['Buildings', 'The estate every floor and space belongs to.'],
-  floors: ['Floors', 'Every floor across every building, and what cleaning applies to it.'],
+  floors: ['Floors', 'Every floor across every building, and any time blocked on it.'],
   spaces: ['Spaces', 'The units people can book, and who may book them.'],
   'space-types': ['Space types', 'The kinds of space an admin can give a space.'],
 }

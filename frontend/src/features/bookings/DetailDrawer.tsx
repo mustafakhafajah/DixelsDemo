@@ -86,7 +86,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
         <span className={`pill ${cls}`}><span className="dot" />{label}</span>
-        <span className="tag">{m.scopeType} cleaning</span>
+        <span className="tag">{m.scopeType} blocked</span>
         {m.seriesId && <span className="tag mono">{shortId(m.seriesId, 'MS')}</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
@@ -94,12 +94,12 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
         <dt>Space</dt><dd>{m.spaceName}</dd>
         <dt>Start</dt><dd className="mono">{stampOffset(m.start)}</dd>
         <dt>End</dt><dd className="mono">{stampOffset(m.end)}</dd>
-        <dt>Note</dt><dd>{m.note || 'Cleaning'}</dd>
+        <dt>Reason</dt><dd>{m.note || 'Blocked'}</dd>
         <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>
       <div style={{ display: 'flex', gap: 8 }}>
         {session.isAdmin && m.status === 'Active' && state !== 'ended'
-          ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Cancel cleaning</button>
+          ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Unblock this time</button>
           : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
       </div>
     </>
@@ -112,7 +112,7 @@ export function DetailDrawer({ entity, id }: { entity: 'booking' | 'maintenance'
   const b = booking.data
   const m = maint.data
   const title = entity === 'booking' ? shortId(id) : shortId(id, 'MT')
-  const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `Cleaning · ${m.scopeLabel}` : ''
+  const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `${m.note || 'Blocked'} · ${m.scopeLabel}` : ''
   const failed = booking.error || maint.error
 
   return (

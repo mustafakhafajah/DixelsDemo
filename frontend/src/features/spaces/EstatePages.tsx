@@ -77,7 +77,7 @@ export function BuildingsPage() {
                       <RowMenu items={[
                         { label: 'Edit', onClick: () => modals.building(b) },
                         bookableItem('building', b.id, b.name, b.isBookable),
-                        { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Building', scopeId: b.id, label: b.name }) },
+                        { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Building', scopeId: b.id, label: b.name }) },
                       ]} />
                     </Actions>
                   </tr>
@@ -135,7 +135,7 @@ export function FloorsPage() {
                         <RowMenu items={[
                           { label: 'Edit', onClick: () => modals.floor(f) },
                           bookableItem('floor', f.id, `${f.buildingName} · Floor ${f.name}`, f.isBookable),
-                          { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Floor', scopeId: f.id, label: `${f.buildingName} · Floor ${f.name}` }) },
+                          { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Floor', scopeId: f.id, label: `${f.buildingName} · Floor ${f.name}` }) },
                         ]} />
                       </Actions>
                     </tr>
@@ -217,7 +217,7 @@ export function SpacesPage() {
                     <RowMenu items={[
                       { label: 'Edit', onClick: () => modals.space(s) },
                       bookableItem('space', s.id, s.name, s.isBookable),
-                      { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Space', scopeId: s.id, label: s.name }) },
+                      { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Space', scopeId: s.id, label: s.name }) },
                     ]} />
                   </Actions>
                 </tr>

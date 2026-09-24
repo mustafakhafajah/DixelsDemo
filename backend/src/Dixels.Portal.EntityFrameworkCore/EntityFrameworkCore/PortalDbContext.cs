@@ -1,4 +1,5 @@
-﻿using Dixels.Portal.Buildings;
+﻿using Dixels.Portal.Bookings;
+using Dixels.Portal.Buildings;
 using Dixels.Portal.EntityFrameworkCore.Configurations;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
@@ -92,18 +93,7 @@ public class PortalDbContext :
         builder.ApplyConfiguration(new BuildingConfiguration());
         builder.ApplyConfiguration(new FloorConfiguration());
         builder.ApplyConfiguration(new SpaceConfiguration());
-
-        builder.Entity<Booking>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Bookings", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.IdempotencyKey).HasMaxLength(EstateConsts.MaxIdempotencyKeyLength);
-            b.HasIndex(x => new { x.SpaceId, x.Status, x.StartUtc, x.EndUtc });
-            b.HasIndex(x => new { x.OwnerUserId, x.Status, x.StartUtc, x.EndUtc });
-            b.HasIndex(x => x.SeriesId);
-            b.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
-            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
-        });
+        builder.ApplyConfiguration(new BookingConfiguration());
 
         builder.Entity<MaintenanceWindow>(b =>
         {

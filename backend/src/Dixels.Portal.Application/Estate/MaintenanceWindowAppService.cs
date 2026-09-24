@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Common;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
@@ -54,7 +56,7 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
         var result = new AffectedBookingsPreviewDto { SpaceCount = spaceIds.Count };
         foreach (var o in input.Occurrences)
         {
-            var (s, e) = (Utc(o.StartUtc), Utc(o.EndUtc));
+            var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             var n = await CountAffectedAsync(spaceIds, s, e);
             result.PerOccurrence.Add(new OccurrenceAffectedCountDto { StartUtc = s, EndUtc = e, AffectedCount = n });
             result.TotalAffected += n;
@@ -80,7 +82,7 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
         var affected = 0;
         foreach (var o in input.Occurrences)
         {
-            var (s, e) = (Utc(o.StartUtc), Utc(o.EndUtc));
+            var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             affected += await CountAffectedAsync(spaceIds, s, e);
             foreach (var spaceId in spaceIds)
             {
@@ -129,8 +131,8 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
     }
 
     private async Task<int> CountAffectedAsync(List<Guid> spaceIds, DateTime s, DateTime e)
-        => await _bookings.CountAsync(b => spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed &&
-                                            b.StartUtc < e && s < b.EndUtc);
+        => await _bookings.CountAsync(new OverlappingBookingsSpecification(s, e)
+            .ToExpression().And(b => spaceIds.Contains(b.SpaceId)));
 
     private async Task<string> ScopeLabelAsync(MaintenanceScopeType type, Guid scopeId)
     {
@@ -147,9 +149,6 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
                 return (await _buildings.FindAsync(scopeId))?.Name ?? "a building";
         }
     }
-
-    private static DateTime Utc(DateTime d) => d.Kind == DateTimeKind.Utc ? d
-        : d.Kind == DateTimeKind.Local ? d.ToUniversalTime() : DateTime.SpecifyKind(d, DateTimeKind.Utc);
 
     private async Task<List<MaintenanceWindowDto>> MapManyAsync(List<MaintenanceWindow> list)
     {

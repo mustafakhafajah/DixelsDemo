@@ -5,84 +5,6 @@ using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Portal.Estate;
 
-public class BookingDto : EntityDto<Guid>
-{
-    public Guid SpaceId { get; set; }
-    public string SpaceName { get; set; } = null!;
-    public Guid OwnerUserId { get; set; }
-    public string OwnerName { get; set; } = null!;
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-    public BookingStatus Status { get; set; }
-    public string Lifecycle { get; set; } = null!;
-    public int Version { get; set; }
-    public Guid? SeriesId { get; set; }
-    public bool Parking { get; set; }
-    public DateTime CreationTime { get; set; }
-    public DateTime? LastModificationTime { get; set; }
-}
-
-public class BookingListFilterDto
-{
-    public Guid? SpaceId { get; set; }
-    public Guid? OwnerUserId { get; set; }
-    public DateTime? FromUtc { get; set; }
-    public DateTime? ToUtc { get; set; }
-    public bool IncludeCancelled { get; set; }
-}
-
-public class CreateBookingDto
-{
-    [Required] public Guid SpaceId { get; set; }
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-    public bool Parking { get; set; }
-    [StringLength(EstateConsts.MaxIdempotencyKeyLength)]
-    public string? IdempotencyKey { get; set; }
-}
-
-public class BookingWindowDto
-{
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-}
-
-public class CreateBookingSeriesDto
-{
-    [Required] public Guid SpaceId { get; set; }
-    [Required, MinLength(1), MaxLength(EstateConsts.MaxRecurrenceOccurrences)]
-    public List<BookingWindowDto> Occurrences { get; set; } = new();
-    public bool Parking { get; set; }
-}
-
-public class BookingWindowFailureDto
-{
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-    public string ErrorCode { get; set; } = null!;
-    public string ErrorMessage { get; set; } = null!;
-}
-
-public class CreateBookingSeriesResultDto
-{
-    public Guid? SeriesId { get; set; }
-    public List<BookingDto> Created { get; set; } = new();
-    public List<BookingWindowFailureDto> Skipped { get; set; } = new();
-}
-
-public class RescheduleBookingDto
-{
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-    public int? ExpectedVersion { get; set; }
-}
-
-public class CancelSeriesResultDto
-{
-    public Guid? SeriesId { get; set; }
-    public int CancelledCount { get; set; }
-}
-
 public class MaintenanceWindowDto : EntityDto<Guid>
 {
     public Guid SpaceId { get; set; }
@@ -113,7 +35,7 @@ public class PreviewMaintenanceDto
     public MaintenanceScopeType ScopeType { get; set; }
     [Required] public Guid ScopeId { get; set; }
     [Required, MinLength(1), MaxLength(EstateConsts.MaxRecurrenceOccurrences)]
-    public List<BookingWindowDto> Occurrences { get; set; } = new();
+    public List<TimeWindowDto> Occurrences { get; set; } = new();
 }
 
 public class OccurrenceAffectedCountDto

@@ -2,31 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Portal.Spaces;
+using Dixels.Portal.Common;
+using Dixels.Portal.Estate;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Bookings;
 
 [Authorize]
 public class BookingAppService : EstateAppServiceBase, IBookingAppService
 {
     private readonly IRepository<Booking, Guid> _bookings;
-    private readonly IRepository<Space, Guid> _spaces;
-    private readonly IIdentityUserRepository _users;
     private readonly BookingManager _manager;
+    private readonly BookingDtoMapper _mapper;
 
-    public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces,
-        IIdentityUserRepository users, BookingManager manager)
+    public BookingAppService(IRepository<Booking, Guid> bookings, BookingManager manager, BookingDtoMapper mapper)
     {
         _bookings = bookings;
-        _spaces = spaces;
-        _users = users;
         _manager = manager;
+        _mapper = mapper;
     }
 
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
@@ -38,22 +35,22 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
         var list = await AsyncExecuter.ToListAsync(query.OrderBy(b => b.StartUtc));
-        return new ListResultDto<BookingDto>(await MapManyAsync(list));
+        return new ListResultDto<BookingDto>(await _mapper.MapListAsync(list));
     }
 
-    public async Task<BookingDto> GetAsync(Guid id) => (await MapManyAsync(new() { await GetBookingAsync(id) }))[0];
+    public async Task<BookingDto> GetAsync(Guid id) => await _mapper.MapAsync(await GetBookingAsync(id));
 
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
     {
         if (!string.IsNullOrWhiteSpace(input.IdempotencyKey))
         {
             var existing = await _bookings.FirstOrDefaultAsync(b => b.IdempotencyKey == input.IdempotencyKey);
-            if (existing != null) return (await MapManyAsync(new() { existing }))[0];
+            if (existing != null) return await _mapper.MapAsync(existing);
         }
 
         var booking = await CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, input.Parking, null,
             string.IsNullOrWhiteSpace(input.IdempotencyKey) ? null : input.IdempotencyKey);
-        return (await MapManyAsync(new() { booking }))[0];
+        return await _mapper.MapAsync(booking);
     }
 
     /* The client expands the recurrence rule; each surviving occurrence is created under one series. */
@@ -81,7 +78,7 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         return new CreateBookingSeriesResultDto
         {
             SeriesId = created.Count > 0 ? seriesId : null,
-            Created = await MapManyAsync(created),
+            Created = await _mapper.MapListAsync(created),
             Skipped = skipped,
         };
     }
@@ -102,8 +99,8 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
                 .WithData("expected", input.ExpectedVersion.Value)
                 .WithData("current", b.Version);
 
-        var start = Utc(input.StartUtc);
-        var end = Utc(input.EndUtc);
+        var start = input.StartUtc.AsUtc();
+        var end = input.EndUtc.AsUtc();
         var ctx = await _manager.GetSpaceContextAsync(b.SpaceId);
         _manager.ValidateWindow(ctx, start, end);
         await _manager.EnsureNoMaintenanceAsync(ctx, start, end);
@@ -114,14 +111,14 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         b.EndUtc = end;
         b.Version++;
         await _bookings.UpdateAsync(b, autoSave: true);
-        return (await MapManyAsync(new() { b }))[0];
+        return await _mapper.MapAsync(b);
     }
 
     public async Task<BookingDto> CancelAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
         await CancelOneAsync(b);
-        return (await MapManyAsync(new() { b }))[0];
+        return await _mapper.MapAsync(b);
     }
 
     public async Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id)
@@ -157,25 +154,16 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         b.EndUtc = Clock.Now;
         b.Version++;
         await _bookings.UpdateAsync(b, autoSave: true);
-        return (await MapManyAsync(new() { b }))[0];
+        return await _mapper.MapAsync(b);
     }
 
     private async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, bool parking,
         Guid? seriesId, string? idempotencyKey)
     {
-        var userId = CurrentUser.GetId();
-        var start = Utc(startUtc);
-        var end = Utc(endUtc);
+        /* Parking is an admin-only extra: who is asking is an application concern, so it's decided here. */
         var isAdmin = await IsAdminAsync();
-        var ctx = await _manager.GetSpaceContextAsync(spaceId);
-        await _manager.ValidateNewBookingAsync(ctx, userId, start, end);
-
-        var booking = new Booking(GuidGenerator.Create(), spaceId, userId, start, end)
-        {
-            SeriesId = seriesId,
-            Parking = isAdmin && parking,
-            IdempotencyKey = idempotencyKey,
-        };
+        var booking = await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
+            parking: isAdmin && parking, seriesId: seriesId, idempotencyKey: idempotencyKey);
         await _bookings.InsertAsync(booking, autoSave: true);
         return booking;
     }
@@ -201,44 +189,4 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
     private async Task<Booking> GetBookingAsync(Guid id)
         => await _bookings.FindAsync(id)
            ?? throw new BusinessException(PortalDomainErrorCodes.BookingNotFound, "No booking with that ID.");
-
-    public static string DisplayName(IdentityUser u)
-    {
-        var full = $"{u.Name} {u.Surname}".Trim();
-        return full.Length > 0 ? full : u.UserName;
-    }
-
-    private static DateTime Utc(DateTime d) => d.Kind switch
-    {
-        DateTimeKind.Utc => d,
-        DateTimeKind.Local => d.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
-    };
-
-    private async Task<List<BookingDto>> MapManyAsync(List<Booking> list)
-    {
-        if (list.Count == 0) return new();
-        var spaceIds = list.Select(b => b.SpaceId).Distinct().ToList();
-        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.Name);
-        var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
-        var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, DisplayName);
-        var now = Clock.Now;
-        return list.Select(b => new BookingDto
-        {
-            Id = b.Id,
-            SpaceId = b.SpaceId,
-            SpaceName = spaces.GetValueOrDefault(b.SpaceId, "Unknown space"),
-            OwnerUserId = b.OwnerUserId,
-            OwnerName = users.GetValueOrDefault(b.OwnerUserId, "a former user"),
-            StartUtc = b.StartUtc,
-            EndUtc = b.EndUtc,
-            Status = b.Status,
-            Lifecycle = b.GetLifecycle(now),
-            Version = b.Version,
-            SeriesId = b.SeriesId,
-            Parking = b.Parking,
-            CreationTime = b.CreationTime,
-            LastModificationTime = b.LastModificationTime,
-        }).ToList();
-    }
 }

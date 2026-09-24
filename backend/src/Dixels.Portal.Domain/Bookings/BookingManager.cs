@@ -2,13 +2,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Spaces;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Bookings;
 
 /* Booking business rules, ported from the mock's api.js rules engine. */
 public class BookingManager : DomainService
@@ -33,8 +34,19 @@ public class BookingManager : DomainService
         _maintenance = maintenance;
     }
 
-    public static string Hm(DateTime d) => d.ToString("HH:mm");
-    public static string Stamp(DateTime d) => d.ToString("yyyy-MM-dd HH:mm");
+    /* Factory: the only way to make a new booking, so no caller can skip the rules. */
+    public async Task<Booking> CreateAsync(Guid spaceId, Guid ownerId, DateTime startUtc, DateTime endUtc,
+        bool parking = false, Guid? seriesId = null, string? idempotencyKey = null)
+    {
+        var ctx = await GetSpaceContextAsync(spaceId);
+        await ValidateNewBookingAsync(ctx, ownerId, startUtc, endUtc);
+        return new Booking(GuidGenerator.Create(), spaceId, ownerId, startUtc, endUtc)
+        {
+            SeriesId = seriesId,
+            Parking = parking,
+            IdempotencyKey = idempotencyKey,
+        };
+    }
 
     public async Task<SpaceContext> GetSpaceContextAsync(Guid spaceId)
     {
@@ -78,21 +90,26 @@ public class BookingManager : DomainService
 
     public void EnsureBookable(SpaceContext ctx)
     {
-        if (ctx.Building.Status != EstateStatus.Active)
-            throw new BusinessException(PortalDomainErrorCodes.BuildingInactive,
-                $"{ctx.Building.Name} is inactive and cannot be booked.");
-        if (ctx.Floor != null && ctx.Floor.Status != EstateStatus.Active)
-            throw new BusinessException(PortalDomainErrorCodes.FloorInactive,
-                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is inactive and cannot be booked.");
-        if (ctx.Space.Status != EstateStatus.Active)
-            throw new BusinessException(PortalDomainErrorCodes.SpaceInactive,
-                "This space is inactive and cannot be booked.");
+        var blocker = FindBookingBlocker(ctx);
+        if (blocker != null) throw blocker;
     }
 
-    public static bool CanBook(SpaceContext ctx)
-        => ctx.Building.Status == EstateStatus.Active &&
-           (ctx.Floor == null || ctx.Floor.Status == EstateStatus.Active) &&
-           ctx.Space.Status == EstateStatus.Active;
+    public static bool CanBook(SpaceContext ctx) => FindBookingBlocker(ctx) == null;
+
+    /* The one list of reasons a space can't be booked, shared by the yes/no check and the throwing check. */
+    private static BusinessException? FindBookingBlocker(SpaceContext ctx)
+    {
+        if (ctx.Building.Status != EstateStatus.Active)
+            return new BusinessException(PortalDomainErrorCodes.BuildingInactive,
+                $"{ctx.Building.Name} is inactive and cannot be booked.");
+        if (ctx.Floor != null && ctx.Floor.Status != EstateStatus.Active)
+            return new BusinessException(PortalDomainErrorCodes.FloorInactive,
+                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is inactive and cannot be booked.");
+        if (ctx.Space.Status != EstateStatus.Active)
+            return new BusinessException(PortalDomainErrorCodes.SpaceInactive,
+                "This space is inactive and cannot be booked.");
+        return null;
+    }
 
     public async Task EnsureNoMaintenanceAsync(SpaceContext ctx, DateTime startUtc, DateTime endUtc)
     {
@@ -108,9 +125,8 @@ public class BookingManager : DomainService
 
     public async Task EnsureNoConflictAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? excludeId)
     {
-        var c = await _bookings.FirstOrDefaultAsync(b =>
-            b.SpaceId == spaceId && b.Status == BookingStatus.Confirmed && b.Id != excludeId &&
-            b.StartUtc < endUtc && startUtc < b.EndUtc);
+        var c = await _bookings.FirstOrDefaultAsync(new OverlappingBookingsSpecification(startUtc, endUtc)
+            .ToExpression().And(b => b.SpaceId == spaceId && b.Id != excludeId));
         if (c != null)
             throw new BusinessException(PortalDomainErrorCodes.BookingConflict,
                     "The space is already booked for part of that window.")
@@ -122,9 +138,8 @@ public class BookingManager : DomainService
     /* One person can't hold two different spaces at once. */
     public async Task EnsureNoSelfOverlapAsync(Guid userId, Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? excludeId)
     {
-        var so = await _bookings.FirstOrDefaultAsync(b =>
-            b.OwnerUserId == userId && b.SpaceId != spaceId && b.Status == BookingStatus.Confirmed &&
-            b.Id != excludeId && b.StartUtc < endUtc && startUtc < b.EndUtc);
+        var so = await _bookings.FirstOrDefaultAsync(new OverlappingBookingsSpecification(startUtc, endUtc)
+            .ToExpression().And(b => b.OwnerUserId == userId && b.SpaceId != spaceId && b.Id != excludeId));
         if (so != null)
         {
             var other = await _spaces.FindAsync(so.SpaceId);
@@ -136,7 +151,7 @@ public class BookingManager : DomainService
     }
 
     /* Full create-time check chain in the mock's order. */
-    public async Task ValidateNewBookingAsync(SpaceContext ctx, Guid ownerId, DateTime startUtc, DateTime endUtc)
+    private async Task ValidateNewBookingAsync(SpaceContext ctx, Guid ownerId, DateTime startUtc, DateTime endUtc)
     {
         ValidateWindow(ctx, startUtc, endUtc);
         EnsureBookable(ctx);
@@ -144,4 +159,6 @@ public class BookingManager : DomainService
         await EnsureNoConflictAsync(ctx.Space.Id, startUtc, endUtc, null);
         await EnsureNoSelfOverlapAsync(ownerId, ctx.Space.Id, startUtc, endUtc, null);
     }
+
+    private static string Hm(DateTime d) => d.ToString("HH:mm");
 }

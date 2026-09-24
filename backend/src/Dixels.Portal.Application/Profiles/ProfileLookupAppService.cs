@@ -1,13 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Profiles;
 
 [Authorize]
 public class ProfileLookupAppService : EstateAppServiceBase, IProfileLookupAppService

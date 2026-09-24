@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
-using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -17,27 +16,24 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
 {
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
-    private readonly IRepository<Space, Guid> _spaces;
+    private readonly FloorDtoMapper _mapper;
 
-    public FloorAppService(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
-        IRepository<Space, Guid> spaces)
+    public FloorAppService(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors, FloorDtoMapper mapper)
     {
         _buildings = buildings;
         _floors = floors;
-        _spaces = spaces;
+        _mapper = mapper;
     }
 
     public async Task<ListResultDto<FloorDto>> GetListAsync(Guid? buildingId)
     {
-        var buildings = (await _buildings.GetListAsync()).ToDictionary(b => b.Id);
         var floors = buildingId.HasValue
             ? await _floors.GetListAsync(f => f.BuildingId == buildingId.Value)
             : await _floors.GetListAsync();
-        var spaces = await _spaces.GetListAsync();
-        return new ListResultDto<FloorDto>(floors
-            .OrderBy(f => buildings[f.BuildingId].Name)
+        var dtos = await _mapper.MapListAsync(floors);
+        return new ListResultDto<FloorDto>(dtos
+            .OrderBy(f => f.BuildingName)
             .ThenBy(f => f.Name.PadLeft(8, '0'))
-            .Select(f => Map(f, buildings[f.BuildingId], spaces.Count(s => s.FloorId == f.Id)))
             .ToList());
     }
 
@@ -50,7 +46,7 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         var floor = new Floor(GuidGenerator.Create(), building.Id, name);
         Apply(floor, input);
         await _floors.InsertAsync(floor, autoSave: true);
-        return Map(floor, building, 0);
+        return await _mapper.MapAsync(floor);
     }
 
     [Authorize(PortalPermissions.Floors.Manage)]
@@ -63,17 +59,16 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         floor.Name = name;
         Apply(floor, input);
         await _floors.UpdateAsync(floor, autoSave: true);
-        return Map(floor, building, await _spaces.CountAsync(s => s.FloorId == floor.Id));
+        return await _mapper.MapAsync(floor);
     }
 
     [Authorize(PortalPermissions.Floors.Manage)]
     public async Task<FloorDto> SetStatusAsync(Guid id, SetStatusDto input)
     {
         var floor = await _floors.GetAsync(id);
-        var building = await GetBuildingAsync(floor.BuildingId);
         floor.Status = input.Status;
         await _floors.UpdateAsync(floor, autoSave: true);
-        return Map(floor, building, await _spaces.CountAsync(s => s.FloorId == floor.Id));
+        return await _mapper.MapAsync(floor);
     }
 
     private async Task<Building> GetBuildingAsync(Guid id)
@@ -99,18 +94,4 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         f.MinBookingMinutesOverride = input.MinBookingMinutesOverride;
         f.MaxBookingHoursOverride = input.MaxBookingHoursOverride;
     }
-
-    private static FloorDto Map(Floor f, Building b, int spaceCount) => new()
-    {
-        Id = f.Id,
-        BuildingId = f.BuildingId,
-        BuildingName = b.Name,
-        Name = f.Name,
-        Status = f.Status,
-        OpenHourOverride = f.OpenHourOverride,
-        CloseHourOverride = f.CloseHourOverride,
-        MinBookingMinutesOverride = f.MinBookingMinutesOverride,
-        MaxBookingHoursOverride = f.MaxBookingHoursOverride,
-        SpaceCount = spaceCount,
-    };
 }

@@ -2,9 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Estate;
-using Dixels.Portal.Floors;
 using Dixels.Portal.Permissions;
-using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -16,28 +14,21 @@ namespace Dixels.Portal.Buildings;
 public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
 {
     private readonly IRepository<Building, Guid> _buildings;
-    private readonly IRepository<Floor, Guid> _floors;
-    private readonly IRepository<Space, Guid> _spaces;
+    private readonly BuildingDtoMapper _mapper;
 
-    public BuildingAppService(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
-        IRepository<Space, Guid> spaces)
+    public BuildingAppService(IRepository<Building, Guid> buildings, BuildingDtoMapper mapper)
     {
         _buildings = buildings;
-        _floors = floors;
-        _spaces = spaces;
+        _mapper = mapper;
     }
 
     public async Task<ListResultDto<BuildingDto>> GetListAsync()
     {
         var buildings = await _buildings.GetListAsync();
-        var floors = await _floors.GetListAsync();
-        var spaces = await _spaces.GetListAsync();
-        return new ListResultDto<BuildingDto>(buildings.OrderBy(b => b.Name)
-            .Select(b => Map(b, floors.Count(f => f.BuildingId == b.Id), spaces.Count(s => s.BuildingId == b.Id)))
-            .ToList());
+        return new ListResultDto<BuildingDto>(await _mapper.MapListAsync(buildings.OrderBy(b => b.Name)));
     }
 
-    public async Task<BuildingDto> GetAsync(Guid id) => await MapWithCountsAsync(await _buildings.GetAsync(id));
+    public async Task<BuildingDto> GetAsync(Guid id) => await _mapper.MapAsync(await _buildings.GetAsync(id));
 
     [Authorize(PortalPermissions.Buildings.Manage)]
     public async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
@@ -47,7 +38,7 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         var building = new Building(GuidGenerator.Create(), name);
         Apply(building, input);
         await _buildings.InsertAsync(building, autoSave: true);
-        return await MapWithCountsAsync(building);
+        return await _mapper.MapAsync(building);
     }
 
     [Authorize(PortalPermissions.Buildings.Manage)]
@@ -59,7 +50,7 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         building.Name = name;
         Apply(building, input);
         await _buildings.UpdateAsync(building, autoSave: true);
-        return await MapWithCountsAsync(building);
+        return await _mapper.MapAsync(building);
     }
 
     [Authorize(PortalPermissions.Buildings.Manage)]
@@ -68,7 +59,7 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         var building = await _buildings.GetAsync(id);
         building.Status = input.Status;
         await _buildings.UpdateAsync(building, autoSave: true);
-        return await MapWithCountsAsync(building);
+        return await _mapper.MapAsync(building);
     }
 
     private async Task ValidateAsync(CreateUpdateBuildingDto input, string name, Guid? excludeId)
@@ -92,22 +83,4 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         b.MaxBookingHours = input.MaxBookingHours;
         b.Holidays = input.Holidays.Distinct().OrderBy(d => d).ToList();
     }
-
-    private async Task<BuildingDto> MapWithCountsAsync(Building b)
-        => Map(b, await _floors.CountAsync(f => f.BuildingId == b.Id), await _spaces.CountAsync(s => s.BuildingId == b.Id));
-
-    private static BuildingDto Map(Building b, int floorCount, int spaceCount) => new()
-    {
-        Id = b.Id,
-        Name = b.Name,
-        TimeZone = b.TimeZone,
-        Status = b.Status,
-        OpenHour = b.OpenHour,
-        CloseHour = b.CloseHour,
-        MinBookingMinutes = b.MinBookingMinutes,
-        MaxBookingHours = b.MaxBookingHours,
-        Holidays = b.Holidays.ToList(),
-        FloorCount = floorCount,
-        SpaceCount = spaceCount,
-    };
 }

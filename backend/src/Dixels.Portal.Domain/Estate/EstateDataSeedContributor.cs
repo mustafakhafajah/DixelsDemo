@@ -59,11 +59,11 @@ public class EstateDataSeedContributor : IDataSeedContributor, ITransientDepende
             floors[$"{b.Name}|{name}"] = await _floors.InsertAsync(new Floor(_guids.Create(), b.Id, name), autoSave: true);
 
         async Task AddSpace(string name, Guid typeId, Building b, string floor, int capacity, string note,
-            EstateStatus status = EstateStatus.Active)
+            bool isBookable = true)
         {
             await _spaces.InsertAsync(new Space(_guids.Create(), name, b.Id, floors[$"{b.Name}|{floor}"].Id, typeId)
             {
-                Status = status,
+                IsBookable = isBookable,
                 Capacity = capacity,
                 Note = note,
             }, autoSave: true);
@@ -74,6 +74,6 @@ public class EstateDataSeedContributor : IDataSeedContributor, ITransientDepende
         await AddSpace("Annex Meeting Pod", DefaultSpaceTypes.MeetingRoom, annex, "1", 4, "Seats 4 · quiet booth");
         await AddSpace("AV Cart 01", DefaultSpaceTypes.Equipment, hq, "2", 0, "Portable · return to floor 2");
         await AddSpace("Video Kit 02", DefaultSpaceTypes.Equipment, annex, "1", 0, "Camera, tripod, two mics");
-        await AddSpace("Usability Lab", DefaultSpaceTypes.MeetingRoom, hq, "4", 8, "Out of service for rewiring", EstateStatus.Inactive);
+        await AddSpace("Usability Lab", DefaultSpaceTypes.MeetingRoom, hq, "4", 8, "Out of service for rewiring", isBookable: false);
     }
 }

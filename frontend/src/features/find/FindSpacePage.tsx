@@ -16,7 +16,7 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
   const f = useFindStore()
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
-  const floorNames = [...new Set(floors.filter((x) => x.status === 'Active' && (!f.buildingId || x.buildingId === f.buildingId)).map((x) => x.name))]
+  const floorNames = [...new Set(floors.filter((x) => x.isBookable && (!f.buildingId || x.buildingId === f.buildingId)).map((x) => x.name))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   /* Only types some space actually has, as id → name. */
   const types = [...new Map(spaces.map((s) => [s.typeId, s.typeName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))

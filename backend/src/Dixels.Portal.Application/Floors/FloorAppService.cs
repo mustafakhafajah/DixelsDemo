@@ -63,10 +63,10 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
     }
 
     [Authorize(PortalPermissions.Floors.Manage)]
-    public async Task<FloorDto> SetStatusAsync(Guid id, SetStatusDto input)
+    public async Task<FloorDto> SetBookableAsync(Guid id, SetBookableDto input)
     {
         var floor = await _floors.GetAsync(id);
-        floor.Status = input.Status;
+        floor.IsBookable = input.IsBookable;
         await _floors.UpdateAsync(floor, autoSave: true);
         return await _mapper.MapAsync(floor);
     }
@@ -88,7 +88,7 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
 
     private static void Apply(Floor f, CreateUpdateFloorDto input)
     {
-        f.Status = input.Status;
+        f.IsBookable = input.IsBookable;
         f.OpenHourOverride = input.OpenHourOverride;
         f.CloseHourOverride = input.CloseHourOverride;
         f.MinBookingMinutesOverride = input.MinBookingMinutesOverride;

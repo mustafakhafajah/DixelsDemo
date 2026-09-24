@@ -41,7 +41,7 @@ public class FloorDtoMapper : ITransientDependency
         BuildingId = f.BuildingId,
         BuildingName = b.Name,
         Name = f.Name,
-        Status = f.Status,
+        IsBookable = f.IsBookable,
         OpenHourOverride = f.OpenHourOverride,
         CloseHourOverride = f.CloseHourOverride,
         MinBookingMinutesOverride = f.MinBookingMinutesOverride,

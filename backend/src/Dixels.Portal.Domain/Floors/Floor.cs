@@ -8,7 +8,8 @@ public class Floor : FullAuditedAggregateRoot<Guid>
 {
     public Guid BuildingId { get; set; }
     public string Name { get; set; } = null!;
-    public EstateStatus Status { get; set; }
+    /* Ticked = people may book it. A space is only bookable if its floor and building are too. */
+    public bool IsBookable { get; set; } = true;
     public int? OpenHourOverride { get; set; }
     public int? CloseHourOverride { get; set; }
     public int? MinBookingMinutesOverride { get; set; }

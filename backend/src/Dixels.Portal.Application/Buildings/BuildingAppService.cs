@@ -54,10 +54,10 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
     }
 
     [Authorize(PortalPermissions.Buildings.Manage)]
-    public async Task<BuildingDto> SetStatusAsync(Guid id, SetStatusDto input)
+    public async Task<BuildingDto> SetBookableAsync(Guid id, SetBookableDto input)
     {
         var building = await _buildings.GetAsync(id);
-        building.Status = input.Status;
+        building.IsBookable = input.IsBookable;
         await _buildings.UpdateAsync(building, autoSave: true);
         return await _mapper.MapAsync(building);
     }
@@ -76,7 +76,7 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
     private static void Apply(Building b, CreateUpdateBuildingDto input)
     {
         b.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
-        b.Status = input.Status;
+        b.IsBookable = input.IsBookable;
         b.OpenHour = input.OpenHour;
         b.CloseHour = input.CloseHour;
         b.MinBookingMinutes = input.MinBookingMinutes;

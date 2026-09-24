@@ -109,10 +109,10 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     }
 
     [Authorize(PortalPermissions.Spaces.Manage)]
-    public async Task<SpaceDto> SetStatusAsync(Guid id, SetStatusDto input)
+    public async Task<SpaceDto> SetBookableAsync(Guid id, SetBookableDto input)
     {
         var space = await _spaces.GetAsync(id);
-        space.Status = input.Status;
+        space.IsBookable = input.IsBookable;
         await _spaces.UpdateAsync(space, autoSave: true);
         return await _mapper.MapAsync(space);
     }
@@ -142,7 +142,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     private static void Apply(Space s, CreateUpdateSpaceDto input)
     {
         s.TypeId = input.TypeId;
-        s.Status = input.Status;
+        s.IsBookable = input.IsBookable;
         s.Capacity = Math.Max(0, input.Capacity);
         s.Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
         s.OpenHourOverride = input.OpenHourOverride;

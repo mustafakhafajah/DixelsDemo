@@ -11,5 +11,5 @@ public interface IFloorAppService : IApplicationService
     Task<ListResultDto<FloorDto>> GetListAsync(Guid? buildingId);
     Task<FloorDto> CreateAsync(CreateUpdateFloorDto input);
     Task<FloorDto> UpdateAsync(Guid id, CreateUpdateFloorDto input);
-    Task<FloorDto> SetStatusAsync(Guid id, SetStatusDto input);
+    Task<FloorDto> SetBookableAsync(Guid id, SetBookableDto input);
 }

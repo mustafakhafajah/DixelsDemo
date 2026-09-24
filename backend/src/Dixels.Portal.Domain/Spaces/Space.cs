@@ -9,7 +9,8 @@ public class Space : FullAuditedAggregateRoot<Guid>
 {
     public string Name { get; set; } = null!;
     public Guid TypeId { get; set; }
-    public EstateStatus Status { get; set; }
+    /* Ticked = people may book it. A space is only bookable if its floor and building are too. */
+    public bool IsBookable { get; set; } = true;
     public Guid BuildingId { get; set; }
     public Guid FloorId { get; set; }
     public int Capacity { get; set; }

@@ -17,7 +17,7 @@ public class SpaceConfiguration : IEntityTypeConfiguration<Space>
         b.Property(x => x.Name).IsRequired().HasMaxLength(SpaceConsts.MaxNameLength);
         b.Property(x => x.Note).HasMaxLength(SpaceConsts.MaxNoteLength);
         b.HasIndex(x => x.Name).IsUnique();
-        b.HasIndex(x => new { x.BuildingId, x.FloorId, x.Status });
+        b.HasIndex(x => new { x.BuildingId, x.FloorId });
         b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Floor>().WithMany().HasForeignKey(x => x.FloorId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<SpaceType>().WithMany().HasForeignKey(x => x.TypeId).OnDelete(DeleteBehavior.Restrict);

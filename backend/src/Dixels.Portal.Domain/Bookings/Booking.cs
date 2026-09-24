@@ -28,6 +28,13 @@ public class Booking : FullAuditedAggregateRoot<Guid>
         Status = BookingStatus.Confirmed;
     }
 
+    /* Every cancellation bumps the version, so a client holding an old copy can't reschedule it. */
+    public void Cancel()
+    {
+        Status = BookingStatus.Cancelled;
+        Version++;
+    }
+
     public string GetLifecycle(DateTime nowUtc)
         => TimeWindowLifecycle.Get(Status == BookingStatus.Cancelled, StartUtc, EndUtc, nowUtc);
 }

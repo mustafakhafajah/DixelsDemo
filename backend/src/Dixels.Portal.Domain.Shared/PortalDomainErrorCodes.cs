@@ -19,12 +19,12 @@ public static class PortalDomainErrorCodes
     public const string InvalidSpaceType = "validation.invalid_space_type";
 
     public const string SpaceNotFound = "space.not_found";
-    public const string SpaceInactive = "space.inactive";
+    public const string SpaceNotBookable = "space.not_bookable";
     public const string SpaceDuplicateName = "space.duplicate_name";
     public const string SpaceUnderMaintenance = "space.under_maintenance";
-    public const string BuildingInactive = "building.inactive";
+    public const string BuildingNotBookable = "building.not_bookable";
     public const string BuildingDuplicate = "building.duplicate";
-    public const string FloorInactive = "floor.inactive";
+    public const string FloorNotBookable = "floor.not_bookable";
     public const string FloorDuplicate = "floor.duplicate";
     public const string SpaceTypeNotFound = "space_type.not_found";
     public const string SpaceTypeDuplicate = "space_type.duplicate";
@@ -55,12 +55,12 @@ public static class PortalDomainErrorCodes
         [InvalidFloor] = HttpStatusCode.BadRequest,
         [InvalidSpaceType] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
-        [SpaceInactive] = HttpStatusCode.Conflict,
+        [SpaceNotBookable] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,
         [SpaceUnderMaintenance] = HttpStatusCode.Conflict,
-        [BuildingInactive] = HttpStatusCode.Conflict,
+        [BuildingNotBookable] = HttpStatusCode.Conflict,
         [BuildingDuplicate] = HttpStatusCode.Conflict,
-        [FloorInactive] = HttpStatusCode.Conflict,
+        [FloorNotBookable] = HttpStatusCode.Conflict,
         [FloorDuplicate] = HttpStatusCode.Conflict,
         [SpaceTypeNotFound] = HttpStatusCode.NotFound,
         [SpaceTypeDuplicate] = HttpStatusCode.Conflict,

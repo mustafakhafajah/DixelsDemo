@@ -15,5 +15,5 @@ public interface ISpaceAppService : IApplicationService
     Task<SpaceDto> GetAsync(Guid id);
     Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input);
     Task<SpaceDto> UpdateAsync(Guid id, CreateUpdateSpaceDto input);
-    Task<SpaceDto> SetStatusAsync(Guid id, SetStatusDto input);
+    Task<SpaceDto> SetBookableAsync(Guid id, SetBookableDto input);
 }

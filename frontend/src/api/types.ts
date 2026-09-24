@@ -1,6 +1,5 @@
 import { parseUtc } from '../lib/dateUtils'
 
-export type EstateStatus = 'Active' | 'Inactive'
 export type MaintenanceScopeType = 'Space' | 'Floor' | 'Building'
 export type Lifecycle = 'scheduled' | 'in_progress' | 'ended' | 'cancelled'
 
@@ -15,7 +14,8 @@ export interface Building {
   id: string
   name: string
   timeZone: string
-  status: EstateStatus
+  /* Ticked = bookable. Unticking blocks every floor and space in it. */
+  isBookable: boolean
   openHour: number
   closeHour: number
   minBookingMinutes: number
@@ -30,7 +30,7 @@ export interface Floor {
   buildingId: string
   buildingName: string
   name: string
-  status: EstateStatus
+  isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
   minBookingMinutesOverride: number | null
@@ -51,7 +51,8 @@ export interface Space {
   name: string
   typeId: string
   typeName: string
-  status: EstateStatus
+  /* Its own tick; it can still be blocked by its floor or building (see notBookableReason). */
+  isBookable: boolean
   buildingId: string
   buildingName: string
   floorId: string
@@ -66,6 +67,8 @@ export interface Space {
   maxBookingHoursOverride: number | null
   constraints: Constraints
   canCurrentUserBook: boolean
+  /* Why it cannot be booked right now, e.g. "HQ North is not bookable ..."; null when it can. */
+  notBookableReason: string | null
 }
 
 export interface BookingDto {

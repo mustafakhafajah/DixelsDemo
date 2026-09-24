@@ -51,7 +51,7 @@ public class SpaceDtoMapper : ITransientDependency
             Name = s.Name,
             TypeId = s.TypeId,
             TypeName = typeName ?? "Unknown type",
-            Status = s.Status,
+            IsBookable = s.IsBookable,
             BuildingId = s.BuildingId,
             BuildingName = building.Name,
             FloorId = s.FloorId,
@@ -72,6 +72,7 @@ public class SpaceDtoMapper : ITransientDependency
                 Holidays = c.Holidays.ToList(),
             },
             CanCurrentUserBook = BookingManager.CanBook(ctx),
+            NotBookableReason = BookingManager.FindNotBookableReason(ctx),
         };
     }
 }

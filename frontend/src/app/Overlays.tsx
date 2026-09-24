@@ -2,6 +2,7 @@ import { BookingModal } from '../features/bookings/BookingModal'
 import { DayDrawer } from '../features/bookings/DayDrawer'
 import { DetailDrawer } from '../features/bookings/DetailDrawer'
 import { BuildingFormModal, FloorFormModal, SpaceFormModal, SpaceTypeFormModal } from '../features/spaces/EstateForms'
+import { NotBookableModal } from '../features/spaces/Bookable'
 import { MaintenanceFormModal } from '../features/spaces/MaintenanceFormModal'
 import { useModalStore } from '../state/modalStore'
 
@@ -25,5 +26,7 @@ export function Overlays() {
       return <SpaceTypeFormModal editing={overlay.editing} />
     case 'maintenance':
       return <MaintenanceFormModal target={overlay.target} />
+    case 'notBookable':
+      return <NotBookableModal target={overlay.target} />
   }
 }

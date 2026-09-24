@@ -40,7 +40,7 @@ public class BuildingDtoMapper : ITransientDependency
         Id = b.Id,
         Name = b.Name,
         TimeZone = b.TimeZone,
-        Status = b.Status,
+        IsBookable = b.IsBookable,
         OpenHour = b.OpenHour,
         CloseHour = b.CloseHour,
         MinBookingMinutes = b.MinBookingMinutes,

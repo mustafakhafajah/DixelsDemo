@@ -7,7 +7,6 @@ import {
   type Booking,
   type BookingDto,
   type Building,
-  type EstateStatus,
   type Floor,
   type ListResult,
   type Maintenance,
@@ -305,7 +304,7 @@ export function useCancelMaintenance() {
 export interface BuildingInput {
   name: string
   timeZone: string
-  status: EstateStatus
+  isBookable: boolean
   openHour: number
   closeHour: number
   minBookingMinutes: number
@@ -316,7 +315,7 @@ export interface BuildingInput {
 export interface FloorInput {
   buildingId: string
   name: string
-  status: EstateStatus
+  isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
   minBookingMinutesOverride: number | null
@@ -326,7 +325,7 @@ export interface FloorInput {
 export interface SpaceInput {
   name: string
   typeId: string
-  status: EstateStatus
+  isBookable: boolean
   buildingId: string
   floorId: string
   capacity: number
@@ -358,9 +357,37 @@ export const useSaveSpace = () =>
   useEstateMutation<{ id?: string; body: SpaceInput }>((api, { id, body }) =>
     id ? api<Space>('PUT', `/api/app/space/${id}`, body) : api<Space>('POST', '/api/app/space', body))
 
-export const useSetStatus = () =>
-  useEstateMutation<{ kind: 'building' | 'floor' | 'space'; id: string; status: EstateStatus }>((api, { kind, id, status }) =>
-    api('POST', `/api/app/${kind}/${id}/set-status`, { status }))
+export type EstateKind = 'building' | 'floor' | 'space'
+
+export const useSetBookable = () =>
+  useEstateMutation<{ kind: EstateKind; id: string; isBookable: boolean }>((api, { kind, id, isBookable }) =>
+    api('POST', `/api/app/${kind}/${id}/set-bookable`, { isBookable }))
+
+export interface EstateScope {
+  scopeType: MaintenanceScopeType
+  scopeId: string
+}
+
+/* Bookings in a space, floor or building that have not started yet (admin only). */
+export function useUpcomingCount(scope: EstateScope | null) {
+  const api = useApi()
+  const ok = useEnabled()
+  return useQuery({
+    queryKey: ['upcoming-count', scope],
+    queryFn: () => api<number>('GET', '/api/app/booking/upcoming-count', undefined, { ScopeType: scope!.scopeType, ScopeId: scope!.scopeId }),
+    enabled: ok && !!scope,
+  })
+}
+
+/* Explicit admin action: cancel exactly those not-yet-started bookings. */
+export function useCancelUpcoming() {
+  const api = useApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('POST', '/api/app/booking/cancel-upcoming', scope),
+    onSettled: () => invalidate([...BOOKING_KEYS, ['upcoming-count']]),
+  })
+}
 
 export const useSaveSpaceType = () =>
   useEstateMutation<{ id?: string; name: string }>((api, { id, name }) =>

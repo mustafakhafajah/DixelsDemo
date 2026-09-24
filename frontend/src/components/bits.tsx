@@ -1,4 +1,4 @@
-import { lifecycleOf, type EstateStatus, type ScheduleItem } from '../api/types'
+import { lifecycleOf, type ScheduleItem } from '../api/types'
 
 export function StatusPill({ item }: { item: ScheduleItem }) {
   const s = lifecycleOf(item)
@@ -13,10 +13,11 @@ export function StatusPill({ item }: { item: ScheduleItem }) {
   )
 }
 
-export function EstatePill({ status }: { status: EstateStatus }) {
-  return status === 'Active'
-    ? <span className="pill pill-confirmed"><span className="dot" />Active</span>
-    : <span className="pill pill-inactive"><span className="dot" />Inactive</span>
+/* reason: shown as a tooltip, e.g. why a ticked space is still blocked by its building. */
+export function BookablePill({ bookable, reason }: { bookable: boolean; reason?: string | null }) {
+  return bookable
+    ? <span className="pill pill-confirmed"><span className="dot" />Bookable</span>
+    : <span className="pill pill-inactive" title={reason ?? undefined}><span className="dot" />Not bookable</span>
 }
 
 export function ErrorLine({ error }: { error: { code: string; message: string } | null | undefined }) {

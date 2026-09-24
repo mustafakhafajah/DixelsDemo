@@ -113,7 +113,6 @@ public class SpaceTypeTests : PortalEntityFrameworkCoreTestBase
     {
         Name = $"Room {Tag()}",
         TypeId = typeId,
-        Status = EstateStatus.Active,
         BuildingId = building.Id,
         FloorId = floor.Id,
     };

@@ -9,7 +9,7 @@ public class SpaceDto : EntityDto<Guid>
     public string Name { get; set; } = null!;
     public Guid TypeId { get; set; }
     public string TypeName { get; set; } = null!;
-    public EstateStatus Status { get; set; }
+    public bool IsBookable { get; set; } = true;
     public Guid BuildingId { get; set; }
     public string BuildingName { get; set; } = null!;
     public Guid FloorId { get; set; }
@@ -24,4 +24,6 @@ public class SpaceDto : EntityDto<Guid>
     public int? MaxBookingHoursOverride { get; set; }
     public ResolvedConstraintsDto Constraints { get; set; } = new();
     public bool CanCurrentUserBook { get; set; }
+    /* Why it cannot be booked right now (the space, its floor or its building is not bookable); null when it can. */
+    public string? NotBookableReason { get; set; }
 }

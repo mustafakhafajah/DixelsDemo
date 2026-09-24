@@ -9,7 +9,7 @@ public class CreateUpdateSpaceDto
     [Required, StringLength(SpaceConsts.MaxNameLength)]
     public string Name { get; set; } = null!;
     [Required] public Guid TypeId { get; set; }
-    public EstateStatus Status { get; set; }
+    public bool IsBookable { get; set; } = true;
     [Required] public Guid BuildingId { get; set; }
     [Required] public Guid FloorId { get; set; }
     [Range(0, 999)] public int Capacity { get; set; }

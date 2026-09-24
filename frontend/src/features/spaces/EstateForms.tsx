@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
-import type { Building, EstateStatus, Floor, Space, SpaceType } from '../../api/types'
+import type { Building, Floor, Space, SpaceType } from '../../api/types'
 import { ErrorLine, plural, RequiredMark, shortId } from '../../components/bits'
 import { Modal } from '../../components/Sheet'
 import { modals } from '../../state/modalStore'
+import { BookableField, useCancelUpcomingAfterSave } from './Bookable'
 import { toast } from '../../state/toastStore'
 
 type FieldError = { code: string; message: string } | null
@@ -83,7 +84,9 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
   const save = useSaveBuilding()
   const [name, setName] = useState(editing?.name ?? '')
   const [tz, setTz] = useState(editing?.timeZone ?? 'UTC')
-  const [status, setStatus] = useState<EstateStatus>(editing?.status ?? 'Active')
+  const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
+  const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const cancelAfter = useCancelUpcomingAfterSave()
   const [open, setOpen] = useState(String(editing?.openHour ?? 8))
   const [close, setClose] = useState(String(editing?.closeHour ?? 20))
   const [min, setMin] = useState(String(editing?.minBookingMinutes ?? 15))
@@ -100,8 +103,12 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
     if (ma < 1) return setError({ code: 'validation.invalid_hours', message: 'Maximum duration must be at least 1 hour.' })
     save.mutateAsync({
       id: editing?.id,
-      body: { name: name.trim(), timeZone: tz.trim() || 'UTC', status, openHour: o, closeHour: c, minBookingMinutes: mi, maxBookingHours: ma, holidays },
-    }).then(() => { toast('ok', editing ? 'Building updated' : 'Building added', name.trim()); modals.close() }, (e) => setError(errorText(e)))
+      body: { name: name.trim(), timeZone: tz.trim() || 'UTC', isBookable, openHour: o, closeHour: c, minBookingMinutes: mi, maxBookingHours: ma, holidays },
+    }).then(async () => {
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('building', editing.id, name.trim())
+      toast('ok', editing ? 'Building updated' : 'Building added', name.trim())
+      modals.close()
+    }, (e) => setError(errorText(e)))
   }
 
   const addHoliday = () => {
@@ -113,16 +120,9 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
     <Modal title={editing ? 'Edit building' : 'Add a building'} subtitle="One record is one physical building." onClose={modals.close}
       footer={<Footer onSave={submit} label="Save building" busy={save.isPending} />}>
       <p className="req-note"><RequiredMark /> Required field</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px', gap: 12 }}>
-        <Field id="bld-name" label="Name" required>
-          <input id="bld-name" className="inp" placeholder="e.g. Riverside Studio" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
-        </Field>
-        <Field id="bld-status" label="Status" required>
-          <select id="bld-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
-            <option value="Active">Active</option><option value="Inactive">Inactive</option>
-          </select>
-        </Field>
-      </div>
+      <Field id="bld-name" label="Name" required>
+        <input id="bld-name" className="inp" placeholder="e.g. Riverside Studio" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
+      </Field>
       <Field id="bld-tz" label="Local timezone" required>
         <input id="bld-tz" className="inp mono" placeholder="UTC" value={tz} onChange={(e) => setTz(e.target.value)} />
       </Field>
@@ -148,6 +148,8 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
           )) : <span style={{ fontSize: 11.5, color: 'var(--slate)' }}>No holidays yet.</span>}
         </div>
       </div>
+      <BookableField idPrefix="bld" kind="building" value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
       <ErrorLine error={error} />
     </Modal>
   )
@@ -160,7 +162,9 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
   const save = useSaveFloor()
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [name, setName] = useState(editing?.name ?? '')
-  const [status, setStatus] = useState<EstateStatus>(editing?.status ?? 'Active')
+  const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
+  const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const cancelAfter = useCancelUpcomingAfterSave()
   const [ov, setOv] = useState<[string, string, string, string]>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),
     numText(editing?.minBookingMinutesOverride), numText(editing?.maxBookingHoursOverride),
@@ -180,8 +184,12 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
     if (ma != null && ma > b.maxBookingHours) return setError({ code: 'validation.narrowing_violation', message: `Floor's maximum duration cannot exceed the building's (${b.maxBookingHours}h).` })
     save.mutateAsync({
       id: editing?.id,
-      body: { buildingId: b.id, name: name.trim(), status, openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma },
-    }).then(() => { toast('ok', editing ? 'Floor updated' : 'Floor added', `Floor ${name.trim()} in ${b.name}.`); modals.close() }, (e) => setError(errorText(e)))
+      body: { buildingId: b.id, name: name.trim(), isBookable, openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma },
+    }).then(async () => {
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('floor', editing.id, `${b.name} · Floor ${name.trim()}`)
+      toast('ok', editing ? 'Floor updated' : 'Floor added', `Floor ${name.trim()} in ${b.name}.`)
+      modals.close()
+    }, (e) => setError(errorText(e)))
   }
 
   return (
@@ -198,13 +206,10 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
           <input id="flr-name" className="inp mono" placeholder="e.g. 5" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
         </Field>
       </div>
-      <Field id="flr-status" label="Status" required>
-        <select id="flr-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
-          <option value="Active">Active</option><option value="Inactive">Inactive</option>
-        </select>
-      </Field>
       <OverrideFields prefix="flr" parent="building" values={ov} onChange={setOv}
         inherits={b ? [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours] : null} />
+      <BookableField idPrefix="flr" kind="floor" value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
       <ErrorLine error={error} />
     </Modal>
   )
@@ -220,7 +225,9 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const [name, setName] = useState(editing?.name ?? '')
   const [typeId, setTypeId] = useState(editing?.typeId ?? '')
   const [capacity, setCapacity] = useState(String(editing?.capacity ?? 0))
-  const [status, setStatus] = useState<EstateStatus>(editing?.status ?? 'Active')
+  const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
+  const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const cancelAfter = useCancelUpcomingAfterSave()
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
   const [note, setNote] = useState(editing?.note ?? '')
@@ -256,13 +263,14 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
     save.mutateAsync({
       id: editing?.id,
       body: {
-        name: name.trim(), typeId: effTypeId, status, buildingId: b.id, floorId: f.id,
+        name: name.trim(), typeId: effTypeId, isBookable, buildingId: b.id, floorId: f.id,
         capacity: Math.max(0, Number(capacity) || 0), note: note.trim(),
         openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma,
       },
-    }).then(() => {
+    }).then(async () => {
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('space', editing.id, name.trim())
       toast('ok', editing ? 'Space updated' : 'Space added',
-        editing ? `${name.trim()} in ${b.name}, floor ${f.name}.` : `${name.trim()} is ${status === 'Active' ? 'bookable now' : 'saved as inactive'}.`)
+        editing ? `${name.trim()} in ${b.name}, floor ${f.name}.` : `${name.trim()} is ${isBookable ? 'bookable now' : 'saved as not bookable'}.`)
       modals.close()
     }, (e) => setError(errorText(e)))
   }
@@ -275,7 +283,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       <Field id="sp-name" label="Name" required>
         <input id="sp-name" className="inp" placeholder="e.g. Conference Room D" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
         <Field id="sp-type" label="Type" required>
           <select id="sp-type" className="inp" value={effTypeId} onChange={(e) => setTypeId(e.target.value)}>
             {types.length ? types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="">No types yet</option>}
@@ -283,11 +291,6 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
         </Field>
         <Field id="sp-capacity" label="Capacity">
           <input type="number" id="sp-capacity" className="inp mono" min={0} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
-        </Field>
-        <Field id="sp-status" label="Status" required>
-          <select id="sp-status" className="inp" value={status} onChange={(e) => setStatus(e.target.value as EstateStatus)}>
-            <option value="Active">Active — bookable</option><option value="Inactive">Inactive — not bookable</option>
-          </select>
         </Field>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 12 }}>
@@ -310,6 +313,14 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       <Field id="sp-note" label="Description">
         <input id="sp-note" className="inp" placeholder="Seats 8 · whiteboard wall" value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
+      <BookableField idPrefix="sp" kind="space" value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
+      {/* The space's own tick can be on while its floor or building is off: say so. */}
+      {isBookable && b && (!b.isBookable || (f && !f.isBookable)) && (
+        <p className="muted-box">
+          Still not bookable while {!b.isBookable ? `${b.name} is not bookable` : `floor ${f!.name} is not bookable`}.
+        </p>
+      )}
       <ErrorLine error={error} />
     </Modal>
   )

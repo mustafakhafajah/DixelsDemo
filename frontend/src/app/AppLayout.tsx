@@ -67,7 +67,7 @@ function Sidebar() {
               <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
                 <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
-                <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.status === 'Active').length ?? ''}</span></NavLink>
+                <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.canCurrentUserBook).length ?? ''}</span></NavLink>
                 <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
               </div>
             </div>

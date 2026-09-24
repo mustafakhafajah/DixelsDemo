@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
+using Dixels.Portal.Maintenance;
+using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -18,12 +20,15 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
     private readonly IRepository<Booking, Guid> _bookings;
     private readonly BookingManager _manager;
     private readonly BookingDtoMapper _mapper;
+    private readonly MaintenanceScopeResolver _scopes;
 
-    public BookingAppService(IRepository<Booking, Guid> bookings, BookingManager manager, BookingDtoMapper mapper)
+    public BookingAppService(IRepository<Booking, Guid> bookings, BookingManager manager, BookingDtoMapper mapper,
+        MaintenanceScopeResolver scopes)
     {
         _bookings = bookings;
         _manager = manager;
         _mapper = mapper;
+        _scopes = scopes;
     }
 
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
@@ -175,9 +180,30 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         if (state == "ended")
             throw new BusinessException(PortalDomainErrorCodes.BookingLocked, "An ended booking cannot be cancelled.");
         if (state == "cancelled") return;
-        b.Status = BookingStatus.Cancelled;
-        b.Version++;
+        b.Cancel();
         await _bookings.UpdateAsync(b, autoSave: true);
+    }
+
+    [Authorize(PortalPermissions.Bookings.ManageAll)]
+    public async Task<int> GetUpcomingCountAsync(EstateScopeDto input)
+        => await AsyncExecuter.CountAsync(await UpcomingInScopeAsync(input));
+
+    [Authorize(PortalPermissions.Bookings.ManageAll)]
+    public async Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input)
+    {
+        var upcoming = await AsyncExecuter.ToListAsync(await UpcomingInScopeAsync(input));
+        foreach (var b in upcoming) b.Cancel();
+        await _bookings.UpdateManyAsync(upcoming, autoSave: true);
+        return new CancelUpcomingResultDto { CancelledCount = upcoming.Count };
+    }
+
+    /* "Upcoming" = confirmed and not started yet; a meeting already in progress is never cut off. */
+    private async Task<IQueryable<Booking>> UpcomingInScopeAsync(EstateScopeDto input)
+    {
+        var spaceIds = await _scopes.FindSpaceIdsAsync(input.ScopeType, input.ScopeId);
+        var now = Clock.Now;
+        return (await _bookings.GetQueryableAsync())
+            .Where(b => spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartUtc > now);
     }
 
     private async Task EnsureCanActAsync(Booking b, string message)

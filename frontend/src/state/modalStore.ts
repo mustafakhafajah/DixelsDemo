@@ -9,6 +9,13 @@ export interface BookingPrefill {
 
 export type ScheduleId = 'my'
 
+/* What the 'Make not bookable' dialog acts on. */
+export interface BookableTarget {
+  kind: 'building' | 'floor' | 'space'
+  id: string
+  label: string
+}
+
 export interface MaintenanceTarget {
   scopeType: MaintenanceScopeType
   scopeId: string
@@ -26,6 +33,7 @@ type Overlay =
   | { kind: 'space'; editing: Space | null }
   | { kind: 'spaceType'; editing: SpaceType | null }
   | { kind: 'maintenance'; target: MaintenanceTarget }
+  | { kind: 'notBookable'; target: BookableTarget }
 
 interface ModalState {
   overlay: Overlay | null
@@ -51,5 +59,6 @@ export const modals = {
   space: (editing: Space | null = null) => useModalStore.getState().open({ kind: 'space', editing }),
   spaceType: (editing: SpaceType | null = null) => useModalStore.getState().open({ kind: 'spaceType', editing }),
   maintenance: (target: MaintenanceTarget) => useModalStore.getState().open({ kind: 'maintenance', target }),
+  notBookable: (target: BookableTarget) => useModalStore.getState().open({ kind: 'notBookable', target }),
   close: () => useModalStore.getState().close(),
 }

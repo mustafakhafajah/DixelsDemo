@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
-import { useBuildings, useDeleteSpaceType, useFloors, useSetStatus, useSpaceRegistry, useSpaceTypes } from '../../api/hooks'
-import type { EstateStatus, SpaceType } from '../../api/types'
-import { EstatePill, Loading, plural, shortId } from '../../components/bits'
+import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
+import type { SpaceType } from '../../api/types'
+import { BookablePill, Loading, plural, shortId } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { pad } from '../../lib/dateUtils'
@@ -12,15 +12,18 @@ import { modals } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
 import { EMPTY_SPACE_FILTERS, SpaceRegistryFilters, type SpaceRegistryFilterValues } from './SpaceRegistryFilters'
 
-function useToggleStatus() {
-  const setStatus = useSetStatus()
-  return (kind: 'building' | 'floor' | 'space', id: string, name: string, current: EstateStatus, scope: string) => {
-    const status: EstateStatus = current === 'Active' ? 'Inactive' : 'Active'
-    setStatus.mutateAsync({ kind, id, status }).then(
-      () => toast(status === 'Active' ? 'ok' : 'warn', `${name} is now ${status.toLowerCase()}`,
-        status === 'Inactive' ? `Every space ${scope} is blocked from new bookings. Existing bookings are kept.` : 'It can be booked again.'),
-      (e) => { const { code, message } = errorText(e); toast('err', 'Request rejected', message, code) })
-  }
+/* The row menu item: "Make not bookable" asks first (it shows the bookings already made there);
+ * "Make bookable" can't hurt anyone, so it applies straight away. */
+function useBookableMenuItem() {
+  const setBookable = useSetBookable()
+  return (kind: EstateKind, id: string, label: string, isBookable: boolean) => isBookable
+    ? { label: 'Make not bookable', onClick: () => modals.notBookable({ kind, id, label }) }
+    : {
+        label: 'Make bookable',
+        onClick: () => setBookable.mutateAsync({ kind, id, isBookable: true }).then(
+          () => toast('ok', `${label} is bookable`, 'People can book it again.'),
+          (e) => { const { code, message } = errorText(e); toast('err', 'Request rejected', message, code) }),
+      }
 }
 
 function RegistryCard({ title, sub, addLabel, onAdd, children }: { title: string; sub: string; addLabel: string; onAdd: () => void; children: ReactNode }) {
@@ -46,7 +49,7 @@ function Actions({ children }: { children: ReactNode }) {
 
 export function BuildingsPage() {
   const q = useBuildings()
-  const toggle = useToggleStatus()
+  const bookableItem = useBookableMenuItem()
   const paging = useClientPaging(q.data ?? [])
   return (
     <section>
@@ -55,7 +58,7 @@ export function BuildingsPage() {
           <>
             <table className="grid">
               <thead>
-                <tr><th>ID</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Floors · Spaces</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>ID</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Floors · Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
               </thead>
               <tbody>
                 {paging.rows.map((b) => (
@@ -69,11 +72,11 @@ export function BuildingsPage() {
                     <td className="mono" style={{ fontSize: 12 }}>{pad(b.openHour)}:00–{pad(b.closeHour)}:00</td>
                     <td className="mono" style={{ fontSize: 12 }}>{b.minBookingMinutes}m–{b.maxBookingHours}h</td>
                     <td>{plural(b.floorCount, 'floor')}<div style={muted}>{plural(b.spaceCount, 'space')}</div></td>
-                    <td><EstatePill status={b.status} /></td>
+                    <td><BookablePill bookable={b.isBookable} /></td>
                     <Actions>
                       <RowMenu items={[
                         { label: 'Edit', onClick: () => modals.building(b) },
-                        { label: b.status === 'Active' ? 'Deactivate' : 'Activate', onClick: () => toggle('building', b.id, b.name, b.status, 'in it') },
+                        bookableItem('building', b.id, b.name, b.isBookable),
                         { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Building', scopeId: b.id, label: b.name }) },
                       ]} />
                     </Actions>
@@ -94,7 +97,7 @@ export function BuildingsPage() {
 export function FloorsPage() {
   const q = useFloors()
   const buildings = useBuildings()
-  const toggle = useToggleStatus()
+  const bookableItem = useBookableMenuItem()
   const paging = useClientPaging(q.data ?? [])
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
@@ -104,7 +107,7 @@ export function FloorsPage() {
           <>
             <table className="grid">
               <thead>
-                <tr><th>ID</th><th>Floor</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Spaces</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>ID</th><th>Floor</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
               </thead>
               <tbody>
                 {paging.rows.map((f) => {
@@ -124,11 +127,14 @@ export function FloorsPage() {
                         {b ? `${f.minBookingMinutesOverride ?? b.minBookingMinutes}m–${f.maxBookingHoursOverride ?? b.maxBookingHours}h` : '—'}
                       </td>
                       <td>{plural(f.spaceCount, 'space')}</td>
-                      <td><EstatePill status={f.status} /></td>
+                      <td>
+                        <BookablePill bookable={f.isBookable && !!b?.isBookable} />
+                        {f.isBookable && b && !b.isBookable && <div style={muted}>{b.name} is not bookable</div>}
+                      </td>
                       <Actions>
                         <RowMenu items={[
                           { label: 'Edit', onClick: () => modals.floor(f) },
-                          { label: f.status === 'Active' ? 'Deactivate' : 'Activate', onClick: () => toggle('floor', f.id, `Floor ${f.name}`, f.status, 'on it') },
+                          bookableItem('floor', f.id, `${f.buildingName} · Floor ${f.name}`, f.isBookable),
                           { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Floor', scopeId: f.id, label: `${f.buildingName} · Floor ${f.name}` }) },
                         ]} />
                       </Actions>
@@ -151,7 +157,7 @@ export function SpacesPage() {
   const buildings = useBuildings()
   const floors = useFloors()
   const types = useSpaceTypes()
-  const toggle = useToggleStatus()
+  const bookableItem = useBookableMenuItem()
   const [filters, setFilters] = useState<SpaceRegistryFilterValues>(EMPTY_SPACE_FILTERS)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
@@ -192,7 +198,7 @@ export function SpacesPage() {
         ) : (
           <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
             <thead>
-              <tr><th>ID</th><th>Space</th><th>Type</th><th>Location</th><th>Time zone</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+              <tr><th>ID</th><th>Space</th><th>Type</th><th>Location</th><th>Time zone</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
             </thead>
             <tbody>
               {q.data.items.map((s) => (
@@ -203,13 +209,14 @@ export function SpacesPage() {
                   <td>{s.buildingName}<div style={muted}>Floor {s.floorName}</div></td>
                   <td className="mono" style={{ fontSize: 11.5, color: 'var(--slate)' }}>{s.timeZone}</td>
                   <td>
-                    <EstatePill status={s.status} />
+                    <BookablePill bookable={s.canCurrentUserBook} reason={s.notBookableReason} />
+                    {s.isBookable && !s.canCurrentUserBook && <div style={{ ...muted, marginTop: 3 }}>blocked by its floor or building</div>}
                     <div style={{ ...muted, marginTop: 3 }}>{q.data.upcomingBookingCounts[s.id] ?? 0} upcoming</div>
                   </td>
                   <Actions>
                     <RowMenu items={[
                       { label: 'Edit', onClick: () => modals.space(s) },
-                      { label: s.status === 'Active' ? 'Deactivate' : 'Activate', onClick: () => toggle('space', s.id, s.name, s.status, 'here') },
+                      bookableItem('space', s.id, s.name, s.isBookable),
                       { label: 'Clean', onClick: () => modals.maintenance({ scopeType: 'Space', scopeId: s.id, label: s.name }) },
                     ]} />
                   </Actions>

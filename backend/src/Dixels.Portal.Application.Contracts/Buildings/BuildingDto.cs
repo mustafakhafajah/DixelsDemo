@@ -9,7 +9,7 @@ public class BuildingDto : EntityDto<Guid>
 {
     public string Name { get; set; } = null!;
     public string TimeZone { get; set; } = null!;
-    public EstateStatus Status { get; set; }
+    public bool IsBookable { get; set; } = true;
     public int OpenHour { get; set; }
     public int CloseHour { get; set; }
     public int MinBookingMinutes { get; set; }

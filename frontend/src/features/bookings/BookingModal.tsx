@@ -15,10 +15,10 @@ import { defaultRecurrence, OccurrenceList, RecurrenceFields, toRule, type Occur
 
 const newKey = () => `idem-${crypto.randomUUID()}`
 
+/* The server says exactly which level blocks it (space, floor or building). */
 function accessError(space: Space) {
   if (space.canCurrentUserBook) return null
-  if (space.status !== 'Active') return { code: 'space.inactive', message: 'This space is inactive and cannot be booked.' }
-  return { code: 'space.inactive', message: `${space.buildingName} or its floor is inactive and cannot be booked.` }
+  return { code: 'space.not_bookable', message: space.notBookableReason ?? `${space.name} is not bookable.` }
 }
 
 export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; editing: Booking | null }) {

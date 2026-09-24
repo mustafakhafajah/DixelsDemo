@@ -97,18 +97,22 @@ public class BookingManager : DomainService
 
     public static bool CanBook(SpaceContext ctx) => FindBookingBlocker(ctx) == null;
 
-    /* The one list of reasons a space can't be booked, shared by the yes/no check and the throwing check. */
+    /* The sentence the UI shows next to a space that can't be booked, e.g. "HQ North is not bookable". */
+    public static string? FindNotBookableReason(SpaceContext ctx) => FindBookingBlocker(ctx)?.Message;
+
+    /* The one list of reasons a space can't be booked, shared by the yes/no check, the reason text and the
+     * throwing check. The building is checked first, so the message names the level that actually blocks it. */
     private static BusinessException? FindBookingBlocker(SpaceContext ctx)
     {
-        if (ctx.Building.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.BuildingInactive,
-                $"{ctx.Building.Name} is inactive and cannot be booked.");
-        if (ctx.Floor != null && ctx.Floor.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.FloorInactive,
-                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is inactive and cannot be booked.");
-        if (ctx.Space.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.SpaceInactive,
-                "This space is inactive and cannot be booked.");
+        if (!ctx.Building.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.BuildingNotBookable,
+                $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.");
+        if (ctx.Floor != null && !ctx.Floor.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.FloorNotBookable,
+                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.");
+        if (!ctx.Space.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.SpaceNotBookable,
+                $"{ctx.Space.Name} is not bookable.");
         return null;
     }
 

@@ -11,7 +11,7 @@ public class CreateUpdateBuildingDto
     public string Name { get; set; } = null!;
     [Required, StringLength(BuildingConsts.MaxTimeZoneLength)]
     public string TimeZone { get; set; } = "UTC";
-    public EstateStatus Status { get; set; }
+    public bool IsBookable { get; set; } = true;
     [Range(0, 23)] public int OpenHour { get; set; } = BuildingConsts.DefaultOpenHour;
     [Range(1, 24)] public int CloseHour { get; set; } = BuildingConsts.DefaultCloseHour;
     [Range(5, 1440)] public int MinBookingMinutes { get; set; } = BuildingConsts.DefaultMinBookingMinutes;

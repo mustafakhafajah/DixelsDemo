@@ -46,8 +46,8 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 6px' }}>
-        <img src={dixelsLogo} alt="Dixels" style={{ height: 20, width: 'auto', display: 'block' }} />
+      <div className="sidebar-logo">
+        <img src={dixelsLogo} alt="Dixels" />
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -58,13 +58,13 @@ function Sidebar() {
         <div>
           <NavLink to="/app/bookings" className={navClass}>
             {Icon.bookings}
-            <span>{session.isAdmin ? 'All bookings' : 'My Schedule'}</span>
+            <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
             <span className="nav-count">{upcoming ?? ''}</span>
           </NavLink>
           {session.isAdmin && (
             <div>
               <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
-              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid rgba(255,255,255,.09)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
+              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid rgba(255,255,255,.2)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
                 <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.status === 'Active').length ?? ''}</span></NavLink>
@@ -75,12 +75,12 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 13 }}>
+      <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,.2)', paddingTop: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
           <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
-            <div style={{ fontSize: 11, color: '#69737C' }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.62)' }}>
               {session.isAdmin ? 'Space administrator' : 'Booking user'}
             </div>
           </div>
@@ -98,7 +98,7 @@ function Topbar() {
   const { isAdmin } = useSession()
   const view = pathname.split('/')[2] || 'find'
   const meta = PAGE_META[view] ?? PAGE_META.find
-  const title = view === 'bookings' ? (isAdmin ? 'All bookings' : 'My Schedule')
+  const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule')
     : view === 'dashboard' ? (isAdmin ? 'Estate dashboard' : 'Dashboard') : meta[0]
   return (
     <header className="topbar">

@@ -2,7 +2,7 @@
 .app-shell {
   --ink: #161b22; --paper: #f2f3f1; --surface: #ffffff; --surface-2: #fafaf9;
   --line: #dce0db; --line-strong: #c3c9c1;
-  --accent: #9c6ca4; --accent-dark: #7a4d82; --accent-soft: #f5eef6;
+  --accent: #9c6ca4; --accent-dark: #7a4d82; --accent-soft: #f5eef6; --grape: #6f2da8;
   --copper: #a97425; --copper-soft: #faf1e3;
   --rust: #a5402f; --rust-soft: #faeae7; --rust-line: #e6bdb3;
   --slate: #5c6670; --slate-2: #8a939b;
@@ -26,14 +26,18 @@
 .app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-ligatures: none; }
 
 /* ── SHELL ── */
-.app-shell .sidebar { background: #0d0d10; color: #e4e7e4; display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; }
-.app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: #69737c; padding: 0 10px; margin: 0 0 6px; }
-.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: #aeb6be; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
-.app-shell .nav-link:hover { background: rgba(255,255,255,.06); color: #fff; }
-.app-shell .nav-link.active { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
+/* Grape sidebar; text colours are soft whites so they read on it. */
+.app-shell .sidebar { background: var(--grape); color: #f6eef8; display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; }
+.app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: rgba(255,255,255,.62); padding: 0 10px; margin: 0 0 6px; }
+.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 7px; font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,.82); cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
+.app-shell .nav-link:hover { background: rgba(255,255,255,.1); color: #fff; }
+.app-shell .nav-link.active { background: rgba(255,255,255,.18); color: #fff; font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; opacity: .8; }
-.app-shell .nav-link.active svg { opacity: 1; color: #c9a8ce; }
-.app-shell .nav-count { margin-left: auto; font-size: 11px; color: #69737c; font-family: 'IBM Plex Mono', monospace; }
+.app-shell .nav-link.active svg { opacity: 1; color: #fff; }
+.app-shell .nav-count { margin-left: auto; font-size: 11px; color: rgba(255,255,255,.62); font-family: 'IBM Plex Mono', monospace; }
+/* The logo's wordmark is dark purple, so it sits on a light badge to stay readable on grape. */
+.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; background: #fff; border-radius: 9px; padding: 7px 11px; }
+.app-shell .sidebar-logo img { height: 40px; width: auto; display: block; }
 .app-shell .nav-primary { font-size: 14px; padding: 11px 10px; }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
 .app-shell .avatar.admin { background: var(--ink); }

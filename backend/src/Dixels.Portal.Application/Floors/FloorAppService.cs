@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
+using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;

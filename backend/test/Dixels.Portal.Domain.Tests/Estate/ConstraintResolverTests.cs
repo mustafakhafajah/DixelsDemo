@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Spaces;
 using Shouldly;
 using Xunit;
 

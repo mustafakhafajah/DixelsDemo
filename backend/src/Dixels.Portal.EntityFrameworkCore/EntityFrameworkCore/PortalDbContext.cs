@@ -2,6 +2,7 @@
 using Dixels.Portal.EntityFrameworkCore.Configurations;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Spaces;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -90,19 +91,7 @@ public class PortalDbContext :
     {
         builder.ApplyConfiguration(new BuildingConfiguration());
         builder.ApplyConfiguration(new FloorConfiguration());
-
-        builder.Entity<Space>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Spaces", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
-            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
-            b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
-            b.HasIndex(x => x.Name).IsUnique();
-            b.HasIndex(x => new { x.BuildingId, x.FloorId, x.Status });
-            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
-            b.HasOne<Floor>().WithMany().HasForeignKey(x => x.FloorId).OnDelete(DeleteBehavior.Restrict);
-        });
+        builder.ApplyConfiguration(new SpaceConfiguration());
 
         builder.Entity<Booking>(b =>
         {

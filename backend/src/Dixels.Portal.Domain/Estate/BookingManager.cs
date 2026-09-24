@@ -3,16 +3,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Spaces;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Estate;
-
-public record SpaceContext(Space Space, Floor? Floor, Building Building)
-{
-    public ResolvedConstraints Constraints => ConstraintResolver.Resolve(Building, Floor, Space);
-}
 
 /* Booking business rules, ported from the mock's api.js rules engine. */
 public class BookingManager : DomainService

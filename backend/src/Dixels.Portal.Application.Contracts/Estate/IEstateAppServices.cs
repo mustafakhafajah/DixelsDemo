@@ -5,15 +5,6 @@ using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.Estate;
 
-public interface ISpaceAppService : IApplicationService
-{
-    Task<ListResultDto<SpaceDto>> GetListAsync();
-    Task<SpaceDto> GetAsync(Guid id);
-    Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input);
-    Task<SpaceDto> UpdateAsync(Guid id, CreateUpdateSpaceDto input);
-    Task<SpaceDto> SetStatusAsync(Guid id, SetStatusDto input);
-}
-
 public interface IBookingAppService : IApplicationService
 {
     Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input);

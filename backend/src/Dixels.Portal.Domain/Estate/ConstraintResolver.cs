@@ -1,17 +1,8 @@
-using System.Collections.Generic;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Spaces;
 
 namespace Dixels.Portal.Estate;
-
-public record ResolvedConstraints(
-    int OpenMinute,
-    int CloseMinute,
-    int MinBookingMinutes,
-    int MaxBookingHours,
-    IReadOnlyList<System.DateOnly> Holidays);
-
-public record ResolvedBounds(int OpenHour, int CloseHour, int MinBookingMinutes, int MaxBookingHours);
 
 /* Space overrides Floor overrides Building (mock: resolveConstraints / resolvedBounds). */
 public static class ConstraintResolver

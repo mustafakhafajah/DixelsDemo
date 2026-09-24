@@ -199,15 +199,22 @@ public class PortalDbMigrationService : ITransientDependency
             .FirstOrDefault(d => d.EndsWith(".EntityFrameworkCore"));
     }
 
-    private string? GetSolutionDirectoryPath()
+    private string? GetSolutionDirectoryPath() => FindSolutionDirectory(Directory.GetCurrentDirectory());
+
+    /* The template only looked for .sln; this solution uses the newer .slnx format, so accept both.
+     * Extensions are compared exactly, so files like "X.sln.DotSettings" don't count. */
+    private static readonly string[] SolutionFileExtensions = { ".sln", ".slnx" };
+
+    internal static string? FindSolutionDirectory(string startDirectory)
     {
-        var currentDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        var currentDirectory = new DirectoryInfo(startDirectory);
 
         while (currentDirectory != null && Directory.GetParent(currentDirectory.FullName) != null)
         {
             currentDirectory = Directory.GetParent(currentDirectory.FullName);
 
-            if (currentDirectory != null && Directory.GetFiles(currentDirectory.FullName).FirstOrDefault(f => f.EndsWith(".sln")) != null)
+            if (currentDirectory != null && Directory.EnumerateFiles(currentDirectory.FullName)
+                    .Any(f => SolutionFileExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)))
             {
                 return currentDirectory.FullName;
             }

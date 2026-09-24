@@ -83,12 +83,6 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
         onClick={() => modals.booking({ spaceId: single?.id, start: dayAt(key, 9, 0), end: dayAt(key, 10, 0) })}>
         New booking on this day
       </button>
-      {session.isAdmin && scheduleId === 'adm' && single && (
-        <button type="button" className="btn" style={{ marginTop: 10, width: '100%' }}
-          onClick={() => modals.maintenance({ scopeType: 'Space', scopeId: single.id, label: single.name })}>
-          Schedule cleaning
-        </button>
-      )}
     </Drawer>
   )
 }

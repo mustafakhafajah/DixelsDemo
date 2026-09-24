@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from './client'
 import {
@@ -15,6 +15,7 @@ import {
   type MaintenanceScopeType,
   type Profile,
   type Space,
+  type SpaceRegistryPage,
   type SpaceType,
   type UserLookup,
   type Window,
@@ -73,6 +74,36 @@ export function useSpaces() {
     queryKey: ['spaces'],
     queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space')).items,
     enabled: useEnabled(),
+  })
+}
+
+export interface SpaceRegistryQuery {
+  page: number
+  pageSize: number
+  code?: string
+  buildingId?: string
+  floorId?: string
+  name?: string
+  type?: SpaceType
+}
+
+/* Server-side paged and filtered, so the registry stays fast with thousands of spaces. */
+export function useSpaceRegistry(q: SpaceRegistryQuery) {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['spaces', 'registry', q],
+    queryFn: () => api<SpaceRegistryPage>('GET', '/api/app/space/paged-list', undefined, {
+      SkipCount: (q.page - 1) * q.pageSize,
+      MaxResultCount: q.pageSize,
+      Code: q.code,
+      BuildingId: q.buildingId,
+      FloorId: q.floorId,
+      Name: q.name,
+      Type: q.type,
+    }),
+    enabled: useEnabled(),
+    /* Keep showing the current page while the next one loads, instead of flashing "Loading…". */
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -150,7 +181,8 @@ function useInvalidate() {
   return (keys: string[][]) => Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: k })))
 }
 
-const BOOKING_KEYS = [['bookings'], ['booking']]
+/* The space registry shows upcoming-booking counts, so booking changes refresh it too. */
+const BOOKING_KEYS = [['bookings'], ['booking'], ['spaces', 'registry']]
 
 export interface CreateBookingInput {
   spaceId: string

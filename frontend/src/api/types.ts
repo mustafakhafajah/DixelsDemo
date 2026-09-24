@@ -132,6 +132,15 @@ export interface ListResult<T> {
   items: T[]
 }
 
+export interface PagedResult<T> extends ListResult<T> {
+  totalCount: number
+}
+
+/* One page of the admin space registry (GET /api/app/space/paged-list). */
+export interface SpaceRegistryPage extends PagedResult<Space> {
+  upcomingBookingCounts: Record<string, number>
+}
+
 export interface Window {
   startUtc: string
   endUtc: string

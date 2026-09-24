@@ -20,38 +20,26 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const store = useScheduleStore()
   const cfg = store.configs[id]
   const session = useSession()
-  const users = useUsers(id === 'my' && session.isAdmin)
+  const users = useUsers(session.isAdmin)
 
   return (
     <div className="sched-toolbar">
-      {id === 'my' ? (
-        <>
-          <div style={{ minWidth: 230 }}>
-            <label className="lbl" htmlFor="my-space">Space</label>
-            <select id="my-space" className="inp" value={cfg.spaceId} onChange={(e) => store.patch(id, { spaceId: e.target.value })}>
-              <option value="all">All my spaces</option>
-              {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          {session.isAdmin && (
-            <div>
-              <label className="lbl" htmlFor="my-user">User</label>
-              <select id="my-user" className="inp" style={{ width: 170 }} value={cfg.userId ?? session.userId}
-                onChange={(e) => store.patch(id, { userId: e.target.value === session.userId ? null : e.target.value })}>
-                {(users.data ?? []).map((u) => (
-                  <option key={u.id} value={u.id}>{u.id === session.userId ? 'You' : u.name}{u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}</option>
-                ))}
-                {!users.data && <option value={session.userId}>You</option>}
-              </select>
-            </div>
-          )}
-        </>
-      ) : (
-        <div style={{ minWidth: 230 }}>
-          <label className="lbl" htmlFor="adm-space">Inspect a space's schedule</label>
-          <select id="adm-space" className="inp" value={cfg.spaceId} onChange={(e) => store.patch(id, { spaceId: e.target.value })}>
-            <option value="">Choose a space…</option>
-            {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}{s.status !== 'Active' ? ' — inactive' : ''}</option>)}
+      <div style={{ minWidth: 230 }}>
+        <label className="lbl" htmlFor="my-space">Space</label>
+        <select id="my-space" className="inp" value={cfg.spaceId} onChange={(e) => store.patch(id, { spaceId: e.target.value })}>
+          <option value="all">All my spaces</option>
+          {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+      {session.isAdmin && (
+        <div>
+          <label className="lbl" htmlFor="my-user">User</label>
+          <select id="my-user" className="inp" style={{ width: 170 }} value={cfg.userId ?? session.userId}
+            onChange={(e) => store.patch(id, { userId: e.target.value === session.userId ? null : e.target.value })}>
+            {(users.data ?? []).map((u) => (
+              <option key={u.id} value={u.id}>{u.id === session.userId ? 'You' : u.name}{u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}</option>
+            ))}
+            {!users.data && <option value={session.userId}>You</option>}
           </select>
         </div>
       )}

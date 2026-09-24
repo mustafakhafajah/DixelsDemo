@@ -188,13 +188,5 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
 }
 
 export function ScheduleCalendar({ id, data }: { id: ScheduleId; data: ScheduleData }) {
-  if (data.needsPick) {
-    return (
-      <div className="sched-empty">
-        <p>Pick a space to see its schedule</p>
-        <p>Use the dropdown above to choose one.</p>
-      </div>
-    )
-  }
   return data.cfg.mode === 'month' ? <MonthView id={id} data={data} /> : <TimeGridView id={id} data={data} />
 }

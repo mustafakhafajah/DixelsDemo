@@ -7,7 +7,7 @@ export interface BookingPrefill {
   end?: Date
 }
 
-export type ScheduleId = 'my' | 'adm'
+export type ScheduleId = 'my'
 
 export interface MaintenanceTarget {
   scopeType: MaintenanceScopeType

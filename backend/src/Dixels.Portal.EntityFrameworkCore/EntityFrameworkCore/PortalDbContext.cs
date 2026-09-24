@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dixels.Portal.Estate;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore.Modeling;
 using Volo.Abp.FeatureManagement.EntityFrameworkCore;
 using Volo.Abp.Identity;
 using Volo.Abp.Identity.EntityFrameworkCore;
@@ -23,7 +25,11 @@ public class PortalDbContext :
     IIdentityDbContext,
     ITenantManagementDbContext
 {
-    /* Add DbSet properties for your Aggregate Roots / Entities here. */
+    public DbSet<Building> Buildings { get; set; }
+    public DbSet<Floor> Floors { get; set; }
+    public DbSet<Space> Spaces { get; set; }
+    public DbSet<Booking> Bookings { get; set; }
+    public DbSet<MaintenanceWindow> MaintenanceWindows { get; set; }
 
     #region Entities from the modules
 
@@ -74,13 +80,64 @@ public class PortalDbContext :
         builder.ConfigureFeatureManagement();
         builder.ConfigureTenantManagement();
 
-        /* Configure your own tables/entities inside here */
+        ConfigureEstate(builder);
+    }
 
-        //builder.Entity<YourEntity>(b =>
-        //{
-        //    b.ToTable(PortalConsts.DbTablePrefix + "YourEntities", PortalConsts.DbSchema);
-        //    b.ConfigureByConvention(); //auto configure for the base class props
-        //    //...
-        //});
+    private static void ConfigureEstate(ModelBuilder builder)
+    {
+        builder.Entity<Building>(b =>
+        {
+            b.ToTable(PortalConsts.DbTablePrefix + "Buildings", PortalConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
+            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
+            b.Property(x => x.Holidays).HasColumnType("date[]");
+            b.HasIndex(x => x.Name).IsUnique();
+        });
+
+        builder.Entity<Floor>(b =>
+        {
+            b.ToTable(PortalConsts.DbTablePrefix + "Floors", PortalConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxFloorNameLength);
+            b.HasIndex(x => new { x.BuildingId, x.Name }).IsUnique();
+            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Space>(b =>
+        {
+            b.ToTable(PortalConsts.DbTablePrefix + "Spaces", PortalConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
+            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
+            b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
+            b.HasIndex(x => x.Name).IsUnique();
+            b.HasIndex(x => new { x.BuildingId, x.FloorId, x.Status });
+            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Floor>().WithMany().HasForeignKey(x => x.FloorId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Booking>(b =>
+        {
+            b.ToTable(PortalConsts.DbTablePrefix + "Bookings", PortalConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.IdempotencyKey).HasMaxLength(EstateConsts.MaxIdempotencyKeyLength);
+            b.HasIndex(x => new { x.SpaceId, x.Status, x.StartUtc, x.EndUtc });
+            b.HasIndex(x => new { x.OwnerUserId, x.Status, x.StartUtc, x.EndUtc });
+            b.HasIndex(x => x.SeriesId);
+            b.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<MaintenanceWindow>(b =>
+        {
+            b.ToTable(PortalConsts.DbTablePrefix + "MaintenanceWindows", PortalConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
+            b.HasIndex(x => new { x.SpaceId, x.Status, x.StartUtc, x.EndUtc });
+            b.HasIndex(x => x.SeriesId);
+            b.HasIndex(x => new { x.ScopeType, x.ScopeId });
+            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

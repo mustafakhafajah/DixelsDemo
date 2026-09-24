@@ -104,8 +104,28 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             );
         }
 
+        // SPA Client (Portal_App)
+        var appClientId = configurationSection["Portal_App:ClientId"];
+        if (!appClientId.IsNullOrWhiteSpace())
+        {
+            var appRootUrl = configurationSection["Portal_App:RootUrl"]!.EnsureEndsWith('/');
 
-
+            /* Public SPA client using Authorization Code + PKCE only (no client secret,
+             * no Implicit flow) — this is the client the React app authenticates through. */
+            await CreateApplicationAsync(
+                name: appClientId!,
+                type: OpenIddictConstants.ClientTypes.Public,
+                consentType: OpenIddictConstants.ConsentTypes.Implicit,
+                displayName: "Portal SPA",
+                secret: null,
+                grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode },
+                scopes: commonScopes,
+                redirectUri: $"{appRootUrl}callback",
+                clientUri: appRootUrl,
+                postLogoutRedirectUri: appRootUrl,
+                requirePkce: true
+            );
+        }
 
 
         // Swagger Client
@@ -139,7 +159,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         string? clientUri = null,
         string? redirectUri = null,
         string? postLogoutRedirectUri = null,
-        List<string>? permissions = null)
+        List<string>? permissions = null,
+        bool requirePkce = false)
     {
         if (!string.IsNullOrEmpty(secret) && string.Equals(type, OpenIddictConstants.ClientTypes.Public,
                 StringComparison.OrdinalIgnoreCase))
@@ -182,6 +203,11 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         if (!redirectUri.IsNullOrWhiteSpace() || !postLogoutRedirectUri.IsNullOrWhiteSpace())
         {
             application.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
+        }
+
+        if (requirePkce)
+        {
+            application.Requirements.Add(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
         }
 
         var buildInGrantTypes = new[] {

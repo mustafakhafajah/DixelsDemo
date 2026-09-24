@@ -4,6 +4,14 @@
     "AppName": "Portal",
     "Menu:Home": "Home",
     "Welcome": "Welcome",
-    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
+    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
+    "Permission:Portal": "Dixels portal",
+    "Permission:Buildings": "Buildings",
+    "Permission:Floors": "Floors",
+    "Permission:Spaces": "Spaces",
+    "Permission:Bookings": "Bookings",
+    "Permission:Maintenance": "Maintenance",
+    "Permission:Manage": "Manage",
+    "Permission:ManageAll": "Manage everyone's"
   }
 }

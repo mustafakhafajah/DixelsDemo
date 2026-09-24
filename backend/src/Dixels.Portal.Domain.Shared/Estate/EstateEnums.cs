@@ -3,13 +3,6 @@ using System.Text.Json.Serialization;
 namespace Dixels.Portal.Estate;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum EstateStatus
-{
-    Active = 0,
-    Inactive = 1
-}
-
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SpaceType
 {
     MeetingRoom = 0,

@@ -5,15 +5,6 @@ using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.Estate;
 
-public interface IBuildingAppService : IApplicationService
-{
-    Task<ListResultDto<BuildingDto>> GetListAsync();
-    Task<BuildingDto> GetAsync(Guid id);
-    Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input);
-    Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input);
-    Task<BuildingDto> SetStatusAsync(Guid id, SetStatusDto input);
-}
-
 public interface IFloorAppService : IApplicationService
 {
     Task<ListResultDto<FloorDto>> GetListAsync(Guid? buildingId);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Dixels.Portal.Buildings;
 
 namespace Dixels.Portal.Estate;
 

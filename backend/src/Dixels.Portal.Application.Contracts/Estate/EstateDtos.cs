@@ -5,34 +5,6 @@ using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Portal.Estate;
 
-public class BuildingDto : EntityDto<Guid>
-{
-    public string Name { get; set; } = null!;
-    public string TimeZone { get; set; } = null!;
-    public EstateStatus Status { get; set; }
-    public int OpenHour { get; set; }
-    public int CloseHour { get; set; }
-    public int MinBookingMinutes { get; set; }
-    public int MaxBookingHours { get; set; }
-    public List<DateOnly> Holidays { get; set; } = new();
-    public int FloorCount { get; set; }
-    public int SpaceCount { get; set; }
-}
-
-public class CreateUpdateBuildingDto
-{
-    [Required, StringLength(EstateConsts.MaxNameLength)]
-    public string Name { get; set; } = null!;
-    [Required, StringLength(EstateConsts.MaxTimeZoneLength)]
-    public string TimeZone { get; set; } = "UTC";
-    public EstateStatus Status { get; set; }
-    [Range(0, 23)] public int OpenHour { get; set; } = EstateConsts.DefaultOpenHour;
-    [Range(1, 24)] public int CloseHour { get; set; } = EstateConsts.DefaultCloseHour;
-    [Range(5, 1440)] public int MinBookingMinutes { get; set; } = EstateConsts.DefaultMinBookingMinutes;
-    [Range(1, 24)] public int MaxBookingHours { get; set; } = EstateConsts.DefaultMaxBookingHours;
-    public List<DateOnly> Holidays { get; set; } = new();
-}
-
 public class FloorDto : EntityDto<Guid>
 {
     public Guid BuildingId { get; set; }

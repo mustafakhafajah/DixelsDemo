@@ -4,25 +4,6 @@ using Volo.Abp.Domain.Entities.Auditing;
 
 namespace Dixels.Portal.Estate;
 
-public class Building : FullAuditedAggregateRoot<Guid>
-{
-    public string Name { get; set; } = null!;
-    public string TimeZone { get; set; } = "UTC";
-    public EstateStatus Status { get; set; }
-    public int OpenHour { get; set; } = EstateConsts.DefaultOpenHour;
-    public int CloseHour { get; set; } = EstateConsts.DefaultCloseHour;
-    public int MinBookingMinutes { get; set; } = EstateConsts.DefaultMinBookingMinutes;
-    public int MaxBookingHours { get; set; } = EstateConsts.DefaultMaxBookingHours;
-    public List<DateOnly> Holidays { get; set; } = new();
-
-    protected Building() { }
-
-    public Building(Guid id, string name) : base(id)
-    {
-        Name = name;
-    }
-}
-
 public class Floor : FullAuditedAggregateRoot<Guid>
 {
     public Guid BuildingId { get; set; }

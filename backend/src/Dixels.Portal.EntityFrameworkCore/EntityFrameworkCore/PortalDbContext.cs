@@ -1,4 +1,6 @@
-﻿using Dixels.Portal.Estate;
+﻿using Dixels.Portal.Buildings;
+using Dixels.Portal.EntityFrameworkCore.Configurations;
+using Dixels.Portal.Estate;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -85,15 +87,7 @@ public class PortalDbContext :
 
     private static void ConfigureEstate(ModelBuilder builder)
     {
-        builder.Entity<Building>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Buildings", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
-            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
-            b.Property(x => x.Holidays).HasColumnType("date[]");
-            b.HasIndex(x => x.Name).IsUnique();
-        });
+        builder.ApplyConfiguration(new BuildingConfiguration());
 
         builder.Entity<Floor>(b =>
         {

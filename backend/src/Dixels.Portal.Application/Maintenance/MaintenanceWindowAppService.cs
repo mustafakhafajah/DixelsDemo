@@ -3,36 +3,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Bookings;
-using Dixels.Portal.Buildings;
 using Dixels.Portal.Common;
-using Dixels.Portal.Floors;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
-using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Maintenance;
 
 [Authorize]
 public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWindowAppService
 {
     private readonly IRepository<MaintenanceWindow, Guid> _maintenance;
     private readonly IRepository<Booking, Guid> _bookings;
-    private readonly IRepository<Space, Guid> _spaces;
-    private readonly IRepository<Floor, Guid> _floors;
-    private readonly IRepository<Building, Guid> _buildings;
+    private readonly MaintenanceScopeResolver _scopes;
+    private readonly MaintenanceWindowDtoMapper _mapper;
 
     public MaintenanceWindowAppService(IRepository<MaintenanceWindow, Guid> maintenance,
-        IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors,
-        IRepository<Building, Guid> buildings)
+        IRepository<Booking, Guid> bookings, MaintenanceScopeResolver scopes, MaintenanceWindowDtoMapper mapper)
     {
         _maintenance = maintenance;
         _bookings = bookings;
-        _spaces = spaces;
-        _floors = floors;
-        _buildings = buildings;
+        _scopes = scopes;
+        _mapper = mapper;
     }
 
     public async Task<ListResultDto<MaintenanceWindowDto>> GetListAsync(MaintenanceListFilterDto input)
@@ -43,16 +38,15 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
         if (input.FromUtc.HasValue) query = query.Where(m => m.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(m => m.StartUtc < input.ToUtc.Value);
         var list = await AsyncExecuter.ToListAsync(query.OrderBy(m => m.StartUtc));
-        return new ListResultDto<MaintenanceWindowDto>(await MapManyAsync(list));
+        return new ListResultDto<MaintenanceWindowDto>(await _mapper.MapListAsync(list));
     }
 
-    public async Task<MaintenanceWindowDto> GetAsync(Guid id)
-        => (await MapManyAsync(new() { await GetWindowAsync(id) }))[0];
+    public async Task<MaintenanceWindowDto> GetAsync(Guid id) => await _mapper.MapAsync(await GetWindowAsync(id));
 
     [Authorize(PortalPermissions.Maintenance.Manage)]
     public async Task<AffectedBookingsPreviewDto> PreviewAffectedBookingsAsync(PreviewMaintenanceDto input)
     {
-        var spaceIds = await ResolveScopeAsync(input.ScopeType, input.ScopeId);
+        var spaceIds = await _scopes.GetSpaceIdsAsync(input.ScopeType, input.ScopeId);
         var result = new AffectedBookingsPreviewDto { SpaceCount = spaceIds.Count };
         foreach (var o in input.Occurrences)
         {
@@ -67,7 +61,7 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
     [Authorize(PortalPermissions.Maintenance.Manage)]
     public async Task<ScheduleMaintenanceResultDto> ScheduleAsync(ScheduleMaintenanceDto input)
     {
-        var spaceIds = await ResolveScopeAsync(input.ScopeType, input.ScopeId);
+        var spaceIds = await _scopes.GetSpaceIdsAsync(input.ScopeType, input.ScopeId);
         foreach (var o in input.Occurrences)
         {
             if (o.StartUtc == default || o.EndUtc == default)
@@ -110,71 +104,14 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
             m.Status = MaintenanceStatus.Cancelled;
             await _maintenance.UpdateAsync(m, autoSave: true);
         }
-        return (await MapManyAsync(new() { m }))[0];
+        return await _mapper.MapAsync(m);
     }
 
     private async Task<MaintenanceWindow> GetWindowAsync(Guid id)
         => await _maintenance.FindAsync(id)
            ?? throw new BusinessException(PortalDomainErrorCodes.MaintenanceNotFound, "No cleaning entry with that ID.");
 
-    private async Task<List<Guid>> ResolveScopeAsync(MaintenanceScopeType type, Guid scopeId)
-    {
-        var ids = type switch
-        {
-            MaintenanceScopeType.Space => await _spaces.AnyAsync(s => s.Id == scopeId) ? new List<Guid> { scopeId } : new(),
-            MaintenanceScopeType.Floor => (await _spaces.GetListAsync(s => s.FloorId == scopeId)).Select(s => s.Id).ToList(),
-            _ => (await _spaces.GetListAsync(s => s.BuildingId == scopeId)).Select(s => s.Id).ToList(),
-        };
-        if (ids.Count == 0)
-            throw new BusinessException(PortalDomainErrorCodes.SpaceNotFound, "That scope has no spaces to clean.");
-        return ids;
-    }
-
     private async Task<int> CountAffectedAsync(List<Guid> spaceIds, DateTime s, DateTime e)
         => await _bookings.CountAsync(new OverlappingBookingsSpecification(s, e)
             .ToExpression().And(b => spaceIds.Contains(b.SpaceId)));
-
-    private async Task<string> ScopeLabelAsync(MaintenanceScopeType type, Guid scopeId)
-    {
-        switch (type)
-        {
-            case MaintenanceScopeType.Space:
-                return (await _spaces.FindAsync(scopeId))?.Name ?? "a space";
-            case MaintenanceScopeType.Floor:
-                var f = await _floors.FindAsync(scopeId);
-                if (f == null) return "a floor";
-                var fb = await _buildings.FindAsync(f.BuildingId);
-                return $"{fb?.Name} · Floor {f.Name}";
-            default:
-                return (await _buildings.FindAsync(scopeId))?.Name ?? "a building";
-        }
-    }
-
-    private async Task<List<MaintenanceWindowDto>> MapManyAsync(List<MaintenanceWindow> list)
-    {
-        if (list.Count == 0) return new();
-        var spaceIds = list.Select(m => m.SpaceId).Distinct().ToList();
-        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.Name);
-        var labels = new Dictionary<(MaintenanceScopeType, Guid), string>();
-        foreach (var key in list.Select(m => (m.ScopeType, m.ScopeId)).Distinct())
-            labels[key] = await ScopeLabelAsync(key.ScopeType, key.ScopeId);
-        var now = Clock.Now;
-        return list.Select(m => new MaintenanceWindowDto
-        {
-            Id = m.Id,
-            SpaceId = m.SpaceId,
-            SpaceName = spaces.GetValueOrDefault(m.SpaceId, "Unknown space"),
-            StartUtc = m.StartUtc,
-            EndUtc = m.EndUtc,
-            Note = m.Note,
-            SeriesId = m.SeriesId,
-            ScopeType = m.ScopeType,
-            ScopeId = m.ScopeId,
-            ScopeLabel = labels[(m.ScopeType, m.ScopeId)],
-            Status = m.Status,
-            Lifecycle = m.GetLifecycle(now),
-            CreationTime = m.CreationTime,
-            CreatorId = m.CreatorId,
-        }).ToList();
-    }
 }

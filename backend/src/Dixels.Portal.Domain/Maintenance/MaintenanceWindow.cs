@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
+using Dixels.Portal.Estate;
 using Volo.Abp.Domain.Entities.Auditing;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Maintenance;
 
 public class MaintenanceWindow : FullAuditedAggregateRoot<Guid>
 {
@@ -27,10 +27,5 @@ public class MaintenanceWindow : FullAuditedAggregateRoot<Guid>
     }
 
     public string GetLifecycle(DateTime nowUtc)
-    {
-        if (Status == MaintenanceStatus.Cancelled) return "cancelled";
-        if (EndUtc <= nowUtc) return "ended";
-        if (StartUtc <= nowUtc) return "in_progress";
-        return "scheduled";
-    }
+        => TimeWindowLifecycle.Get(Status == MaintenanceStatus.Cancelled, StartUtc, EndUtc, nowUtc);
 }

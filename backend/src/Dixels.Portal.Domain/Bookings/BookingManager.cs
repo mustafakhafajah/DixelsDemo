@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -113,9 +114,8 @@ public class BookingManager : DomainService
 
     public async Task EnsureNoMaintenanceAsync(SpaceContext ctx, DateTime startUtc, DateTime endUtc)
     {
-        var m = await _maintenance.FirstOrDefaultAsync(x =>
-            x.SpaceId == ctx.Space.Id && x.Status == MaintenanceStatus.Active &&
-            x.StartUtc < endUtc && startUtc < x.EndUtc);
+        var m = await _maintenance.FirstOrDefaultAsync(new OverlappingMaintenanceSpecification(startUtc, endUtc)
+            .ToExpression().And(x => x.SpaceId == ctx.Space.Id));
         if (m != null)
             throw new BusinessException(PortalDomainErrorCodes.SpaceUnderMaintenance,
                     $"{ctx.Space.Name} is scheduled for cleaning {Hm(m.StartUtc)}–{Hm(m.EndUtc)} and can't be booked then.")

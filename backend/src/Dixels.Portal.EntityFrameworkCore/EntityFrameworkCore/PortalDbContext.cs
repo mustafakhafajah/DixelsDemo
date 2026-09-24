@@ -1,8 +1,8 @@
 ﻿using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.EntityFrameworkCore.Configurations;
-using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
@@ -94,16 +94,6 @@ public class PortalDbContext :
         builder.ApplyConfiguration(new FloorConfiguration());
         builder.ApplyConfiguration(new SpaceConfiguration());
         builder.ApplyConfiguration(new BookingConfiguration());
-
-        builder.Entity<MaintenanceWindow>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "MaintenanceWindows", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
-            b.HasIndex(x => new { x.SpaceId, x.Status, x.StartUtc, x.EndUtc });
-            b.HasIndex(x => x.SeriesId);
-            b.HasIndex(x => new { x.ScopeType, x.ScopeId });
-            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
-        });
+        builder.ApplyConfiguration(new MaintenanceWindowConfiguration());
     }
 }

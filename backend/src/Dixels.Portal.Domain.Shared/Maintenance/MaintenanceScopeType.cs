@@ -1,13 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Dixels.Portal.Estate;
-
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MaintenanceStatus
-{
-    Active = 0,
-    Cancelled = 1
-}
+namespace Dixels.Portal.Maintenance;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MaintenanceScopeType

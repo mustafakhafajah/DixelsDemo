@@ -27,10 +27,11 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
     <aside className="card find-filters">
       <div>
         <h3>When</h3>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input type="date" className="inp mono" style={{ flex: 1 }} value={f.date} aria-label="Date"
+        {/* Stacked, one per row, so neither field is squeezed in the narrow filter column. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input type="date" className="inp mono" value={f.date} aria-label="Date"
             onChange={(e) => f.patch({ date: e.target.value || todayKey() })} />
-          <input type="time" className="inp mono" style={{ flex: 1 }} value={minLabel(f.time)} aria-label="Start time"
+          <input type="time" className="inp mono" value={minLabel(f.time)} aria-label="Start time"
             onChange={(e) => { const [h, m] = (e.target.value || '09:00').split(':').map(Number); f.patch({ time: h * 60 + m }) }} />
         </div>
         <div className="dur-row" style={{ marginTop: 10 }}>

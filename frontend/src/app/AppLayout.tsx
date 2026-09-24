@@ -64,7 +64,7 @@ function Sidebar() {
           {session.isAdmin && (
             <div>
               <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
-              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid rgba(255,255,255,.2)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
+              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
                 <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.status === 'Active').length ?? ''}</span></NavLink>
@@ -75,12 +75,12 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,.2)', paddingTop: 13 }}>
+      <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
           <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.62)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--slate)' }}>
               {session.isAdmin ? 'Space administrator' : 'Booking user'}
             </div>
           </div>

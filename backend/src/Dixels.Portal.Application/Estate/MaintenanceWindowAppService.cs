@@ -18,18 +18,16 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Building, Guid> _buildings;
-    private readonly ActivityLogAppender _log;
 
     public MaintenanceWindowAppService(IRepository<MaintenanceWindow, Guid> maintenance,
         IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors,
-        IRepository<Building, Guid> buildings, ActivityLogAppender log)
+        IRepository<Building, Guid> buildings)
     {
         _maintenance = maintenance;
         _bookings = bookings;
         _spaces = spaces;
         _floors = floors;
         _buildings = buildings;
-        _log = log;
     }
 
     public async Task<ListResultDto<MaintenanceWindowDto>> GetListAsync(MaintenanceListFilterDto input)
@@ -75,7 +73,6 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
 
         var note = string.IsNullOrWhiteSpace(input.Note) ? "Cleaning" : input.Note.Trim();
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
-        var label = await ScopeLabelAsync(input.ScopeType, input.ScopeId);
         var created = 0;
         var affected = 0;
         foreach (var o in input.Occurrences)
@@ -92,8 +89,6 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
                     ScopeId = input.ScopeId,
                 };
                 await _maintenance.InsertAsync(m, autoSave: true);
-                await _log.LogAsync(ActivityActions.MaintenanceScheduled, ActivityEntityTypes.Maintenance, m.Id,
-                    $"{input.ScopeType.ToString().ToLower()} · {label} · {BookingManager.Stamp(s)} → {BookingManager.Hm(e)}{(note != "Cleaning" ? $" · {note}" : "")}");
                 created++;
             }
         }
@@ -109,8 +104,6 @@ public class MaintenanceWindowAppService : EstateAppServiceBase, IMaintenanceWin
         {
             m.Status = MaintenanceStatus.Cancelled;
             await _maintenance.UpdateAsync(m, autoSave: true);
-            await _log.LogAsync(ActivityActions.MaintenanceCancelled, ActivityEntityTypes.Maintenance, m.Id,
-                $"Cleaning cancelled · {m.ScopeType.ToString().ToLower()} · {await ScopeLabelAsync(m.ScopeType, m.ScopeId)}");
         }
         return (await MapManyAsync(new() { m }))[0];
     }

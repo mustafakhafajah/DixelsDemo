@@ -15,15 +15,13 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Space, Guid> _spaces;
-    private readonly ActivityLogAppender _log;
 
     public BuildingAppService(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
-        IRepository<Space, Guid> spaces, ActivityLogAppender log)
+        IRepository<Space, Guid> spaces)
     {
         _buildings = buildings;
         _floors = floors;
         _spaces = spaces;
-        _log = log;
     }
 
     public async Task<ListResultDto<BuildingDto>> GetListAsync()
@@ -46,8 +44,6 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         var building = new Building(GuidGenerator.Create(), name);
         Apply(building, input);
         await _buildings.InsertAsync(building, autoSave: true);
-        await _log.LogAsync(ActivityActions.BuildingCreated, ActivityEntityTypes.Building, building.Id,
-            $"{name} added · local zone {building.TimeZone}");
         return await MapWithCountsAsync(building);
     }
 
@@ -60,8 +56,6 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         building.Name = name;
         Apply(building, input);
         await _buildings.UpdateAsync(building, autoSave: true);
-        await _log.LogAsync(ActivityActions.BuildingUpdated, ActivityEntityTypes.Building, building.Id,
-            $"{name} · {building.Status.ToString().ToLower()} · day {building.OpenHour:00}:00–{building.CloseHour:00}:00 · {building.MinBookingMinutes}m–{building.MaxBookingHours}h");
         return await MapWithCountsAsync(building);
     }
 
@@ -71,8 +65,6 @@ public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
         var building = await _buildings.GetAsync(id);
         building.Status = input.Status;
         await _buildings.UpdateAsync(building, autoSave: true);
-        await _log.LogAsync(ActivityActions.BuildingStatusChanged, ActivityEntityTypes.Building, building.Id,
-            $"{building.Name} set to {building.Status.ToString().ToLower()}");
         return await MapWithCountsAsync(building);
     }
 
@@ -123,15 +115,13 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Space, Guid> _spaces;
-    private readonly ActivityLogAppender _log;
 
     public FloorAppService(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
-        IRepository<Space, Guid> spaces, ActivityLogAppender log)
+        IRepository<Space, Guid> spaces)
     {
         _buildings = buildings;
         _floors = floors;
         _spaces = spaces;
-        _log = log;
     }
 
     public async Task<ListResultDto<FloorDto>> GetListAsync(Guid? buildingId)
@@ -157,8 +147,6 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         var floor = new Floor(GuidGenerator.Create(), building.Id, name);
         Apply(floor, input);
         await _floors.InsertAsync(floor, autoSave: true);
-        await _log.LogAsync(ActivityActions.FloorCreated, ActivityEntityTypes.Floor, floor.Id,
-            $"Floor {name} added to {building.Name}");
         return Map(floor, building, 0);
     }
 
@@ -172,8 +160,6 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         floor.Name = name;
         Apply(floor, input);
         await _floors.UpdateAsync(floor, autoSave: true);
-        await _log.LogAsync(ActivityActions.FloorUpdated, ActivityEntityTypes.Floor, floor.Id,
-            $"Floor {name} in {building.Name} updated");
         return Map(floor, building, await _spaces.CountAsync(s => s.FloorId == floor.Id));
     }
 
@@ -184,8 +170,6 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         var building = await GetBuildingAsync(floor.BuildingId);
         floor.Status = input.Status;
         await _floors.UpdateAsync(floor, autoSave: true);
-        await _log.LogAsync(ActivityActions.FloorStatusChanged, ActivityEntityTypes.Floor, floor.Id,
-            $"Floor {floor.Name} in {building.Name} set to {floor.Status.ToString().ToLower()}");
         return Map(floor, building, await _spaces.CountAsync(s => s.FloorId == floor.Id));
     }
 

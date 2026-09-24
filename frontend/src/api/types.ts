@@ -12,11 +12,6 @@ export const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
   Studio: 'Studio',
 }
 
-export interface Team {
-  id: string
-  name: string
-}
-
 export interface Building {
   id: string
   name: string
@@ -63,8 +58,6 @@ export interface Space {
   floorName: string
   timeZone: string
   capacity: number
-  restrictedTeamIds: string[]
-  restrictedTeamNames: string[]
   note: string | null
   openHourOverride: number | null
   closeHourOverride: number | null
@@ -80,7 +73,6 @@ export interface BookingDto {
   spaceName: string
   ownerUserId: string
   ownerName: string
-  ownerTeamName: string | null
   startUtc: string
   endUtc: string
   status: 'Confirmed' | 'Cancelled'
@@ -123,23 +115,10 @@ export interface Maintenance extends Omit<MaintenanceDto, 'startUtc' | 'endUtc' 
 
 export type ScheduleItem = Booking | Maintenance
 
-export interface ActivityEntry {
-  id: string
-  timestampUtc: string
-  actorUserId: string
-  actorName: string
-  action: string
-  entityType: string
-  entityId: string
-  detail: string
-}
-
 export interface Profile {
   id: string
   name: string
   email: string | null
-  teamId: string | null
-  teamName: string | null
   isAdmin: boolean
 }
 

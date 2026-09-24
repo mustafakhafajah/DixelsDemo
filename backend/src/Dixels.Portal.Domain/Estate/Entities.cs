@@ -1,21 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Entities.Auditing;
 
 namespace Dixels.Portal.Estate;
-
-public class Team : FullAuditedAggregateRoot<Guid>
-{
-    public string Name { get; set; } = null!;
-
-    protected Team() { }
-
-    public Team(Guid id, string name) : base(id)
-    {
-        Name = name;
-    }
-}
 
 public class Building : FullAuditedAggregateRoot<Guid>
 {
@@ -64,7 +51,6 @@ public class Space : FullAuditedAggregateRoot<Guid>
     public Guid FloorId { get; set; }
     public string TimeZone { get; set; } = "UTC";
     public int Capacity { get; set; }
-    public List<Guid> RestrictedTeamIds { get; set; } = new();
     public string? Note { get; set; }
     public int? OpenHourOverride { get; set; }
     public int? CloseHourOverride { get; set; }
@@ -142,20 +128,4 @@ public class MaintenanceWindow : FullAuditedAggregateRoot<Guid>
         if (StartUtc <= nowUtc) return "in_progress";
         return "scheduled";
     }
-}
-
-/* Business activity trail shown in the UI; separate from ABP's request AuditLog. */
-public class ActivityLogEntry : AggregateRoot<Guid>
-{
-    public DateTime TimestampUtc { get; set; }
-    public Guid ActorUserId { get; set; }
-    public string ActorName { get; set; } = null!;
-    public string Action { get; set; } = null!;
-    public string EntityType { get; set; } = null!;
-    public string EntityId { get; set; } = null!;
-    public string Detail { get; set; } = null!;
-
-    protected ActivityLogEntry() { }
-
-    public ActivityLogEntry(Guid id) : base(id) { }
 }

@@ -44,7 +44,7 @@ function LoginPage() {
     }
 
     navigate('/dashboard', {
-      state: { name: account.name, role: account.role, team: account.team },
+      state: { name: account.name, role: account.role },
     })
   }
 
@@ -94,7 +94,7 @@ function LoginPage() {
       <div className="signin-panel">
         <div className="signin-card">
           <h2>Sign in</h2>
-          <p className="lead">Use your company account. Your role and team come from it.</p>
+          <p className="lead">Use your company account. Your role comes from it.</p>
 
           <div className="form-fields">
             <div>
@@ -165,8 +165,7 @@ function LoginPage() {
                 <span className="demo-acct-info">
                   <span className="demo-acct-name">{account.name}</span>
                   <span className="demo-acct-role">
-                    {account.role === 'administrator' ? 'Space administrator' : 'Booking user'} ·{' '}
-                    {account.team}
+                    {account.role === 'administrator' ? 'Space administrator' : 'Booking user'}
                   </span>
                 </span>
                 <span className="demo-acct-use">Use</span>

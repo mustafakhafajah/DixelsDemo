@@ -107,27 +107,6 @@ export function FloorsPage() {
   )
 }
 
-function AccessRestrictionsPanel() {
-  const spaces = useSpaces().data ?? []
-  const restricted = spaces.filter((s) => s.restrictedTeamIds.length)
-  return (
-    <div className="card" style={{ marginBottom: 16 }}>
-      <div className="card-head"><div><h2 className="card-title">Access restrictions</h2><p className="card-sub">Which teams may book which spaces.</p></div></div>
-      <div style={{ padding: '14px 16px', fontSize: 12.5, color: 'var(--slate)', lineHeight: 1.6 }}>
-        <p style={{ margin: '0 0 10px' }}>
-          A space with no teams listed is open to everyone. Add teams to restrict it, and only those teams can book it. Administrators always see every space.
-        </p>
-        {restricted.length ? restricted.map((s) => (
-          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderBottom: '1px solid var(--line)' }}>
-            <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{s.name}</span>
-            <span style={{ display: 'flex', gap: 4 }}>{s.restrictedTeamNames.map((t) => <span key={t} className="tag">{t}</span>)}</span>
-          </div>
-        )) : <p>No space is restricted at the moment. Every team can book everything active.</p>}
-      </div>
-    </div>
-  )
-}
-
 function SpaceScheduleInspector() {
   const data = useScheduleData('adm')
   return (
@@ -153,7 +132,6 @@ export function SpacesPage() {
 
   return (
     <section>
-      <AccessRestrictionsPanel />
       <SpaceScheduleInspector />
       <div className="card" style={{ overflow: 'hidden' }}>
         <div className="card-head">
@@ -163,7 +141,7 @@ export function SpacesPage() {
         {!q.data ? <Loading /> : (
           <table className="grid">
             <thead>
-              <tr><th>ID</th><th>Space</th><th>Type</th><th>Location</th><th>TZ</th><th>Teams allowed</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+              <tr><th>ID</th><th>Space</th><th>Type</th><th>Location</th><th>TZ</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
             </thead>
             <tbody>
               {q.data.map((s) => (
@@ -173,11 +151,6 @@ export function SpacesPage() {
                   <td>{SPACE_TYPE_LABELS[s.type]}</td>
                   <td>{s.buildingName}<div style={{ fontSize: 11, color: 'var(--slate)' }}>Floor {s.floorName}</div></td>
                   <td className="mono" style={{ fontSize: 11.5, color: 'var(--slate)' }}>{s.timeZone}</td>
-                  <td>
-                    {s.restrictedTeamNames.length
-                      ? <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>{s.restrictedTeamNames.map((t) => <span key={t} className="tag">{t}</span>)}</span>
-                      : <span style={{ fontSize: 12, color: 'var(--slate)' }}>Open to all teams</span>}
-                  </td>
                   <td>
                     <EstatePill status={s.status} />
                     <div style={{ fontSize: 11, color: 'var(--slate)', marginTop: 3 }}>{upcomingBy[s.id] ?? 0} upcoming</div>

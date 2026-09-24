@@ -75,7 +75,7 @@ function Sidebar() {
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
             <div style={{ fontSize: 11, color: '#69737C' }}>
-              {session.isAdmin ? 'Space administrator' : 'Booking user'}{session.teamName ? ` · ${session.teamName}` : ''}
+              {session.isAdmin ? 'Space administrator' : 'Booking user'}
             </div>
           </div>
         </div>

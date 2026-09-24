@@ -5,7 +5,6 @@ export interface DemoAccount {
   name: string
   email: string
   password: string
-  team: string
   role: DemoRole
   initials: string
 }
@@ -16,7 +15,6 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     name: 'J. Tran',
     email: 'j.tran@company.com',
     password: 'demo-password',
-    team: 'Platform',
     role: 'booking_user',
     initials: 'JT',
   },
@@ -25,7 +23,6 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     name: 'A. Okafor',
     email: 'a.okafor@company.com',
     password: 'demo-password',
-    team: 'Platform',
     role: 'administrator',
     initials: 'AO',
   },

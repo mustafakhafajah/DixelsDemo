@@ -5,14 +5,6 @@ using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.Estate;
 
-public interface ITeamAppService : IApplicationService
-{
-    Task<ListResultDto<TeamDto>> GetListAsync();
-    Task<TeamDto> CreateAsync(CreateUpdateTeamDto input);
-    Task<TeamDto> UpdateAsync(Guid id, CreateUpdateTeamDto input);
-    Task DeleteAsync(Guid id);
-}
-
 public interface IBuildingAppService : IApplicationService
 {
     Task<ListResultDto<BuildingDto>> GetListAsync();
@@ -58,12 +50,6 @@ public interface IMaintenanceWindowAppService : IApplicationService
     Task<AffectedBookingsPreviewDto> PreviewAffectedBookingsAsync(PreviewMaintenanceDto input);
     Task<ScheduleMaintenanceResultDto> ScheduleAsync(ScheduleMaintenanceDto input);
     Task<MaintenanceWindowDto> CancelAsync(Guid id);
-}
-
-public interface IActivityLogAppService : IApplicationService
-{
-    Task<ListResultDto<ActivityLogEntryDto>> GetListAsync(ActivityLogFilterDto input);
-    Task RecordSignInAsync();
 }
 
 public interface IProfileLookupAppService : IApplicationService

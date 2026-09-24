@@ -4,12 +4,6 @@ public static class PortalPermissions
 {
     public const string GroupName = "Portal";
 
-    public static class Teams
-    {
-        public const string Default = GroupName + ".Teams";
-        public const string Manage = Default + ".Manage";
-    }
-
     public static class Buildings
     {
         public const string Default = GroupName + ".Buildings";
@@ -39,11 +33,5 @@ public static class PortalPermissions
     {
         public const string Default = GroupName + ".Maintenance";
         public const string Manage = Default + ".Manage";
-    }
-
-    public static class ActivityLog
-    {
-        public const string Default = GroupName + ".ActivityLog";
-        public const string ViewAll = Default + ".ViewAll";
     }
 }

@@ -16,20 +16,13 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Building, Guid> _buildings;
-    private readonly IRepository<Team, Guid> _teams;
-    private readonly BookingManager _bookingManager;
-    private readonly ActivityLogAppender _log;
 
     public SpaceAppService(IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors,
-        IRepository<Building, Guid> buildings, IRepository<Team, Guid> teams,
-        BookingManager bookingManager, ActivityLogAppender log)
+        IRepository<Building, Guid> buildings)
     {
         _spaces = spaces;
         _floors = floors;
         _buildings = buildings;
-        _teams = teams;
-        _bookingManager = bookingManager;
-        _log = log;
     }
 
     public async Task<ListResultDto<SpaceDto>> GetListAsync()
@@ -55,10 +48,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         var space = new Space(GuidGenerator.Create(), name, building.Id, floor.Id);
         Apply(space, input, building);
         await _spaces.InsertAsync(space, autoSave: true);
-        var mapper = await CreateMapperAsync();
-        await _log.LogAsync(ActivityActions.SpaceCreated, ActivityEntityTypes.Space, space.Id,
-            $"{name} · {building.Name} floor {floor.Name} · {mapper.TeamsLabel(space)}");
-        return mapper.Map(space);
+        return (await CreateMapperAsync()).Map(space);
     }
 
     [Authorize(PortalPermissions.Spaces.Manage)]
@@ -71,10 +61,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         space.FloorId = floor.Id;
         Apply(space, input, building);
         await _spaces.UpdateAsync(space, autoSave: true);
-        var mapper = await CreateMapperAsync();
-        await _log.LogAsync(ActivityActions.SpaceUpdated, ActivityEntityTypes.Space, space.Id,
-            $"{name} · {building.Name} floor {floor.Name} · {mapper.TeamsLabel(space)} · {space.Status.ToString().ToLower()}");
-        return mapper.Map(space);
+        return (await CreateMapperAsync()).Map(space);
     }
 
     [Authorize(PortalPermissions.Spaces.Manage)]
@@ -83,8 +70,6 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         var space = await _spaces.GetAsync(id);
         space.Status = input.Status;
         await _spaces.UpdateAsync(space, autoSave: true);
-        await _log.LogAsync(ActivityActions.SpaceStatusChanged, ActivityEntityTypes.Space, space.Id,
-            $"{space.Name} set to {space.Status.ToString().ToLower()}");
         return (await CreateMapperAsync()).Map(space);
     }
 
@@ -115,7 +100,6 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         s.Capacity = Math.Max(0, input.Capacity);
         s.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? building.TimeZone : input.TimeZone.Trim();
         s.Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
-        s.RestrictedTeamIds = input.RestrictedTeamIds.Distinct().ToList();
         s.OpenHourOverride = input.OpenHourOverride;
         s.CloseHourOverride = input.CloseHourOverride;
         s.MinBookingMinutesOverride = input.MinBookingMinutesOverride;
@@ -126,35 +110,21 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
     {
         var buildings = (await _buildings.GetListAsync()).ToDictionary(b => b.Id);
         var floors = (await _floors.GetListAsync()).ToDictionary(f => f.Id);
-        var teams = (await _teams.GetListAsync()).ToDictionary(t => t.Id, t => t.Name);
-        var isAdmin = await IsAdminAsync();
-        var teamId = CurrentUser.Id.HasValue ? await _bookingManager.GetUserTeamIdAsync(CurrentUser.Id.Value) : null;
-        return new SpaceMapper(buildings, floors, teams, isAdmin, teamId);
+        return new SpaceMapper(buildings, floors);
     }
 
     private sealed class SpaceMapper
     {
         private readonly Dictionary<Guid, Building> _buildings;
         private readonly Dictionary<Guid, Floor> _floors;
-        private readonly Dictionary<Guid, string> _teams;
-        private readonly bool _isAdmin;
-        private readonly Guid? _teamId;
 
-        public SpaceMapper(Dictionary<Guid, Building> buildings, Dictionary<Guid, Floor> floors,
-            Dictionary<Guid, string> teams, bool isAdmin, Guid? teamId)
+        public SpaceMapper(Dictionary<Guid, Building> buildings, Dictionary<Guid, Floor> floors)
         {
             _buildings = buildings;
             _floors = floors;
-            _teams = teams;
-            _isAdmin = isAdmin;
-            _teamId = teamId;
         }
 
         public string BuildingName(Space s) => _buildings.TryGetValue(s.BuildingId, out var b) ? b.Name : "";
-
-        public string TeamsLabel(Space s) => s.RestrictedTeamIds.Count == 0
-            ? "open to all teams"
-            : string.Join(", ", s.RestrictedTeamIds.Select(id => _teams.GetValueOrDefault(id, "?"))) + " only";
 
         public SpaceDto Map(Space s)
         {
@@ -174,8 +144,6 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
                 FloorName = floor?.Name ?? "",
                 TimeZone = s.TimeZone,
                 Capacity = s.Capacity,
-                RestrictedTeamIds = s.RestrictedTeamIds.ToList(),
-                RestrictedTeamNames = s.RestrictedTeamIds.Select(id => _teams.GetValueOrDefault(id, "?")).ToList(),
                 Note = s.Note,
                 OpenHourOverride = s.OpenHourOverride,
                 CloseHourOverride = s.CloseHourOverride,
@@ -189,7 +157,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
                     MaxBookingHours = c.MaxBookingHours,
                     Holidays = c.Holidays.ToList(),
                 },
-                CanCurrentUserBook = BookingManager.CanBook(ctx, _teamId, _isAdmin),
+                CanCurrentUserBook = BookingManager.CanBook(ctx),
             };
         }
     }

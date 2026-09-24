@@ -6,15 +6,12 @@
     "Welcome": "Welcome",
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
     "Permission:Portal": "Dixels portal",
-    "Permission:Teams": "Teams",
     "Permission:Buildings": "Buildings",
     "Permission:Floors": "Floors",
     "Permission:Spaces": "Spaces",
     "Permission:Bookings": "Bookings",
     "Permission:Maintenance": "Maintenance",
-    "Permission:ActivityLog": "Activity log",
     "Permission:Manage": "Manage",
-    "Permission:ManageAll": "Manage everyone's",
-    "Permission:ViewAll": "View all"
+    "Permission:ManageAll": "Manage everyone's"
   }
 }

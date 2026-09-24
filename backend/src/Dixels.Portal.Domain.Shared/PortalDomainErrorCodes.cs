@@ -25,10 +25,7 @@ public static class PortalDomainErrorCodes
     public const string BuildingDuplicate = "building.duplicate";
     public const string FloorInactive = "floor.inactive";
     public const string FloorDuplicate = "floor.duplicate";
-    public const string TeamDuplicate = "team.duplicate";
-    public const string TeamInUse = "team.in_use";
 
-    public const string AccessTeamRestricted = "access.team_restricted";
     public const string AccessForbidden = "access.forbidden";
 
     public const string BookingNotFound = "booking.not_found";
@@ -60,9 +57,6 @@ public static class PortalDomainErrorCodes
         [BuildingDuplicate] = HttpStatusCode.Conflict,
         [FloorInactive] = HttpStatusCode.Conflict,
         [FloorDuplicate] = HttpStatusCode.Conflict,
-        [TeamDuplicate] = HttpStatusCode.Conflict,
-        [TeamInUse] = HttpStatusCode.Conflict,
-        [AccessTeamRestricted] = HttpStatusCode.Forbidden,
         [AccessForbidden] = HttpStatusCode.Forbidden,
         [BookingNotFound] = HttpStatusCode.NotFound,
         [BookingConflict] = HttpStatusCode.Conflict,

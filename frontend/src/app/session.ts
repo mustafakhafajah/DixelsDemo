@@ -11,8 +11,6 @@ export function useSession() {
   return {
     userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
     name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? 'You',
-    teamName: profile.data?.teamName ?? null,
-    teamId: profile.data?.teamId ?? null,
     isAdmin: profile.data?.isAdmin ?? roleAdmin,
     signOut: () => auth.signoutRedirect(),
   }

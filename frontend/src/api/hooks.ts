@@ -4,7 +4,6 @@ import { useApi } from './client'
 import {
   toBooking,
   toMaintenance,
-  type ActivityEntry,
   type Booking,
   type BookingDto,
   type Building,
@@ -17,12 +16,11 @@ import {
   type Profile,
   type Space,
   type SpaceType,
-  type Team,
   type UserLookup,
   type Window,
 } from './types'
 
-const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces'], ['activity']]
+const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces']]
 
 function useEnabled() {
   return !!useAuth().user?.access_token
@@ -48,15 +46,6 @@ export function useUsers(enabled = true) {
     queryFn: async () => (await api<ListResult<UserLookup>>('GET', '/api/app/profile-lookup/users')).items,
     enabled: ok && enabled,
     staleTime: 5 * 60_000,
-  })
-}
-
-export function useTeams() {
-  const api = useApi()
-  return useQuery({
-    queryKey: ['teams'],
-    queryFn: async () => (await api<ListResult<Team>>('GET', '/api/app/team')).items,
-    enabled: useEnabled(),
   })
 }
 
@@ -154,17 +143,6 @@ export function useMaintenanceWindow(id: string | null) {
   })
 }
 
-export function useActivity(entityId: string | null, enabled = true) {
-  const api = useApi()
-  const ok = useEnabled()
-  return useQuery({
-    queryKey: ['activity', entityId],
-    queryFn: async () =>
-      (await api<ListResult<ActivityEntry>>('GET', '/api/app/activity-log', undefined, { EntityId: entityId ?? undefined })).items,
-    enabled: ok && enabled && !!entityId,
-  })
-}
-
 /* ─── Mutations ─── */
 
 function useInvalidate() {
@@ -172,7 +150,7 @@ function useInvalidate() {
   return (keys: string[][]) => Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: k })))
 }
 
-const BOOKING_KEYS = [['bookings'], ['booking'], ['activity']]
+const BOOKING_KEYS = [['bookings'], ['booking']]
 
 export interface CreateBookingInput {
   spaceId: string
@@ -270,7 +248,7 @@ export function useScheduleMaintenance() {
     mutationFn: (input: MaintenanceScopeInput & { note?: string }) =>
       api<{ seriesId: string | null; created: number; affectedBookingsCount: number }>(
         'POST', '/api/app/maintenance-window/schedule', input),
-    onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ['activity']]),
+    onSuccess: () => invalidate([['maintenance'], ['maintenance-window']]),
   })
 }
 
@@ -279,7 +257,7 @@ export function useCancelMaintenance() {
   const invalidate = useInvalidate()
   return useMutation({
     mutationFn: (id: string) => api<MaintenanceDto>('POST', `/api/app/maintenance-window/${id}/cancel`).then(toMaintenance),
-    onSettled: () => invalidate([['maintenance'], ['maintenance-window'], ['activity']]),
+    onSettled: () => invalidate([['maintenance'], ['maintenance-window']]),
   })
 }
 
@@ -312,7 +290,6 @@ export interface SpaceInput {
   floorId: string
   timeZone: string
   capacity: number
-  restrictedTeamIds: string[]
   note: string
   openHourOverride: number | null
   closeHourOverride: number | null

@@ -1,28 +1,12 @@
 import { useState } from 'react'
-import { useActivity, useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
-import { lifecycleOf, type ActivityEntry, type Booking, type Maintenance } from '../../api/types'
+import { useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
+import { lifecycleOf, type Booking, type Maintenance } from '../../api/types'
 import { useSession } from '../../app/session'
 import { Loading, shortId, StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
 import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
 import { modals } from '../../state/modalStore'
 import { useBookingActions } from './useBookingActions'
-
-function AuditTimeline({ entries, prefix }: { entries: ActivityEntry[] | undefined; prefix: string }) {
-  if (!entries) return <Loading />
-  if (!entries.length) return <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>No entries yet.</p>
-  return (
-    <div className="timeline-audit" style={{ marginBottom: 18 }}>
-      {[...entries].reverse().map((a) => (
-        <div key={a.id} className="audit-item">
-          <div style={{ fontSize: 12.5, fontWeight: 600 }}>{a.action.replace(prefix, '').replace(/_/g, ' ')}</div>
-          <div className="mono" style={{ fontSize: 11.5, color: 'var(--slate)' }}>{stamp(parseUtc(a.timestampUtc))} · {a.actorName}</div>
-          <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 2 }}>{a.detail}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function BookingDetail({ b }: { b: Booking }) {
   const session = useSession()
@@ -32,7 +16,6 @@ function BookingDetail({ b }: { b: Booking }) {
   const state = lifecycleOf(b)
   const mine = b.ownerUserId === session.userId
   const may = mine || session.isAdmin
-  const trail = useActivity(b.id, may)
   const series = useBookings({ from: b.start }, !!b.seriesId)
   const laterInSeries = b.seriesId ? (series.data ?? []).filter((x) => x.seriesId === b.seriesId && x.id !== b.id).length : 0
   const [askSeries, setAskSeries] = useState(false)
@@ -41,7 +24,7 @@ function BookingDetail({ b }: { b: Booking }) {
   if (state === 'ended') note = 'This booking has ended. Ended bookings are locked and cannot be changed.'
   else if (state === 'cancelled') note = 'Cancelled. The record is kept and the window is bookable again.'
   else if (state === 'in_progress') note = 'This booking has already started, so it can only be cancelled or ended early.'
-  else if (!mine && session.isAdmin) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it, and the change is recorded against your name.`
+  else if (!mine && session.isAdmin) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it.`
   else if (!mine) note = `Owned by ${b.ownerName}. You can only change your own bookings.`
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
@@ -58,7 +41,7 @@ function BookingDetail({ b }: { b: Booking }) {
         <dt>Space</dt>
         <dd>{b.spaceName}{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{space.buildingName} · Floor {space.floorName} · {space.timeZone}</div>}</dd>
         <dt>Booked by</dt>
-        <dd>{b.ownerName}{b.ownerTeamName && <span style={{ color: 'var(--slate)', fontWeight: 400 }}> ({b.ownerTeamName})</span>}</dd>
+        <dd>{b.ownerName}</dd>
         <dt>Start</dt><dd className="mono">{stampOffset(b.start)}</dd>
         <dt>End</dt><dd className="mono">{stampOffset(b.end)}</dd>
         <dt>Duration</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>
@@ -85,9 +68,6 @@ function BookingDetail({ b }: { b: Booking }) {
         </div>
       )}
 
-      <h3 style={{ fontSize: 12.5, margin: '0 0 10px' }}>Change history</h3>
-      {may ? <AuditTimeline entries={trail.data} prefix="booking." />
-        : <p style={{ fontSize: 12, color: 'var(--slate)', margin: '0 0 18px' }}>Only the owner and administrators can see this booking's history.</p>}
       <details>
         <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--slate)' }}>Raw record</summary>
         <pre className="json" style={{ marginTop: 9 }}>{JSON.stringify({ ...b, start: b.start.toISOString(), end: b.end.toISOString(), lifecycle: state }, null, 2)}</pre>
@@ -99,7 +79,6 @@ function BookingDetail({ b }: { b: Booking }) {
 function MaintenanceDetail({ m }: { m: Maintenance }) {
   const session = useSession()
   const actions = useBookingActions()
-  const trail = useActivity(m.id, session.isAdmin)
   const state = lifecycleOf(m)
   const label = state === 'cancelled' ? 'Cancelled' : state === 'ended' ? 'Ended' : state === 'in_progress' ? 'In progress' : 'Scheduled'
   const cls = state === 'cancelled' ? 'pill-cancelled' : state === 'ended' ? 'pill-ended' : state === 'in_progress' ? 'pill-inprog' : 'pill-confirmed'
@@ -118,17 +97,11 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
         <dt>Note</dt><dd>{m.note || 'Cleaning'}</dd>
         <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
         {session.isAdmin && m.status === 'Active' && state !== 'ended'
           ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Cancel cleaning</button>
           : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
       </div>
-      {session.isAdmin && (
-        <>
-          <h3 style={{ fontSize: 12.5, margin: '0 0 10px' }}>Change history</h3>
-          <AuditTimeline entries={trail.data} prefix="maintenance." />
-        </>
-      )}
     </>
   )
 }

@@ -18,8 +18,6 @@ const newKey = () => `idem-${crypto.randomUUID()}`
 function accessError(space: Space) {
   if (space.canCurrentUserBook) return null
   if (space.status !== 'Active') return { code: 'space.inactive', message: 'This space is inactive and cannot be booked.' }
-  if (space.restrictedTeamNames.length)
-    return { code: 'access.team_restricted', message: `${space.name} is limited to ${space.restrictedTeamNames.join(' and ')}.` }
   return { code: 'space.inactive', message: `${space.buildingName} or its floor is inactive and cannot be booked.` }
 }
 

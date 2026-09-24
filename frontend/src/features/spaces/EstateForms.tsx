@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
-import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useTeams } from '../../api/hooks'
+import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace } from '../../api/hooks'
 import { SPACE_TYPE_LABELS, type Building, type EstateStatus, type Floor, type Space, type SpaceType } from '../../api/types'
 import { ErrorLine, shortId } from '../../components/bits'
 import { Modal } from '../../components/Sheet'
@@ -192,7 +192,6 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
 export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
-  const teams = useTeams().data ?? []
   const save = useSaveSpace()
   const [name, setName] = useState(editing?.name ?? '')
   const [type, setType] = useState<SpaceType>(editing?.type ?? 'MeetingRoom')
@@ -202,7 +201,6 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
   const [tz, setTz] = useState<string | null>(editing?.timeZone ?? null)
   const [note, setNote] = useState(editing?.note ?? '')
-  const [teamIds, setTeamIds] = useState<string[]>(editing?.restrictedTeamIds ?? [])
   const [ov, setOv] = useState<[string, string, string, string]>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),
     numText(editing?.minBookingMinutesOverride), numText(editing?.maxBookingHoursOverride),
@@ -235,7 +233,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       id: editing?.id,
       body: {
         name: name.trim(), type, status, buildingId: b.id, floorId: f.id, timeZone: effTz.trim() || 'UTC',
-        capacity: Math.max(0, Number(capacity) || 0), restrictedTeamIds: teamIds, note: note.trim(),
+        capacity: Math.max(0, Number(capacity) || 0), note: note.trim(),
         openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma,
       },
     }).then(() => {
@@ -286,18 +284,6 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       <Field id="sp-note" label="Description">
         <input id="sp-note" className="inp" placeholder="Seats 8 · whiteboard wall" value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
-      <div>
-        <label className="lbl">Restrict to teams</label>
-        <div className="checkbox-row">
-          {teams.map((t) => (
-            <label key={t.id}>
-              <input type="checkbox" checked={teamIds.includes(t.id)}
-                onChange={(e) => setTeamIds(e.target.checked ? [...teamIds, t.id] : teamIds.filter((x) => x !== t.id))} /> {t.name}
-            </label>
-          ))}
-        </div>
-        <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '7px 0 0' }}>Tick nothing to leave the space open to every team.</p>
-      </div>
       <ErrorLine error={error} />
     </Modal>
   )

@@ -40,7 +40,7 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
-        {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-left" />}
+        {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
       </QueryClientProvider>
     </AuthProvider>
   )

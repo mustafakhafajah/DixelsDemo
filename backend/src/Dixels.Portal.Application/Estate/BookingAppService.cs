@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Users;
@@ -18,19 +17,15 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
     private readonly IRepository<Booking, Guid> _bookings;
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IIdentityUserRepository _users;
-    private readonly IRepository<Team, Guid> _teams;
     private readonly BookingManager _manager;
-    private readonly ActivityLogAppender _log;
 
     public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces,
-        IIdentityUserRepository users, IRepository<Team, Guid> teams, BookingManager manager, ActivityLogAppender log)
+        IIdentityUserRepository users, BookingManager manager)
     {
         _bookings = bookings;
         _spaces = spaces;
         _users = users;
-        _teams = teams;
         _manager = manager;
-        _log = log;
     }
 
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
@@ -114,14 +109,10 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         await _manager.EnsureNoConflictAsync(b.SpaceId, start, end, b.Id);
         await _manager.EnsureNoSelfOverlapAsync(b.OwnerUserId, b.SpaceId, start, end, b.Id);
 
-        var before = $"{BookingManager.Stamp(b.StartUtc)} → {BookingManager.Hm(b.EndUtc)}";
         b.StartUtc = start;
         b.EndUtc = end;
         b.Version++;
         await _bookings.UpdateAsync(b, autoSave: true);
-        var onBehalf = b.OwnerUserId != CurrentUser.Id ? $" · on behalf of {await OwnerNameAsync(b.OwnerUserId)}" : "";
-        await _log.LogAsync(ActivityActions.BookingRescheduled, ActivityEntityTypes.Booking, b.Id,
-            $"{before}  ⇒  {BookingManager.Stamp(start)} → {BookingManager.Hm(end)}{onBehalf}");
         return (await MapManyAsync(new() { b }))[0];
     }
 
@@ -165,9 +156,6 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         b.EndUtc = Clock.Now;
         b.Version++;
         await _bookings.UpdateAsync(b, autoSave: true);
-        var space = await _spaces.GetAsync(b.SpaceId);
-        await _log.LogAsync(ActivityActions.BookingEndedEarly, ActivityEntityTypes.Booking, b.Id,
-            $"{space.Name} · ended at {BookingManager.Hm(b.EndUtc)}");
         return (await MapManyAsync(new() { b }))[0];
     }
 
@@ -179,8 +167,7 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         var end = Utc(endUtc);
         var isAdmin = await IsAdminAsync();
         var ctx = await _manager.GetSpaceContextAsync(spaceId);
-        var teamId = await _manager.GetUserTeamIdAsync(userId);
-        await _manager.ValidateNewBookingAsync(ctx, userId, teamId, isAdmin, start, end);
+        await _manager.ValidateNewBookingAsync(ctx, userId, start, end);
 
         var booking = new Booking(GuidGenerator.Create(), spaceId, userId, start, end)
         {
@@ -189,8 +176,6 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
             IdempotencyKey = idempotencyKey,
         };
         await _bookings.InsertAsync(booking, autoSave: true);
-        await _log.LogAsync(ActivityActions.BookingCreated, ActivityEntityTypes.Booking, booking.Id,
-            $"{ctx.Space.Name} · {BookingManager.Stamp(start)} → {BookingManager.Hm(end)}");
         return booking;
     }
 
@@ -204,10 +189,6 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         b.Status = BookingStatus.Cancelled;
         b.Version++;
         await _bookings.UpdateAsync(b, autoSave: true);
-        var space = await _spaces.GetAsync(b.SpaceId);
-        var byAdmin = b.OwnerUserId != CurrentUser.Id ? " · cancelled by administrator" : "";
-        await _log.LogAsync(ActivityActions.BookingCancelled, ActivityEntityTypes.Booking, b.Id,
-            $"{space.Name} · {BookingManager.Stamp(b.StartUtc)} → {BookingManager.Hm(b.EndUtc)}{byAdmin}");
     }
 
     private async Task EnsureCanActAsync(Booking b, string message)
@@ -219,12 +200,6 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
     private async Task<Booking> GetBookingAsync(Guid id)
         => await _bookings.FindAsync(id)
            ?? throw new BusinessException(PortalDomainErrorCodes.BookingNotFound, "No booking with that ID.");
-
-    private async Task<string> OwnerNameAsync(Guid userId)
-    {
-        var u = await _users.FindAsync(userId, includeDetails: false);
-        return u == null ? "a former user" : DisplayName(u);
-    }
 
     public static string DisplayName(IdentityUser u)
     {
@@ -245,14 +220,7 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
         var spaceIds = list.Select(b => b.SpaceId).Distinct().ToList();
         var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.Name);
         var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
-        var userEntities = await _users.GetListByIdsAsync(userIds);
-        var users = userEntities.ToDictionary(u => u.Id, DisplayName);
-        var teamNames = (await _teams.GetListAsync()).ToDictionary(t => t.Id, t => t.Name);
-        var userTeams = userEntities.ToDictionary(u => u.Id, u =>
-        {
-            var teamId = u.GetProperty<Guid?>(BookingManager.TeamIdProperty);
-            return teamId.HasValue ? teamNames.GetValueOrDefault(teamId.Value) : null;
-        });
+        var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, DisplayName);
         var now = Clock.Now;
         return list.Select(b => new BookingDto
         {
@@ -261,7 +229,6 @@ public class BookingAppService : EstateAppServiceBase, IBookingAppService
             SpaceName = spaces.GetValueOrDefault(b.SpaceId, "Unknown space"),
             OwnerUserId = b.OwnerUserId,
             OwnerName = users.GetValueOrDefault(b.OwnerUserId, "a former user"),
-            OwnerTeamName = userTeams.GetValueOrDefault(b.OwnerUserId),
             StartUtc = b.StartUtc,
             EndUtc = b.EndUtc,
             Status = b.Status,

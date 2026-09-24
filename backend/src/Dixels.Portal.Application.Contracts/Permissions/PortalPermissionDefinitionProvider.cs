@@ -10,8 +10,6 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
     {
         var group = context.AddGroup(PortalPermissions.GroupName, L("Permission:Portal"));
 
-        group.AddPermission(PortalPermissions.Teams.Default, L("Permission:Teams"))
-            .AddChild(PortalPermissions.Teams.Manage, L("Permission:Manage"));
         group.AddPermission(PortalPermissions.Buildings.Default, L("Permission:Buildings"))
             .AddChild(PortalPermissions.Buildings.Manage, L("Permission:Manage"));
         group.AddPermission(PortalPermissions.Floors.Default, L("Permission:Floors"))
@@ -21,10 +19,7 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
         group.AddPermission(PortalPermissions.Bookings.Default, L("Permission:Bookings"))
             .AddChild(PortalPermissions.Bookings.ManageAll, L("Permission:ManageAll"));
         group.AddPermission(PortalPermissions.Maintenance.Default, L("Permission:Maintenance"))
-            .AddChild(PortalPermissions.Maintenance.Manage, L("Permission:Manage"));
-        group.AddPermission(PortalPermissions.ActivityLog.Default, L("Permission:ActivityLog"))
-            .AddChild(PortalPermissions.ActivityLog.ViewAll, L("Permission:ViewAll"));
-    }
+            .AddChild(PortalPermissions.Maintenance.Manage, L("Permission:Manage"));    }
 
     private static LocalizableString L(string name)
     {

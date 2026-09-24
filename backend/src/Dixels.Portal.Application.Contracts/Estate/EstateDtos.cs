@@ -5,17 +5,6 @@ using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Portal.Estate;
 
-public class TeamDto : EntityDto<Guid>
-{
-    public string Name { get; set; } = null!;
-}
-
-public class CreateUpdateTeamDto
-{
-    [Required, StringLength(EstateConsts.MaxTeamNameLength)]
-    public string Name { get; set; } = null!;
-}
-
 public class BuildingDto : EntityDto<Guid>
 {
     public string Name { get; set; } = null!;
@@ -89,8 +78,6 @@ public class SpaceDto : EntityDto<Guid>
     public string FloorName { get; set; } = null!;
     public string TimeZone { get; set; } = null!;
     public int Capacity { get; set; }
-    public List<Guid> RestrictedTeamIds { get; set; } = new();
-    public List<string> RestrictedTeamNames { get; set; } = new();
     public string? Note { get; set; }
     public int? OpenHourOverride { get; set; }
     public int? CloseHourOverride { get; set; }
@@ -111,7 +98,6 @@ public class CreateUpdateSpaceDto
     [StringLength(EstateConsts.MaxTimeZoneLength)]
     public string? TimeZone { get; set; }
     [Range(0, 999)] public int Capacity { get; set; }
-    public List<Guid> RestrictedTeamIds { get; set; } = new();
     [StringLength(EstateConsts.MaxNoteLength)]
     public string? Note { get; set; }
     [Range(0, 23)] public int? OpenHourOverride { get; set; }
@@ -131,7 +117,6 @@ public class BookingDto : EntityDto<Guid>
     public string SpaceName { get; set; } = null!;
     public Guid OwnerUserId { get; set; }
     public string OwnerName { get; set; } = null!;
-    public string? OwnerTeamName { get; set; }
     public DateTime StartUtc { get; set; }
     public DateTime EndUtc { get; set; }
     public BookingStatus Status { get; set; }
@@ -264,31 +249,11 @@ public class ScheduleMaintenanceResultDto
     public int AffectedBookingsCount { get; set; }
 }
 
-public class ActivityLogEntryDto : EntityDto<Guid>
-{
-    public DateTime TimestampUtc { get; set; }
-    public Guid ActorUserId { get; set; }
-    public string ActorName { get; set; } = null!;
-    public string Action { get; set; } = null!;
-    public string EntityType { get; set; } = null!;
-    public string EntityId { get; set; } = null!;
-    public string Detail { get; set; } = null!;
-}
-
-public class ActivityLogFilterDto
-{
-    public string? EntityId { get; set; }
-    public string? Action { get; set; }
-    [Range(1, 500)] public int MaxResultCount { get; set; } = 100;
-}
-
 public class CurrentUserProfileDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
     public string? Email { get; set; }
-    public Guid? TeamId { get; set; }
-    public string? TeamName { get; set; }
     public bool IsAdmin { get; set; }
 }
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useBookings, useBuildings, useSpaces, useTeams } from '../../api/hooks'
-import { lifecycleOf, type Booking, type Building, type Space, type Team } from '../../api/types'
+import { useBookings, useBuildings, useSpaces } from '../../api/hooks'
+import { lifecycleOf, type Booking, type Building, type Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { Loading, StatusPill } from '../../components/bits'
 import { addDays, addMin, dayAt, dayKey, hm, relative, roundUp30, stampOffset, todayKey } from '../../lib/dateUtils'
@@ -24,7 +24,7 @@ function Bars({ rows, max, fmt }: { rows: { name: string; count: number }[]; max
   )
 }
 
-function AdminStats({ all, spaces, buildings, teams }: { all: Booking[]; spaces: Space[]; buildings: Building[]; teams: Team[] }) {
+function AdminStats({ all, spaces, buildings }: { all: Booking[]; spaces: Space[]; buildings: Building[] }) {
   const now = new Date()
   const weekAgo = addDays(now, -7)
   const confirmed = all.filter((b) => b.status === 'Confirmed')
@@ -40,12 +40,9 @@ function AdminStats({ all, spaces, buildings, teams }: { all: Booking[]; spaces:
     confirmed.forEach((b) => { const k = key(b); if (k) m[k] = (m[k] ?? 0) + 1 })
     return m
   }
-  const byTeam = count((b) => b.ownerTeamName)
   const spaceBuilding = Object.fromEntries(spaces.map((s) => [s.id, s.buildingName]))
   const byBuilding = count((b) => spaceBuilding[b.spaceId])
-  const teamRows = teams.map((t) => ({ name: t.name, count: byTeam[t.name] ?? 0 })).sort((a, b) => b.count - a.count)
   const bldgRows = buildings.map((b) => ({ name: b.name, count: byBuilding[b.name] ?? 0 })).sort((a, b) => b.count - a.count)
-  const teamMax = Math.max(1, ...teamRows.map((r) => r.count))
   const bldgMax = Math.max(1, ...bldgRows.map((r) => r.count))
   const cancelled = all.length - confirmed.length
   const cancelRate = all.length ? Math.round((cancelled / all.length) * 100) : 0
@@ -75,11 +72,7 @@ function AdminStats({ all, spaces, buildings, teams }: { all: Booking[]; spaces:
             <p style={{ fontSize: 11, color: 'var(--slate-2)', margin: '8px 0 0' }}>14 days ago → today</p>
           </div>
         </div>
-        <div className="card">
-          <div className="card-head"><div><h3 className="card-title">Bookings by team</h3><p className="card-sub">All confirmed bookings, all time.</p></div></div>
-          <Bars rows={teamRows} max={teamMax} />
-        </div>
-        <div className="card">
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div className="card-head"><div><h3 className="card-title">Bookings by building</h3><p className="card-sub">All confirmed bookings, all time.</p></div></div>
           <Bars rows={bldgRows} max={bldgMax} />
         </div>
@@ -94,7 +87,6 @@ export function DashboardPage() {
   const actions = useBookingActions()
   const spacesQ = useSpaces()
   const buildingsQ = useBuildings()
-  const teamsQ = useTeams()
   const weekAgo = useMemo(() => addDays(dayAt(todayKey()), -7), [])
   const nowWindow = useMemo(() => { const n = new Date(); return { from: n, to: addMin(n, 30) } }, [])
 
@@ -239,7 +231,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {session.isAdmin && <AdminStats all={allQ.data ?? []} spaces={spaces} buildings={buildings} teams={teamsQ.data ?? []} />}
+      {session.isAdmin && <AdminStats all={allQ.data ?? []} spaces={spaces} buildings={buildings} />}
     </section>
   )
 }

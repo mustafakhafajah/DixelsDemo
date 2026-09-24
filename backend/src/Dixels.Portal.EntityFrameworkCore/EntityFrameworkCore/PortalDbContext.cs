@@ -25,13 +25,11 @@ public class PortalDbContext :
     IIdentityDbContext,
     ITenantManagementDbContext
 {
-    public DbSet<Team> Teams { get; set; }
     public DbSet<Building> Buildings { get; set; }
     public DbSet<Floor> Floors { get; set; }
     public DbSet<Space> Spaces { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<MaintenanceWindow> MaintenanceWindows { get; set; }
-    public DbSet<ActivityLogEntry> ActivityLogEntries { get; set; }
 
     #region Entities from the modules
 
@@ -87,14 +85,6 @@ public class PortalDbContext :
 
     private static void ConfigureEstate(ModelBuilder builder)
     {
-        builder.Entity<Team>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Teams", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxTeamNameLength);
-            b.HasIndex(x => x.Name).IsUnique();
-        });
-
         builder.Entity<Building>(b =>
         {
             b.ToTable(PortalConsts.DbTablePrefix + "Buildings", PortalConsts.DbSchema);
@@ -121,7 +111,6 @@ public class PortalDbContext :
             b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
             b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
             b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
-            b.Property(x => x.RestrictedTeamIds).HasColumnType("uuid[]");
             b.HasIndex(x => x.Name).IsUnique();
             b.HasIndex(x => new { x.BuildingId, x.FloorId, x.Status });
             b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
@@ -149,19 +138,6 @@ public class PortalDbContext :
             b.HasIndex(x => x.SeriesId);
             b.HasIndex(x => new { x.ScopeType, x.ScopeId });
             b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        builder.Entity<ActivityLogEntry>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "ActivityLogEntries", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.ActorName).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
-            b.Property(x => x.Action).IsRequired().HasMaxLength(40);
-            b.Property(x => x.EntityType).IsRequired().HasMaxLength(32);
-            b.Property(x => x.EntityId).IsRequired().HasMaxLength(64);
-            b.Property(x => x.Detail).IsRequired().HasMaxLength(EstateConsts.MaxDetailLength);
-            b.HasIndex(x => new { x.EntityType, x.EntityId });
-            b.HasIndex(x => x.TimestampUtc);
         });
     }
 }

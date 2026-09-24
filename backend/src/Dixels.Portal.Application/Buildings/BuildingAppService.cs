@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Estate;
+using Dixels.Portal.Floors;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;

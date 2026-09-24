@@ -5,31 +5,6 @@ using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Portal.Estate;
 
-public class FloorDto : EntityDto<Guid>
-{
-    public Guid BuildingId { get; set; }
-    public string BuildingName { get; set; } = null!;
-    public string Name { get; set; } = null!;
-    public EstateStatus Status { get; set; }
-    public int? OpenHourOverride { get; set; }
-    public int? CloseHourOverride { get; set; }
-    public int? MinBookingMinutesOverride { get; set; }
-    public int? MaxBookingHoursOverride { get; set; }
-    public int SpaceCount { get; set; }
-}
-
-public class CreateUpdateFloorDto
-{
-    [Required] public Guid BuildingId { get; set; }
-    [Required, StringLength(EstateConsts.MaxFloorNameLength)]
-    public string Name { get; set; } = null!;
-    public EstateStatus Status { get; set; }
-    [Range(0, 23)] public int? OpenHourOverride { get; set; }
-    [Range(1, 24)] public int? CloseHourOverride { get; set; }
-    [Range(5, 1440)] public int? MinBookingMinutesOverride { get; set; }
-    [Range(1, 24)] public int? MaxBookingHoursOverride { get; set; }
-}
-
 public class ResolvedConstraintsDto
 {
     public int OpenMinute { get; set; }

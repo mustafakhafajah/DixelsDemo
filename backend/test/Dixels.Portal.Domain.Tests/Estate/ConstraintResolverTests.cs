@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Floors;
 using Shouldly;
 using Xunit;
 

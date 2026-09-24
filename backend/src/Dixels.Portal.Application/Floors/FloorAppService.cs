@@ -2,13 +2,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
 
-namespace Dixels.Portal.Estate;
+namespace Dixels.Portal.Floors;
 
 [Authorize]
 public class FloorAppService : EstateAppServiceBase, IFloorAppService
@@ -84,7 +85,7 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
             throw new BusinessException(PortalDomainErrorCodes.MissingField, "Type a floor name or number.");
         if (await _floors.AnyAsync(f => f.BuildingId == b.Id && f.Name == name && f.Id != excludeId))
             throw new BusinessException(PortalDomainErrorCodes.FloorDuplicate, $"{b.Name} already has floor {name}.");
-        EstateValidation.ValidateOverrides("Floor", "the building", "the building's",
+        EstateOverrideRules.EnsureOnlyNarrows("Floor", "the building", "the building's",
             ConstraintResolver.ResolveBounds(b, null),
             input.OpenHourOverride, input.CloseHourOverride, input.MinBookingMinutesOverride, input.MaxBookingHoursOverride);
     }
@@ -111,29 +112,4 @@ public class FloorAppService : EstateAppServiceBase, IFloorAppService
         MaxBookingHoursOverride = f.MaxBookingHoursOverride,
         SpaceCount = spaceCount,
     };
-}
-
-public static class EstateValidation
-{
-    /* Overrides may only narrow the parent's rules (mock: submitFloor / submitSpace). */
-    public static void ValidateOverrides(string subject, string parent, string parentPossessive, ResolvedBounds bounds,
-        int? openOv, int? closeOv, int? minOv, int? maxOv)
-    {
-        if (openOv.HasValue && openOv < bounds.OpenHour)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
-                $"{subject} cannot open earlier ({openOv}) than {parent} ({bounds.OpenHour}).");
-        if (closeOv.HasValue && closeOv > bounds.CloseHour)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
-                $"{subject} cannot close later ({closeOv}) than {parent} ({bounds.CloseHour}).");
-        var effOpen = openOv ?? bounds.OpenHour;
-        var effClose = closeOv ?? bounds.CloseHour;
-        if (effClose <= effOpen)
-            throw new BusinessException(PortalDomainErrorCodes.InvalidHours, "Close hour must be after open hour.");
-        if (minOv.HasValue && minOv < bounds.MinBookingMinutes)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
-                $"{subject}'s minimum duration cannot be less than {parentPossessive} ({bounds.MinBookingMinutes}m).");
-        if (maxOv.HasValue && maxOv > bounds.MaxBookingHours)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
-                $"{subject}'s maximum duration cannot exceed {parentPossessive} ({bounds.MaxBookingHours}h).");
-    }
 }

@@ -1,6 +1,7 @@
 ﻿using Dixels.Portal.Buildings;
 using Dixels.Portal.EntityFrameworkCore.Configurations;
 using Dixels.Portal.Estate;
+using Dixels.Portal.Floors;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -88,15 +89,7 @@ public class PortalDbContext :
     private static void ConfigureEstate(ModelBuilder builder)
     {
         builder.ApplyConfiguration(new BuildingConfiguration());
-
-        builder.Entity<Floor>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Floors", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxFloorNameLength);
-            b.HasIndex(x => new { x.BuildingId, x.Name }).IsUnique();
-            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
-        });
+        builder.ApplyConfiguration(new FloorConfiguration());
 
         builder.Entity<Space>(b =>
         {

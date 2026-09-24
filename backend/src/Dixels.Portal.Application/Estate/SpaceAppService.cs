@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Floors;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -88,7 +89,7 @@ public class SpaceAppService : EstateAppServiceBase, ISpaceAppService
         if (await _spaces.AnyAsync(s => s.Name.ToLower() == lower && s.Id != excludeId))
             throw new BusinessException(PortalDomainErrorCodes.SpaceDuplicateName, "Another space already uses that name.");
 
-        EstateValidation.ValidateOverrides("Space", "its floor", "its floor's",
+        EstateOverrideRules.EnsureOnlyNarrows("Space", "its floor", "its floor's",
             ConstraintResolver.ResolveBounds(building, floor),
             input.OpenHourOverride, input.CloseHourOverride, input.MinBookingMinutesOverride, input.MaxBookingHoursOverride);
         return (name, building, floor);

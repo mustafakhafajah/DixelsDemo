@@ -43,7 +43,6 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const [chosenFloorId, setChosenFloorId] = useState<string | null>(null)
   const [recur, setRecur] = useState(() => defaultRecurrence(initStart, 4))
   const [skipOverrides, setSkipOverrides] = useState<Record<number, boolean>>({})
-  const [parking, setParking] = useState(false)
   const [idempotencyKey] = useState(newKey)
   const [conflict, setConflict] = useState<{ message: string; suggested: { start: Date; end: Date } | null } | null>(null)
 
@@ -158,7 +157,6 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         if (!wanted.length) { toast('warn', 'Nothing selected', 'Tick at least one occurrence.'); return }
         const r = await createSeries.mutateAsync({
           spaceId: space.id,
-          parking: session.isAdmin && parking,
           occurrences: wanted.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() })),
         })
         if (r.created.length) {
@@ -171,7 +169,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       }
       const b = await create.mutateAsync({
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
-        parking: session.isAdmin && parking, idempotencyKey,
+        idempotencyKey,
       })
       toast('ok', 'Booking confirmed', `${shortId(b.id)} · ${space.name} · ${stampOffset(start)} → ${hm(end)}.`)
       modals.close()
@@ -272,16 +270,6 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         </p>
         <ErrorLine error={spaceError} />
       </div>
-
-      {session.isAdmin && !editing && (
-        <div>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-            <input type="checkbox" checked={parking} onChange={(e) => setParking(e.target.checked)} />
-            🚗 Reserve parking for this booking
-          </label>
-          <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '5px 0 0' }}>Management-only — reserved for the visitor or guest attending this booking.</p>
-        </div>
-      )}
 
       {conflict && (
         <div style={{ background: 'var(--rust-soft)', border: '1px solid var(--rust-line)', borderRadius: 9, padding: '12px 13px' }}>

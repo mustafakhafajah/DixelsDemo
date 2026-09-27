@@ -37,14 +37,13 @@ public class BookingManager : DomainService
 
     /* Factory: the only way to make a new booking, so no caller can skip the rules. */
     public async Task<Booking> CreateAsync(Guid spaceId, Guid ownerId, DateTime startUtc, DateTime endUtc,
-        bool parking = false, Guid? seriesId = null, string? idempotencyKey = null)
+        Guid? seriesId = null, string? idempotencyKey = null)
     {
         var ctx = await GetSpaceContextAsync(spaceId);
         await ValidateNewBookingAsync(ctx, ownerId, startUtc, endUtc);
         return new Booking(GuidGenerator.Create(), spaceId, ownerId, startUtc, endUtc)
         {
             SeriesId = seriesId,
-            Parking = parking,
             IdempotencyKey = idempotencyKey,
         };
     }

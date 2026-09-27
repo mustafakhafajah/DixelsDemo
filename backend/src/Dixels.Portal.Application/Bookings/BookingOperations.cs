@@ -42,13 +42,11 @@ public class BookingOperations : ITransientDependency
             throw new BusinessException(PortalDomainErrorCodes.AccessForbidden, message);
     }
 
-    public async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, bool parking,
+    public async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc,
         Guid? seriesId, string? idempotencyKey)
     {
-        /* Parking is an admin-only extra: who is asking is an application concern, so it's decided here. */
-        var isAdmin = await _user.IsAdminAsync();
         var booking = await _manager.CreateAsync(spaceId, _user.UserId, startUtc.AsUtc(), endUtc.AsUtc(),
-            parking: isAdmin && parking, seriesId: seriesId, idempotencyKey: idempotencyKey);
+            seriesId: seriesId, idempotencyKey: idempotencyKey);
         await _bookings.InsertAsync(booking, autoSave: true);
         return booking;
     }

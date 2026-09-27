@@ -15,7 +15,6 @@ public class BookingDto : EntityDto<Guid>
     public string Lifecycle { get; set; } = null!;
     public int Version { get; set; }
     public Guid? SeriesId { get; set; }
-    public bool Parking { get; set; }
     public DateTime CreationTime { get; set; }
     public DateTime? LastModificationTime { get; set; }
 }

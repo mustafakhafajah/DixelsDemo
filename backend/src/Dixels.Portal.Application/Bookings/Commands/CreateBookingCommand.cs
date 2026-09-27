@@ -32,7 +32,7 @@ public class CreateBookingCommandHandler : ICommandHandler<CreateBookingCommand,
             if (existing != null) return await _mapper.MapAsync(existing);
         }
 
-        var booking = await _operations.CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, input.Parking, null, key);
+        var booking = await _operations.CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key);
         return await _mapper.MapAsync(booking);
     }
 }

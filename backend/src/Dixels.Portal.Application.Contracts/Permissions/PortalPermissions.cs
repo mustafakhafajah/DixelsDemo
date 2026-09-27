@@ -25,7 +25,7 @@ public static class PortalPermissions
     public static class Bookings
     {
         public const string Default = GroupName + ".Bookings";
-        /* Act on anyone's bookings, list all bookings, reserve parking. */
+        /* Act on anyone's bookings and list all bookings. */
         public const string ManageAll = Default + ".ManageAll";
     }
 

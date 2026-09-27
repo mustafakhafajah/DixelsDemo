@@ -35,7 +35,6 @@ function BookingDetail({ b }: { b: Booking }) {
         <StatusPill item={b} />
         <span className="tag mono">v{b.version}</span>
         {b.seriesId && <span className="tag mono">{shortId(b.seriesId, 'SR')}</span>}
-        {b.parking && <span className="tag">🚗 Parking</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>Space</dt>

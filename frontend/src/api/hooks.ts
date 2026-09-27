@@ -223,7 +223,6 @@ export interface CreateBookingInput {
   spaceId: string
   startUtc: string
   endUtc: string
-  parking: boolean
   idempotencyKey?: string
 }
 
@@ -246,7 +245,7 @@ export function useCreateBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: { spaceId: string; occurrences: Window[]; parking: boolean }) =>
+    mutationFn: (input: { spaceId: string; occurrences: Window[] }) =>
       api<SeriesResult>('POST', '/api/app/booking/series', input),
     onSuccess: () => invalidate(BOOKING_KEYS),
   })

@@ -83,7 +83,6 @@ export interface BookingDto {
   lifecycle: Lifecycle
   version: number
   seriesId: string | null
-  parking: boolean
   creationTime: string
   lastModificationTime: string | null
 }

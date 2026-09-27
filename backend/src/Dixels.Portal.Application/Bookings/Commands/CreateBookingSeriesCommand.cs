@@ -35,7 +35,7 @@ public class CreateBookingSeriesCommandHandler : ICommandHandler<CreateBookingSe
         {
             try
             {
-                created.Add(await _operations.CreateOneAsync(input.SpaceId, o.StartUtc, o.EndUtc, input.Parking, seriesId, null));
+                created.Add(await _operations.CreateOneAsync(input.SpaceId, o.StartUtc, o.EndUtc, seriesId, null));
             }
             catch (BusinessException ex)
             {

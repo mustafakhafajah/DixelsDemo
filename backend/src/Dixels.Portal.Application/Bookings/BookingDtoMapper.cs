@@ -49,7 +49,6 @@ public class BookingDtoMapper : ITransientDependency
             Lifecycle = b.GetLifecycle(now).ToApiValue(),
             Version = b.Version,
             SeriesId = b.SeriesId,
-            Parking = b.Parking,
             CreationTime = b.CreationTime,
             LastModificationTime = b.LastModificationTime,
         }).ToList();

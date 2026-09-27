@@ -229,6 +229,10 @@
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
 .app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: rgba(156,108,164,.14); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
 .app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
+.app-shell .rt-track { cursor: crosshair; user-select: none; }
+/* The window being dragged on a room's row, with its times. */
+.app-shell .rt-drag { position: absolute; top: 4px; bottom: 4px; z-index: 3; pointer-events: none; border-radius: 6px; background: rgba(124,58,237,.18); border: 1.5px solid #7c3aed; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+.app-shell .rt-drag span { margin-top: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: #5b21b6; background: rgba(255,255,255,.85); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
 .app-shell .rt-free { position: absolute; top: 5px; bottom: 5px; cursor: pointer; border-radius: 5px; z-index: 1; }
 .app-shell .rt-free:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .app-shell .rt-block { top: 6px; bottom: 6px; z-index: 2; }

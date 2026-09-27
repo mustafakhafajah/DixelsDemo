@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useBookings, useBuildings, useFloors, useMaintenance, useSpaces } from '../../api/hooks'
+import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useBookings, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { Loading, plural } from '../../components/bits'
@@ -7,21 +7,37 @@ import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { findToday, useFindStore, type FindDuration } from '../../state/findStore'
 import { modals } from '../../state/modalStore'
 import { itemClass, openItem } from '../bookings/schedule/ScheduleCalendar'
 
 const px = (min: number) => (min / 60) * RT_PX_PER_HOUR
 
-function FindFilters({ spaces }: { spaces: Space[] }) {
+const CAPACITY_PRESETS = [4, 6, 8, 12]
+/* Dragged windows snap to quarter hours, the shortest booking most spaces allow. */
+const DRAG_SNAP = 15
+
+interface DragState {
+  spaceId: string
+  from: number
+  to: number
+  moved: boolean
+}
+
+function FindFilters() {
   const f = useFindStore()
+  /* "Custom…" shows a number box; a saved value that isn't a preset reopens in custom mode. */
+  const [customCapacity, setCustomCapacity] = useState(() => f.minCapacity > 0 && !CAPACITY_PRESETS.includes(f.minCapacity))
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
+  const spaceTypes = useSpaceTypes().data ?? []
   /* Floor stays locked until a building is picked, then lists only that building's floors. */
   const floorNames = [...new Set(floors.filter((x) => x.isBookable && !!f.buildingId && x.buildingId === f.buildingId).map((x) => x.name))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   /* Only types some space actually has, as id → name. */
-  const types = [...new Map(spaces.map((s) => [s.typeId, s.typeName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  const types = spaceTypes.filter((t) => t.spaceCount > 0).map((t) => [t.id, t.name] as const)
+    .sort((a, b) => a[1].localeCompare(b[1]))
   const endMin = (((f.customEnd ?? f.time + 60) % 1440) + 1440) % 1440
   const setDur = (d: FindDuration) => f.patch({ duration: d, customEnd: d === 'custom' && f.customEnd == null ? f.time + 60 : f.customEnd })
 
@@ -67,8 +83,25 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
           </div>
           <div>
             <label className="lbl" htmlFor="fv-capacity">Capacity</label>
-            <Dropdown id="fv-capacity" value={String(f.minCapacity)} onChange={(v) => f.patch({ minCapacity: Number(v) })}
-              options={[{ value: '0', label: 'Any capacity' }, ...[4, 6, 8, 12].map((n) => ({ value: String(n), label: `${n}+` }))]} />
+            <Dropdown id="fv-capacity" value={customCapacity ? 'custom' : String(f.minCapacity)}
+              onChange={(v) => {
+                if (v === 'custom') { setCustomCapacity(true); return }
+                setCustomCapacity(false)
+                f.patch({ minCapacity: Number(v) })
+              }}
+              options={[
+                { value: '0', label: 'Any capacity' },
+                ...CAPACITY_PRESETS.map((n) => ({ value: String(n), label: `${n}+` })),
+                { value: 'custom', label: 'Custom…' },
+              ]} />
+            {customCapacity && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                <input id="fv-capacity-custom" type="number" className="inp mono" min={1} placeholder="e.g. 10" autoFocus
+                  aria-label="Minimum seats" value={f.minCapacity || ''}
+                  onChange={(e) => f.patch({ minCapacity: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+                <span style={{ fontSize: 12, color: 'var(--slate)', whiteSpace: 'nowrap' }}>seats or more</span>
+              </div>
+            )}
           </div>
           <div>
             <label className="lbl">Space type</label>
@@ -93,23 +126,23 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
 export function FindSpacePage() {
   const f = useFindStore()
   const { userId } = useSession()
-  const spacesQ = useSpaces()
+  /* The room criteria are filtered on the server; typing in the search box waits a moment before asking. */
+  const name = useDebouncedValue(f.query.trim())
+  const findQ = useFindSpaces({
+    buildingId: f.buildingId || undefined,
+    floorName: (f.buildingId && f.floorName) || undefined,
+    minCapacity: f.minCapacity,
+    typeIds: f.types,
+    name: name || undefined,
+  })
   const dayFrom = useMemo(() => dayAt(f.date), [f.date])
   const dayTo = useMemo(() => addDays(dayAt(f.date), 1), [f.date])
   const bookingsQ = useBookings({ from: dayFrom, to: dayTo })
   const maintQ = useMaintenance({ from: dayFrom, to: dayTo })
-  const spaces = useMemo(() => spacesQ.data ?? [], [spacesQ.data])
 
   const items: ScheduleItem[] = useMemo(() => [...(bookingsQ.data ?? []), ...(maintQ.data ?? [])], [bookingsQ.data, maintQ.data])
 
-  const q = f.query.trim().toLowerCase()
-  const candidates = spaces
-    .filter((s) => s.canCurrentUserBook)
-    .filter((s) => !f.buildingId || s.buildingId === f.buildingId)
-    .filter((s) => !f.buildingId || !f.floorName || s.floorName === f.floorName)
-    .filter((s) => !f.minCapacity || s.capacity >= f.minCapacity)
-    .filter((s) => !f.types.length || f.types.includes(s.typeId))
-    .filter((s) => !q || s.name.toLowerCase().includes(q))
+  const candidates = findQ.data ?? []
 
   const durMin = f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
   const winStart = dayAt(f.date, 0, f.time)
@@ -128,8 +161,14 @@ export function FindSpacePage() {
     modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, start), end: dayAt(f.date, 0, end) })
   }
 
+  const [drag, setDrag] = useState<DragState | null>(null)
+  /* Set below, where the visible day (open/close) is known; rows only exist once it is. */
+  let startDrag = (_e: ReactPointerEvent<HTMLDivElement>, _s: Space) => {}
+  let moveDrag = (_e: ReactPointerEvent<HTMLDivElement>, _s: Space) => {}
+  let endDrag = (_s: Space) => {}
+
   let body
-  if (!spacesQ.data) body = <Loading />
+  if (!findQ.data) body = <Loading />
   else if (!candidates.length) {
     body = (
       <div className="sched-empty">
@@ -148,6 +187,36 @@ export function FindSpacePage() {
     const wS = Math.max(open, minOfDay(winStart))
     const wE = Math.min(close, wS + durMin)
     const band = wE > wS ? <div className="rt-band" style={{ left: px(wS - open), width: px(wE - wS) }} /> : null
+
+    /* Drag on a room's row to pick a window: minutes snap to DRAG_SNAP and stay inside the visible day. */
+    const minuteAt = (e: ReactPointerEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const raw = open + ((e.clientX - rect.left) / RT_PX_PER_HOUR) * 60
+      return Math.min(close, Math.max(open, Math.round(raw / DRAG_SNAP) * DRAG_SNAP))
+    }
+    startDrag = (e, s) => {
+      if (e.button !== 0 || (e.target as HTMLElement).closest('.rt-block')) return
+      const m = minuteAt(e)
+      setDrag({ spaceId: s.id, from: m, to: m, moved: false })
+    }
+    moveDrag = (e, s) => {
+      if (drag?.spaceId !== s.id) return
+      const m = minuteAt(e)
+      if (m === drag.to) return
+      /* Capture only once it's really a drag, so a plain click still reaches the free slot underneath. */
+      if (!drag.moved) e.currentTarget.setPointerCapture(e.pointerId)
+      setDrag({ ...drag, to: m, moved: true })
+    }
+    endDrag = (s) => {
+      if (drag?.spaceId !== s.id) return
+      const from = Math.min(drag.from, drag.to)
+      const to = Math.max(drag.from, drag.to)
+      setDrag(null)
+      if (!drag.moved || to - from < DRAG_SNAP) return
+      /* The picked window becomes the search window too, so the band and "free" counts match what's being booked. */
+      f.patch({ time: from, duration: 'custom', customEnd: to })
+      modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, from), end: dayAt(f.date, 0, to) })
+    }
     const nowLine = isToday && nowMin >= open && nowMin <= close ? <div className="rt-now" style={{ left: px(nowMin - open) }} /> : null
 
     const groups = new Map<string, Space[]>()
@@ -185,8 +254,15 @@ export function FindSpacePage() {
                       <div className="rt-roomname">{s.name}</div>
                       <div className="rt-roommeta">{s.typeName}{s.capacity ? ` · ${s.capacity} seats` : ''}</div>
                     </div>
-                    <div className="rt-track" style={{ width: trackW }}>
+                    <div className="rt-track" style={{ width: trackW }}
+                      onPointerDown={(e) => startDrag(e, s)} onPointerMove={(e) => moveDrag(e, s)}
+                      onPointerUp={() => endDrag(s)} onPointerCancel={() => setDrag(null)}>
                       {band}{nowLine}
+                      {drag?.spaceId === s.id && drag.moved && (
+                        <div className="rt-drag" style={{ left: px(Math.min(drag.from, drag.to) - open), width: px(Math.abs(drag.to - drag.from)) }}>
+                          <span>{minLabel(Math.min(drag.from, drag.to))}–{minLabel(Math.max(drag.from, drag.to))}</span>
+                        </div>
+                      )}
                       {free.map((reg) => (
                         <div key={reg.start} className="rt-free" style={{ left: px(reg.start - open), width: px(reg.end - reg.start) }}
                           onClick={() => regionPrefill(s, reg)} title={`Book ${s.name} ${minLabel(reg.start)}–${minLabel(reg.end)}`} />
@@ -217,7 +293,7 @@ export function FindSpacePage() {
   return (
     <section>
       <div className="find-layout">
-        <FindFilters spaces={spaces} />
+        <FindFilters />
         <section className="card" style={{ overflow: 'hidden' }}>
           <div className="find-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -49,16 +49,4 @@ public class SpaceInputValidator : ITransientDependency
             input.OpenHourOverride, input.CloseHourOverride, input.MinBookingMinutesOverride, input.MaxBookingHoursOverride);
         return (name, building, floor);
     }
-
-    public static void Apply(Space s, CreateUpdateSpaceDto input)
-    {
-        s.TypeId = input.TypeId;
-        s.IsBookable = input.IsBookable;
-        s.Capacity = Math.Max(0, input.Capacity);
-        s.Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
-        s.OpenHourOverride = input.OpenHourOverride;
-        s.CloseHourOverride = input.CloseHourOverride;
-        s.MinBookingMinutesOverride = input.MinBookingMinutesOverride;
-        s.MaxBookingHoursOverride = input.MaxBookingHoursOverride;
-    }
 }

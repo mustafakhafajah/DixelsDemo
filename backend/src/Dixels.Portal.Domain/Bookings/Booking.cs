@@ -35,6 +35,6 @@ public class Booking : FullAuditedAggregateRoot<Guid>
         Version++;
     }
 
-    public string GetLifecycle(DateTime nowUtc)
+    public TimeWindowState GetLifecycle(DateTime nowUtc)
         => TimeWindowLifecycle.Get(Status == BookingStatus.Cancelled, StartUtc, EndUtc, nowUtc);
 }

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,17 +21,20 @@ public class PortalDbMigrationService : ITransientDependency
     private readonly IEnumerable<IPortalDbSchemaMigrator> _dbSchemaMigrators;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IAbpCliRunner _abpCli;
 
     public PortalDbMigrationService(
         IDataSeeder dataSeeder,
         IEnumerable<IPortalDbSchemaMigrator> dbSchemaMigrators,
         ITenantRepository tenantRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IAbpCliRunner abpCli)
     {
         _dataSeeder = dataSeeder;
         _dbSchemaMigrators = dbSchemaMigrators;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
+        _abpCli = abpCli;
 
         Logger = NullLogger<PortalDbMigrationService>.Instance;
     }
@@ -155,33 +156,7 @@ public class PortalDbMigrationService : ITransientDependency
     private void AddInitialMigration()
     {
         Logger.LogInformation("Creating initial migration...");
-
-        string argumentPrefix;
-        string fileName;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            argumentPrefix = "-c";
-            fileName = "/bin/bash";
-        }
-        else
-        {
-            argumentPrefix = "/C";
-            fileName = "cmd.exe";
-        }
-
-        var procStartInfo = new ProcessStartInfo(fileName,
-            $"{argumentPrefix} \"abp create-migration-and-run-migrator \"{GetEntityFrameworkCoreProjectFolderPath()}\"\""
-        );
-
-        try
-        {
-            Process.Start(procStartInfo);
-        }
-        catch (Exception)
-        {
-            throw new Exception("Couldn't run ABP CLI...");
-        }
+        _abpCli.CreateMigrationAndRunMigrator(GetEntityFrameworkCoreProjectFolderPath()!);
     }
 
     private string? GetEntityFrameworkCoreProjectFolderPath()

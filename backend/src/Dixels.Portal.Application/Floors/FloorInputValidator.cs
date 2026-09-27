@@ -37,13 +37,4 @@ public class FloorInputValidator : ITransientDependency
             input.OpenHourOverride, input.CloseHourOverride, input.MinBookingMinutesOverride, input.MaxBookingHoursOverride);
         return name;
     }
-
-    public static void Apply(Floor f, CreateUpdateFloorDto input)
-    {
-        f.IsBookable = input.IsBookable;
-        f.OpenHourOverride = input.OpenHourOverride;
-        f.CloseHourOverride = input.CloseHourOverride;
-        f.MinBookingMinutesOverride = input.MinBookingMinutesOverride;
-        f.MaxBookingHoursOverride = input.MaxBookingHoursOverride;
-    }
 }

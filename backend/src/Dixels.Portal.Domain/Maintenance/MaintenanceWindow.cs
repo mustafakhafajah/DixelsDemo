@@ -26,6 +26,6 @@ public class MaintenanceWindow : FullAuditedAggregateRoot<Guid>
         Status = MaintenanceStatus.Active;
     }
 
-    public string GetLifecycle(DateTime nowUtc)
+    public TimeWindowState GetLifecycle(DateTime nowUtc)
         => TimeWindowLifecycle.Get(Status == MaintenanceStatus.Cancelled, StartUtc, EndUtc, nowUtc);
 }

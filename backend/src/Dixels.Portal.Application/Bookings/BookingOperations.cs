@@ -57,9 +57,9 @@ public class BookingOperations : ITransientDependency
     {
         await EnsureCanActAsync(b, "You can only cancel your own bookings.");
         var state = b.GetLifecycle(_clock.Now);
-        if (state == "ended")
+        if (state == TimeWindowState.Ended)
             throw new BusinessException(PortalDomainErrorCodes.BookingLocked, "An ended booking cannot be cancelled.");
-        if (state == "cancelled") return;
+        if (state == TimeWindowState.Cancelled) return;
         b.Cancel();
         await _bookings.UpdateAsync(b, autoSave: true);
     }

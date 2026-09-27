@@ -28,7 +28,7 @@ public class CreateBuildingCommandHandler : ICommandHandler<CreateBuildingComman
     {
         var name = await _validator.ValidateAsync(command.Input, null);
         var building = new Building(_guids.Create(), name);
-        BuildingInputValidator.Apply(building, command.Input);
+        BuildingInputApplier.Apply(building, command.Input);
         await _buildings.InsertAsync(building, autoSave: true);
         return await _mapper.MapAsync(building);
     }

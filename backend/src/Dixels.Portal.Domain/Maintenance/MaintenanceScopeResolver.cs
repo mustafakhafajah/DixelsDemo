@@ -2,22 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Portal.Spaces;
+using Dixels.Portal.Maintenance.Scopes;
 using Volo.Abp;
-using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Maintenance;
 
 /* An admin blocks time (cleaning, renovation, ...) for a space, a whole floor or a whole building;
- * this decides which spaces that covers. */
+ * this decides which spaces that covers. Each kind of scope has its own IMaintenanceScopeStrategy. */
 public class MaintenanceScopeResolver : DomainService
 {
-    private readonly IRepository<Space, Guid> _spaces;
+    private readonly Dictionary<MaintenanceScopeType, IMaintenanceScopeStrategy> _strategies;
 
-    public MaintenanceScopeResolver(IRepository<Space, Guid> spaces)
+    public MaintenanceScopeResolver(IEnumerable<IMaintenanceScopeStrategy> strategies)
     {
-        _spaces = spaces;
+        _strategies = strategies.ToDictionary(s => s.ScopeType);
     }
 
     /* For blocking time: a scope with no spaces is a mistake, so it is rejected. */
@@ -30,10 +29,8 @@ public class MaintenanceScopeResolver : DomainService
     }
 
     /* The same resolution without the check, for questions like "how many bookings are in this floor?". */
-    public async Task<List<Guid>> FindSpaceIdsAsync(MaintenanceScopeType type, Guid scopeId) => type switch
-    {
-        MaintenanceScopeType.Space => await _spaces.AnyAsync(s => s.Id == scopeId) ? new List<Guid> { scopeId } : new(),
-        MaintenanceScopeType.Floor => (await _spaces.GetListAsync(s => s.FloorId == scopeId)).Select(s => s.Id).ToList(),
-        _ => (await _spaces.GetListAsync(s => s.BuildingId == scopeId)).Select(s => s.Id).ToList(),
-    };
+    public Task<List<Guid>> FindSpaceIdsAsync(MaintenanceScopeType type, Guid scopeId)
+        => _strategies.TryGetValue(type, out var strategy)
+            ? strategy.FindSpaceIdsAsync(scopeId)
+            : throw new ArgumentOutOfRangeException(nameof(type), type, "No scope strategy is registered for this scope type.");
 }

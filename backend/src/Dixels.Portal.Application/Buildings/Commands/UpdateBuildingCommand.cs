@@ -25,7 +25,7 @@ public class UpdateBuildingCommandHandler : ICommandHandler<UpdateBuildingComman
     {
         var building = await _buildings.GetAsync(command.Id);
         building.Name = await _validator.ValidateAsync(command.Input, command.Id);
-        BuildingInputValidator.Apply(building, command.Input);
+        BuildingInputApplier.Apply(building, command.Input);
         await _buildings.UpdateAsync(building, autoSave: true);
         return await _mapper.MapAsync(building);
     }

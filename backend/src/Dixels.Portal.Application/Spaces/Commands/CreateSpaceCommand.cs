@@ -28,7 +28,7 @@ public class CreateSpaceCommandHandler : ICommandHandler<CreateSpaceCommand, Spa
     {
         var (name, building, floor) = await _validator.ValidateAsync(command.Input, null);
         var space = new Space(_guids.Create(), name, building.Id, floor.Id, command.Input.TypeId);
-        SpaceInputValidator.Apply(space, command.Input);
+        SpaceInputApplier.Apply(space, command.Input);
         await _spaces.InsertAsync(space, autoSave: true);
         return await _mapper.MapAsync(space);
     }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Cqrs;
+using Dixels.Portal.Estate;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Timing;
 
@@ -38,7 +39,7 @@ public class CancelBookingSeriesFromCommandHandler : ICommandHandler<CancelBooki
         var targets = await _bookings.GetListAsync(b =>
             b.SeriesId == seriesId && b.Status == BookingStatus.Confirmed && b.StartUtc >= from);
         var count = 0;
-        foreach (var b in targets.Where(b => b.GetLifecycle(_clock.Now) != "ended"))
+        foreach (var b in targets.Where(b => b.GetLifecycle(_clock.Now) != TimeWindowState.Ended))
         {
             await _operations.CancelOneAsync(b);
             count++;

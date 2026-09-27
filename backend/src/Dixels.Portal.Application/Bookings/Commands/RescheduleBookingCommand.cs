@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
 using Dixels.Portal.Cqrs;
+using Dixels.Portal.Estate;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Timing;
@@ -34,9 +35,9 @@ public class RescheduleBookingCommandHandler : ICommandHandler<RescheduleBooking
         var b = await _operations.GetAsync(command.Id);
         await _operations.EnsureCanActAsync(b, "You can only change your own bookings.");
         var state = b.GetLifecycle(_clock.Now);
-        if (state is "ended" or "cancelled")
-            throw new BusinessException(PortalDomainErrorCodes.BookingLocked, $"A {state} booking cannot be changed.");
-        if (state == "in_progress")
+        if (state is TimeWindowState.Ended or TimeWindowState.Cancelled)
+            throw new BusinessException(PortalDomainErrorCodes.BookingLocked, $"A {state.ToApiValue()} booking cannot be changed.");
+        if (state == TimeWindowState.InProgress)
             throw new BusinessException(PortalDomainErrorCodes.BookingInProgress,
                 "A booking that has started can only be cancelled or ended early.");
         /* Optimistic concurrency: refuse if someone changed the booking after the client loaded it. */

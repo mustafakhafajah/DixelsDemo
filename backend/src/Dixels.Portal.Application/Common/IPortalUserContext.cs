@@ -12,6 +12,6 @@ public interface IPortalUserContext
 
     Guid? UserIdOrNull { get; }
 
-    /* Admins hold Bookings.ManageAll; the admin role is granted every permission by the identity seeder. */
+    /* Decided by PortalAdminRule, the one definition of "admin". */
     Task<bool> IsAdminAsync();
 }

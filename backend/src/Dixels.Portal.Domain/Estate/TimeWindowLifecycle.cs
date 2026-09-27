@@ -2,14 +2,14 @@ using System;
 
 namespace Dixels.Portal.Estate;
 
-/* Bookings and maintenance windows move through the same states; the API sends these strings. */
+/* Bookings and maintenance windows move through the same states. */
 public static class TimeWindowLifecycle
 {
-    public static string Get(bool isCancelled, DateTime startUtc, DateTime endUtc, DateTime nowUtc)
+    public static TimeWindowState Get(bool isCancelled, DateTime startUtc, DateTime endUtc, DateTime nowUtc)
     {
-        if (isCancelled) return "cancelled";
-        if (endUtc <= nowUtc) return "ended";
-        if (startUtc <= nowUtc) return "in_progress";
-        return "scheduled";
+        if (isCancelled) return TimeWindowState.Cancelled;
+        if (endUtc <= nowUtc) return TimeWindowState.Ended;
+        if (startUtc <= nowUtc) return TimeWindowState.InProgress;
+        return TimeWindowState.Scheduled;
     }
 }

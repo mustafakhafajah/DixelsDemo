@@ -12,7 +12,6 @@ import './appShell.css'
 
 const PAGE_META: Record<string, [string, string]> = {
   find: ['Find a space', 'See every room at a glance, or search a specific time. No approval step.'],
-  dashboard: ['Dashboard', 'Your day at a glance.'],
   bookings: ['Bookings', 'A calendar view of your bookings.'],
   buildings: ['Buildings', 'The estate every floor and space belongs to.'],
   floors: ['Floors', 'Every floor across every building, and any time blocked on it.'],
@@ -25,7 +24,6 @@ const BOOKING_VIEWS = new Set(['find', 'bookings'])
 
 const Icon = {
   find: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4L14 14" strokeLinecap="round" /></svg>,
-  dashboard: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="1.8" y="1.8" width="5.2" height="5.2" rx="1.3" /><rect x="9" y="1.8" width="5.2" height="5.2" rx="1.3" /><rect x="1.8" y="9" width="5.2" height="5.2" rx="1.3" /><rect x="9" y="9" width="5.2" height="5.2" rx="1.3" /></svg>,
   bookings: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2" y="3.2" width="12" height="10.6" rx="1.8" /><path d="M2 6.4h12M5.4 1.8v2.6M10.6 1.8v2.6" strokeLinecap="round" /></svg>,
   estate: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="1.8" y="1.8" width="12.4" height="12.4" rx="1.5" /><path d="M1.8 7h12.4M7 1.8v12.4" strokeLinecap="round" /></svg>,
   signOut: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
@@ -53,7 +51,6 @@ function Sidebar() {
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
           <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>
-          <NavLink to="/app/dashboard" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.dashboard}Dashboard</NavLink>
         </div>
         <div>
           <NavLink to="/app/bookings" className={navClass}>
@@ -98,8 +95,7 @@ function Topbar() {
   const { isAdmin } = useSession()
   const view = pathname.split('/')[2] || 'find'
   const meta = PAGE_META[view] ?? PAGE_META.find
-  const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule')
-    : view === 'dashboard' ? (isAdmin ? 'Estate dashboard' : 'Dashboard') : meta[0]
+  const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule') : meta[0]
   return (
     <header className="topbar">
       <div>

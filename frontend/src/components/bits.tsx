@@ -23,8 +23,8 @@ export function BookablePill({ bookable, reason }: { bookable: boolean; reason?:
 export function ErrorLine({ error }: { error: { code: string; message: string } | null | undefined }) {
   if (!error) return null
   return (
-    <p className="err">
-      <span className="errcode">{error.code}</span>
+    /* Only the human sentence is shown; the code stays in the data for logic, not on screen. */
+    <p className="err" data-code={error.code}>
       <span className="msg">{error.message}</span>
     </p>
   )

@@ -3,6 +3,7 @@ import { errorText } from '../../api/client'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, Floor, Space, SpaceType } from '../../api/types'
 import { ErrorLine, plural, RequiredMark, shortId } from '../../components/bits'
+import { DatePicker, Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { modals } from '../../state/modalStore'
 import { BookableField, useCancelUpcomingAfterSave } from './Bookable'
@@ -137,7 +138,7 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
       <div>
         <label className="lbl" htmlFor="bld-holiday">Holidays</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input type="date" id="bld-holiday" className="inp mono" style={{ flex: 1 }} value={holidayInput} onChange={(e) => setHolidayInput(e.target.value)} />
+          <div style={{ flex: 1 }}><DatePicker id="bld-holiday" value={holidayInput} onChange={setHolidayInput} /></div>
           <button type="button" className="btn btn-sm" onClick={addHoliday}>Add</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
@@ -198,9 +199,8 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
       <p className="req-note"><RequiredMark /> Required field</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Field id="flr-building" label="Building" required>
-          <select id="flr-building" className="inp" value={effBuildingId} disabled={!!editing} onChange={(e) => setBuildingId(e.target.value)}>
-            {buildings.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </select>
+          <Dropdown id="flr-building" value={effBuildingId} disabled={!!editing} onChange={setBuildingId}
+            options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
         <Field id="flr-name" label="Floor" required>
           <input id="flr-name" className="inp mono" placeholder="e.g. 5" value={name} autoFocus onChange={(e) => { setName(e.target.value); setError(null) }} />
@@ -237,10 +237,10 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   ])
   const [error, setError] = useState<FieldError>(null)
 
-  const effBuildingId = buildingId || buildings[0]?.id || ''
-  const b = buildings.find((x) => x.id === effBuildingId)
-  const bFloors = floors.filter((f) => f.buildingId === effBuildingId)
-  const effFloorId = bFloors.some((f) => f.id === floorId) ? floorId : bFloors[0]?.id ?? ''
+  /* Nothing is pre-picked: choose the building, then one of its floors. */
+  const b = buildings.find((x) => x.id === buildingId)
+  const bFloors = b ? floors.filter((f) => f.buildingId === b.id) : []
+  const effFloorId = bFloors.some((f) => f.id === floorId) ? floorId : ''
   const f = bFloors.find((x) => x.id === effFloorId)
   const bounds = b ? [
     f?.openHourOverride ?? b.openHour, f?.closeHourOverride ?? b.closeHour,
@@ -251,7 +251,8 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const submit = () => {
     if (!name.trim()) return setError({ code: 'validation.missing_field', message: 'Give the space a name.' })
     if (!b) return setError({ code: 'validation.missing_field', message: 'Pick a building. Add one first if the list is empty.' })
-    if (!f) return setError({ code: 'validation.missing_field', message: `${b.name} has no floors yet. Add a floor to it first.` })
+    if (!bFloors.length) return setError({ code: 'validation.missing_field', message: `${b.name} has no floors yet. Add a floor to it first.` })
+    if (!f) return setError({ code: 'validation.missing_field', message: 'Pick a floor.' })
     if (!effTypeId) return setError({ code: 'validation.invalid_space_type', message: 'Pick a space type. Add one on the Space types page first.' })
     const [o, c, mi, ma] = ov.map(numOrNull)
     const [bo, bc, bmi, bma] = bounds!
@@ -285,9 +286,9 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
         <Field id="sp-type" label="Type" required>
-          <select id="sp-type" className="inp" value={effTypeId} onChange={(e) => setTypeId(e.target.value)}>
-            {types.length ? types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>) : <option value="">No types yet</option>}
-          </select>
+          <Dropdown id="sp-type" value={effTypeId} onChange={setTypeId} disabled={!types.length}
+            placeholder={types.length ? 'Choose a type' : 'No types yet'}
+            options={types.map((t) => ({ value: t.id, label: t.name }))} />
         </Field>
         <Field id="sp-capacity" label="Capacity">
           <input type="number" id="sp-capacity" className="inp mono" min={0} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
@@ -295,14 +296,14 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 12 }}>
         <Field id="sp-building" label="Building" required>
-          <select id="sp-building" className="inp" value={effBuildingId} onChange={(e) => { setBuildingId(e.target.value); setFloorId('') }}>
-            {buildings.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </select>
+          <Dropdown id="sp-building" value={buildingId} placeholder="Choose a building"
+            onChange={(v) => { setBuildingId(v); setFloorId(''); setError(null) }}
+            options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
         <Field id="sp-floor" label="Floor" required>
-          <select id="sp-floor" className="inp" value={effFloorId} onChange={(e) => setFloorId(e.target.value)}>
-            {bFloors.length ? bFloors.map((x) => <option key={x.id} value={x.id}>{x.name}</option>) : <option value="">—</option>}
-          </select>
+          <Dropdown id="sp-floor" value={effFloorId} onChange={(v) => { setFloorId(v); setError(null) }}
+            disabled={!b || !bFloors.length} placeholder={!b ? 'Building first' : bFloors.length ? 'Choose' : 'No floors'}
+            options={bFloors.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
         {/* A space always uses its building's time zone; it is changed on the building. */}
         <Field id="sp-tz" label="Time zone (building)">

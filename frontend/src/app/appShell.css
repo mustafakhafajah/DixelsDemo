@@ -4,6 +4,8 @@
   --ink: #18181b; --paper: #ffffff; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5;
   --line: #e4e4e7; --line-strong: #d4d4d8;
   --accent: #9c6ca4; --accent-dark: #6e3a7a; --accent-soft: #f4ecf5;
+  /* One solid purple for every main-action button and the login button (same as the avatar). */
+  --btn-purple: #6e3a7a; --btn-purple-hover: #5a2e64;
   --copper: #a97425; --copper-soft: #faf1e3;
   --rust: #a5402f; --rust-soft: #faeae7; --rust-line: #e6bdb3;
   --slate: #71717a; --slate-2: #a1a1aa;
@@ -27,12 +29,9 @@
 .app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-ligatures: none; }
 
 /* ── SHELL ── */
-/* Sidebar uses the accent button's colours (purple background, white text). The theme variables are
- * re-pointed inside it so inline styles in AppLayout (var(--ink), var(--slate), var(--line)) follow. */
+/* Light sidebar (reference design): white panel, grey items, the selected item is a soft purple pill. */
 .app-shell .sidebar {
-  --ink: #ffffff; --slate: rgba(255,255,255,.75); --slate-2: rgba(255,255,255,.6);
-  --line: rgba(255,255,255,.22); --surface-3: rgba(255,255,255,.14);
-  background: var(--accent); color: var(--ink); border-right: 1px solid var(--accent-dark); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh;
+  background: var(--surface); color: var(--ink); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--slate); padding: 0 10px; margin: 0 0 6px; }
 .app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #3f3f46; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
@@ -40,26 +39,23 @@
 .app-shell .nav-link.active { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; color: var(--slate); }
 .app-shell .nav-link.active svg { color: var(--accent-dark); }
-.app-shell .sidebar .nav-link { color: rgba(255,255,255,.9); }
-.app-shell .sidebar .nav-link.active { background: var(--accent-dark); color: #fff; }
-.app-shell .sidebar .nav-link.active svg { color: #fff; }
 .app-shell .nav-count { margin-left: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
-.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; padding: 2px 6px; }
+/* flex-shrink: 0 keeps the logo from being squeezed to nothing on short screens. */
+.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; flex-shrink: 0; padding: 2px 6px; }
 .app-shell .sidebar-logo img { height: 40px; width: auto; display: block; }
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
 .app-shell .avatar.admin { background: var(--ink); }
-.app-shell .sidebar .avatar { background: #fff; color: var(--accent-dark); }
-.app-shell .sidebar .avatar.admin { background: var(--accent-dark); color: #fff; }
+.app-shell .sidebar .avatar, .app-shell .sidebar .avatar.admin { background: var(--accent-dark); color: #fff; }
 
 .app-shell .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 26px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .app-shell .btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); line-height: normal; box-shadow: 0 1px 2px rgba(24,24,27,.04); }
 .app-shell .btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .app-shell .btn:disabled { opacity: .45; cursor: not-allowed; }
-.app-shell .btn-primary { background: var(--ink); border-color: var(--ink); color: #fff; }
-.app-shell .btn-primary:hover { background: #000; border-color: #000; }
-.app-shell .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
-.app-shell .btn-accent:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+/* Main-action buttons are solid purple, the same as the login button. Secondary buttons stay white
+ * so "Save" and "Discard" never look alike. */
+.app-shell .btn-primary, .app-shell .btn-accent { background: var(--btn-purple); border-color: var(--btn-purple); color: #fff; }
+.app-shell .btn-primary:hover, .app-shell .btn-accent:hover { background: var(--btn-purple-hover); border-color: var(--btn-purple-hover); }
 .app-shell .btn-danger { color: var(--rust); border-color: var(--rust-line); }
 .app-shell .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
 .app-shell .btn-lg { padding: 11px 16px; font-size: 14px; }
@@ -79,9 +75,6 @@
 .app-shell .err { display: flex; gap: 6px; align-items: baseline; font-size: 12px; color: var(--rust); margin-top: 5px; }
 .app-shell .errcode { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--rust); background: var(--rust-soft); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
 
-.app-shell .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-.app-shell .stat b { display: block; font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-.app-shell .stat span { font-size: 12px; color: var(--slate); }
 
 .app-shell table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
 .app-shell table.grid th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); padding: 11px 16px; border-bottom: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
@@ -236,6 +229,10 @@
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
 .app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: rgba(156,108,164,.14); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
 .app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
+.app-shell .rt-track { cursor: crosshair; user-select: none; }
+/* The window being dragged on a room's row, with its times. */
+.app-shell .rt-drag { position: absolute; top: 4px; bottom: 4px; z-index: 3; pointer-events: none; border-radius: 6px; background: rgba(124,58,237,.18); border: 1.5px solid #7c3aed; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+.app-shell .rt-drag span { margin-top: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: #5b21b6; background: rgba(255,255,255,.85); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
 .app-shell .rt-free { position: absolute; top: 5px; bottom: 5px; cursor: pointer; border-radius: 5px; z-index: 1; }
 .app-shell .rt-free:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .app-shell .rt-block { top: 6px; bottom: 6px; z-index: 2; }
@@ -244,13 +241,6 @@
   background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 5px, var(--line-strong) 5px, var(--line-strong) 6px);
   color: var(--ink); border-left-color: var(--slate); }
 
-/* stats bars */
-.app-shell .bar-row { display: grid; grid-template-columns: 140px 1fr 44px; gap: 10px; align-items: center; padding: 7px 0; font-size: 12.5px; }
-.app-shell .bar-track { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
-.app-shell .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); }
-.app-shell .trend-row { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
-.app-shell .trend-bar { flex: 1; border-radius: 2px 2px 0 0; background: var(--accent-soft); position: relative; }
-.app-shell .trend-bar.high { background: var(--rust); }
 
 .app-shell .main { flex: 1; padding: 22px 26px 44px; min-width: 0; }
 .app-shell .registry-row { padding: 11px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }

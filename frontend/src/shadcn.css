@@ -1,0 +1,37 @@
+/* Tailwind for the shadcn/ui pickers only. No preflight, so the app's own styles stay exactly as they are. */
+@layer theme, base, components, utilities;
+/* prefix(tw): every utility is written tw:flex, tw:p-3…, so none can clash with the app's own class names (grid, card, hidden…). */
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* shadcn colour names mapped to the app's purple theme (same values as .app-shell in appShell.css).
+   Fixed hex values, because dropdowns and calendars open in a portal outside .app-shell. */
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: #18181b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #18181b;
+  --color-primary: #6e3a7a;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #f4ecf5;
+  --color-accent-foreground: #6e3a7a;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-border: #e4e4e7;
+  --color-input: #e4e4e7;
+  --color-ring: #9c6ca4;
+  /* The page root is 18px; pin sizes in px so pickers match the app's 14px fields. */
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Without preflight, portalled picker content needs its own box model and plain buttons. */
+[data-slot='select-content'] *, [data-slot='popover-content'] * { box-sizing: border-box; }
+[data-slot='popover-content'] button, [data-slot='select-content'] button { font-family: inherit; }
+
+@keyframes shadcn-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+[data-slot='select-content'][data-state='open'], [data-slot='popover-content'][data-state='open'] { animation: shadcn-in 120ms ease-out; }

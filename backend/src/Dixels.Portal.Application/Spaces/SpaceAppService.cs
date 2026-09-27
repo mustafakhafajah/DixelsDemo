@@ -25,6 +25,9 @@ public class SpaceAppService : PortalAppService, ISpaceAppService
     public Task<ListResultDto<SpaceDto>> GetListAsync()
         => _queries.QueryAsync(new GetSpaceListQuery());
 
+    public Task<ListResultDto<SpaceDto>> GetBookableListAsync(FindSpacesInput input)
+        => _queries.QueryAsync(new GetBookableSpacesQuery(input));
+
     public Task<SpaceRegistryPageDto> GetPagedListAsync(GetSpacesInput input)
         => _queries.QueryAsync(new GetSpaceRegistryPageQuery(input));
 

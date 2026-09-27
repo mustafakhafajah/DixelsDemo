@@ -161,19 +161,20 @@
   width: 100%;
 }
 
+/* Same solid purple as the app's main-action buttons (#6e3a7a). */
 .login-page .real-signin-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--lp-accent);
-  border-color: var(--lp-accent);
+  background: #6e3a7a;
+  border-color: #6e3a7a;
   color: #fff;
 }
 
 .login-page .real-signin-btn:hover {
-  background: var(--lp-accent-dark);
-  border-color: var(--lp-accent-dark);
+  background: #5a2e64;
+  border-color: #5a2e64;
 }
 
 .login-page .real-signin-icon {

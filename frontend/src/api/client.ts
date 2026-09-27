@@ -16,12 +16,15 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | boolean | null | undefined>
+type QueryValue = string | number | boolean | null | undefined
+type Query = Record<string, QueryValue | string[]>
 
+/* A list is sent as a repeated key (TypeIds=a&TypeIds=b), which is how ASP.NET binds List<T>. */
 export function buildUrl(path: string, query?: Query): string {
   const url = new URL(path, API_URL)
   Object.entries(query ?? {}).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
+    if (Array.isArray(v)) v.forEach((item) => url.searchParams.append(k, item))
+    else if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
   })
   return url.toString()
 }

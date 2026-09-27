@@ -76,6 +76,33 @@ export function useSpaces() {
   })
 }
 
+export interface FindSpacesQuery {
+  buildingId?: string
+  floorName?: string
+  minCapacity?: number
+  typeIds: string[]
+  name?: string
+}
+
+/* "Find a space": the server filters and returns only bookable spaces, so the page never loads the whole estate.
+ * The key starts with 'spaces', so saving a space refreshes these results too. */
+export function useFindSpaces(q: FindSpacesQuery) {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['spaces', 'find', q],
+    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space/bookable-list', undefined, {
+      BuildingId: q.buildingId,
+      FloorName: q.floorName,
+      MinCapacity: q.minCapacity || undefined,
+      TypeIds: q.typeIds,
+      Name: q.name,
+    })).items,
+    enabled: useEnabled(),
+    /* Keep the current rooms on screen while a changed filter loads, instead of flashing "Loading…". */
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useSpaceTypes() {
   const api = useApi()
   return useQuery({

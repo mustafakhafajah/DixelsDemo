@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { DatePicker, Dropdown } from '../../components/pickers'
 import { RECURRENCE_SAFETY_CAP } from '../../lib/constants'
 import { addDays, dayAt, dayKey, dayName, hm } from '../../lib/dateUtils'
 import type { RecurrenceRule, RepeatFreq } from '../../lib/recurrence'
@@ -47,12 +48,13 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 150 }}>
           <label className="lbl" htmlFor={`${idPrefix}-repeat`}>Repeats</label>
-          <select id={`${idPrefix}-repeat`} className="inp" value={value.repeat} onChange={(e) => set({ repeat: e.target.value as RepeatFreq })}>
-            <option value="none">Does not repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
+          <Dropdown id={`${idPrefix}-repeat`} value={value.repeat} onChange={(v) => set({ repeat: v as RepeatFreq })}
+            options={[
+              { value: 'none', label: 'Does not repeat' },
+              { value: 'daily', label: 'Daily' },
+              { value: 'weekly', label: 'Weekly' },
+              { value: 'monthly', label: 'Monthly' },
+            ]} />
         </div>
         {value.repeat !== 'none' && (
           <div style={{ width: 150 }}>
@@ -93,8 +95,8 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
                 <span className="mono" style={{ fontSize: 12, color: 'var(--slate)' }}>occurrences</span>
               </div>
             ) : (
-              <div style={{ width: 170 }}>
-                <input type="date" className="inp mono" value={value.until} onChange={(e) => set({ until: e.target.value })} aria-label="Until" />
+              <div style={{ width: 190 }}>
+                <DatePicker value={value.until} onChange={(v) => set({ until: v })} aria-label="Until" />
               </div>
             )}
           </div>
@@ -112,6 +114,8 @@ export interface OccurrenceRow {
   note?: ReactNode
 }
 
+/* Collapsed by default: a long series shows one summary row instead of pushing the form down forever.
+ * Click the header to review (and exclude) individual occurrences. */
 export function OccurrenceList({ rows, summary, summaryAlert, truncated, onToggle }: {
   rows: OccurrenceRow[]
   summary: ReactNode
@@ -119,29 +123,41 @@ export function OccurrenceList({ rows, summary, summaryAlert, truncated, onToggl
   truncated: boolean
   onToggle: (i: number) => void
 }) {
+  const [open, setOpen] = useState(false)
+  const excluded = rows.filter((o) => o.skip).length
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', marginTop: 12, maxHeight: 280, overflowY: 'auto' }}>
-      <div style={{ padding: '8px 11px', background: 'var(--surface-2)', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', gap: 8, position: 'sticky', top: 0 }}>
-        <span style={{ fontSize: 12, fontWeight: 600 }}>{rows.length} occurrences</span>
-        <span style={{ fontSize: 11.5, color: summaryAlert ? 'var(--rust)' : 'var(--slate)' }}>{summary}</span>
-      </div>
-      {truncated && (
-        <div style={{ padding: '7px 11px', fontSize: 11.5, color: 'var(--rust)', background: 'var(--rust-soft)', borderBottom: '1px solid var(--rust-line)' }}>
-          Showing the first {RECURRENCE_SAFETY_CAP} occurrences — narrow the end date or occurrence count to see fewer.
+    <div style={{ border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
+      <button type="button" className="occ-head" aria-expanded={open} onClick={() => setOpen(!open)}
+        style={{ width: '100%', padding: '9px 11px', background: 'var(--surface-2)', border: 'none', borderBottom: open ? '1px solid var(--line)' : 'none',
+          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+        <span aria-hidden style={{ display: 'inline-block', width: 10, fontSize: 10, color: 'var(--slate)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>▶</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>
+          {rows.length} occurrences{excluded ? ` · ${excluded} excluded` : ''}
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: summaryAlert ? 'var(--rust)' : 'var(--slate)' }}>{summary}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent-dark)', whiteSpace: 'nowrap' }}>{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+          {truncated && (
+            <div style={{ padding: '7px 11px', fontSize: 11.5, color: 'var(--rust)', background: 'var(--rust-soft)', borderBottom: '1px solid var(--rust-line)' }}>
+              Showing the first {RECURRENCE_SAFETY_CAP} occurrences — narrow the end date or occurrence count to see fewer.
+            </div>
+          )}
+          {rows.map((o, i) => (
+            <div key={o.start.getTime()} className="occ-row" onClick={() => onToggle(i)}
+              style={{ display: 'flex', gap: 9, alignItems: 'center', padding: '7px 11px', borderBottom: '1px solid var(--line)', fontSize: 12.5, background: o.flagged ? 'var(--rust-soft)' : undefined }}>
+              <span className={`occ-bar${o.skip ? '' : ' on'}`} />
+              <span className="mono" style={{ fontSize: 12, ...(o.skip ? { color: 'var(--slate-2)', textDecoration: 'line-through' } : {}) }}>
+                {dayKey(o.start)} {hm(o.start)}–{hm(o.end)}
+              </span>
+              <span style={{ color: 'var(--slate)', fontSize: 11.5 }}>{dayName(o.start).slice(0, 3)}</span>
+              {o.note ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--rust)', fontWeight: 600 }}>{o.note}</span>
+                : o.skip ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--slate-2)' }}>Excluded</span> : null}
+            </div>
+          ))}
         </div>
       )}
-      {rows.map((o, i) => (
-        <div key={o.start.getTime()} className="occ-row" onClick={() => onToggle(i)}
-          style={{ display: 'flex', gap: 9, alignItems: 'center', padding: '7px 11px', borderBottom: '1px solid var(--line)', fontSize: 12.5, background: o.flagged ? 'var(--rust-soft)' : undefined }}>
-          <span className={`occ-bar${o.skip ? '' : ' on'}`} />
-          <span className="mono" style={{ fontSize: 12, ...(o.skip ? { color: 'var(--slate-2)', textDecoration: 'line-through' } : {}) }}>
-            {dayKey(o.start)} {hm(o.start)}–{hm(o.end)}
-          </span>
-          <span style={{ color: 'var(--slate)', fontSize: 11.5 }}>{dayName(o.start).slice(0, 3)}</span>
-          {o.note ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--rust)', fontWeight: 600 }}>{o.note}</span>
-            : o.skip ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--slate-2)' }}>Excluded</span> : null}
-        </div>
-      ))}
     </div>
   )
 }

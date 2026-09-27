@@ -10,16 +10,24 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
     {
         var group = context.AddGroup(PortalPermissions.GroupName, L("Permission:Portal"));
 
-        group.AddPermission(PortalPermissions.Buildings.Default, L("Permission:Buildings"))
-            .AddChild(PortalPermissions.Buildings.Manage, L("Permission:Manage"));
-        group.AddPermission(PortalPermissions.Floors.Default, L("Permission:Floors"))
-            .AddChild(PortalPermissions.Floors.Manage, L("Permission:Manage"));
-        group.AddPermission(PortalPermissions.Spaces.Default, L("Permission:Spaces"))
-            .AddChild(PortalPermissions.Spaces.Manage, L("Permission:Manage"));
+        AddCrud(group, PortalPermissions.Buildings.Default, "Permission:Buildings");
+        AddCrud(group, PortalPermissions.Floors.Default, "Permission:Floors");
+        AddCrud(group, PortalPermissions.Spaces.Default, "Permission:Spaces");
+        AddCrud(group, PortalPermissions.SpaceTypes.Default, "Permission:SpaceTypes");
+        AddCrud(group, PortalPermissions.Maintenance.Default, "Permission:Maintenance");
+
         group.AddPermission(PortalPermissions.Bookings.Default, L("Permission:Bookings"))
             .AddChild(PortalPermissions.Bookings.ManageAll, L("Permission:ManageAll"));
-        group.AddPermission(PortalPermissions.Maintenance.Default, L("Permission:Maintenance"))
-            .AddChild(PortalPermissions.Maintenance.Manage, L("Permission:Manage"));    }
+    }
+
+    /* The ABP convention: a parent permission to view, with Create / Edit / Delete children. */
+    private static void AddCrud(PermissionGroupDefinition group, string name, string displayName)
+    {
+        var parent = group.AddPermission(name, L(displayName));
+        parent.AddChild(name + ".Create", L("Permission:Create"));
+        parent.AddChild(name + ".Edit", L("Permission:Edit"));
+        parent.AddChild(name + ".Delete", L("Permission:Delete"));
+    }
 
     private static LocalizableString L(string name)
     {

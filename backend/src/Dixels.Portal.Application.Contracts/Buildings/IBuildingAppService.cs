@@ -1,16 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using Dixels.Portal.Estate;
-using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.Buildings;
 
-public interface IBuildingAppService : IApplicationService
+public interface IBuildingAppService : ICrudAppService<BuildingDto, Guid, EstateListInput, CreateUpdateBuildingDto>
 {
-    Task<ListResultDto<BuildingDto>> GetListAsync();
-    Task<BuildingDto> GetAsync(Guid id);
-    Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input);
-    Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input);
     Task<BuildingDto> SetBookableAsync(Guid id, SetBookableDto input);
 }

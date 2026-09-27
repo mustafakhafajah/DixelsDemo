@@ -1,15 +1,10 @@
 using System;
-using System.Threading.Tasks;
-using Volo.Abp.Application.Dtos;
+using Dixels.Portal.Estate;
 using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.SpaceTypes;
 
-public interface ISpaceTypeAppService : IApplicationService
+/* DeleteAsync only succeeds for a type no space uses. */
+public interface ISpaceTypeAppService : ICrudAppService<SpaceTypeDto, Guid, EstateListInput, CreateUpdateSpaceTypeDto>
 {
-    Task<ListResultDto<SpaceTypeDto>> GetListAsync();
-    Task<SpaceTypeDto> CreateAsync(CreateUpdateSpaceTypeDto input);
-    Task<SpaceTypeDto> UpdateAsync(Guid id, CreateUpdateSpaceTypeDto input);
-    /* Only a type no space uses can be deleted. */
-    Task DeleteAsync(Guid id);
 }

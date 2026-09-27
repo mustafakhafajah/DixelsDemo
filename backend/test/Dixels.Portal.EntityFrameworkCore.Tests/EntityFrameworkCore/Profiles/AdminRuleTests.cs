@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Portal.Common;
+using Dixels.Portal.Permissions;
 using Dixels.Portal.Profiles;
 using Shouldly;
 using Volo.Abp.PermissionManagement;
@@ -43,7 +43,7 @@ public class AdminRuleTests : PortalEntityFrameworkCoreTestBase
     {
         var granted = await CreateUserAsync("granted.user");
         await WithUnitOfWorkAsync(() =>
-            _permissions.SetForUserAsync(granted.Id, PortalAdminRule.Permission, true));
+            _permissions.SetForUserAsync(granted.Id, PortalPermissions.Bookings.ManageAll, true));
 
         var users = (await _profiles.GetUsersAsync()).Items;
 

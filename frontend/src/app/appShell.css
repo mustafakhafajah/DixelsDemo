@@ -75,9 +75,6 @@
 .app-shell .err { display: flex; gap: 6px; align-items: baseline; font-size: 12px; color: var(--rust); margin-top: 5px; }
 .app-shell .errcode { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--rust); background: var(--rust-soft); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
 
-.app-shell .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
-.app-shell .stat b { display: block; font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-.app-shell .stat span { font-size: 12px; color: var(--slate); }
 
 .app-shell table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
 .app-shell table.grid th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); padding: 11px 16px; border-bottom: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
@@ -240,13 +237,6 @@
   background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 5px, var(--line-strong) 5px, var(--line-strong) 6px);
   color: var(--ink); border-left-color: var(--slate); }
 
-/* stats bars */
-.app-shell .bar-row { display: grid; grid-template-columns: 140px 1fr 44px; gap: 10px; align-items: center; padding: 7px 0; font-size: 12.5px; }
-.app-shell .bar-track { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
-.app-shell .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); }
-.app-shell .trend-row { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
-.app-shell .trend-bar { flex: 1; border-radius: 2px 2px 0 0; background: var(--accent-soft); position: relative; }
-.app-shell .trend-bar.high { background: var(--rust); }
 
 .app-shell .main { flex: 1; padding: 22px 26px 44px; min-width: 0; }
 .app-shell .registry-row { padding: 11px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }

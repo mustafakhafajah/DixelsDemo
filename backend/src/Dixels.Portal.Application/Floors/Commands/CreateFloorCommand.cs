@@ -29,7 +29,7 @@ public class CreateFloorCommandHandler : ICommandHandler<CreateFloorCommand, Flo
         var building = await _validator.GetBuildingAsync(command.Input.BuildingId);
         var name = await _validator.ValidateAsync(building, command.Input, null);
         var floor = new Floor(_guids.Create(), building.Id, name);
-        FloorInputValidator.Apply(floor, command.Input);
+        FloorInputApplier.Apply(floor, command.Input);
         await _floors.InsertAsync(floor, autoSave: true);
         return await _mapper.MapAsync(floor);
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Spaces;
 using Volo.Abp.DependencyInjection;
@@ -52,7 +53,7 @@ public class MaintenanceWindowDtoMapper : ITransientDependency
             ScopeId = m.ScopeId,
             ScopeLabel = labels[(m.ScopeType, m.ScopeId)],
             Status = m.Status,
-            Lifecycle = m.GetLifecycle(now),
+            Lifecycle = m.GetLifecycle(now).ToApiValue(),
             CreationTime = m.CreationTime,
             CreatorId = m.CreatorId,
         }).ToList();

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Dixels.Portal.Cqrs;
+using Dixels.Portal.Estate;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Timing;
@@ -30,7 +31,7 @@ public class EndBookingEarlyCommandHandler : ICommandHandler<EndBookingEarlyComm
     {
         var b = await _operations.GetAsync(command.Id);
         await _operations.EnsureCanActAsync(b, "You can only end your own bookings.");
-        if (b.GetLifecycle(_clock.Now) != "in_progress")
+        if (b.GetLifecycle(_clock.Now) != TimeWindowState.InProgress)
             throw new BusinessException(PortalDomainErrorCodes.BookingNotInProgress,
                 "Only a booking that has already started can be ended early.");
         b.EndUtc = _clock.Now;

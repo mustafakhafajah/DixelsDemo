@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
@@ -29,16 +28,5 @@ public class BuildingInputValidator : ITransientDependency
         if (input.CloseHour <= input.OpenHour)
             throw new BusinessException(PortalDomainErrorCodes.InvalidHours, "Close hour must be after open hour.");
         return name;
-    }
-
-    public static void Apply(Building b, CreateUpdateBuildingDto input)
-    {
-        b.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
-        b.IsBookable = input.IsBookable;
-        b.OpenHour = input.OpenHour;
-        b.CloseHour = input.CloseHour;
-        b.MinBookingMinutes = input.MinBookingMinutes;
-        b.MaxBookingHours = input.MaxBookingHours;
-        b.Holidays = input.Holidays.Distinct().OrderBy(d => d).ToList();
     }
 }

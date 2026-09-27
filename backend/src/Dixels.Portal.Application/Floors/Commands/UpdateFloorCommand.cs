@@ -26,7 +26,7 @@ public class UpdateFloorCommandHandler : ICommandHandler<UpdateFloorCommand, Flo
         var floor = await _floors.GetAsync(command.Id);
         var building = await _validator.GetBuildingAsync(floor.BuildingId);
         floor.Name = await _validator.ValidateAsync(building, command.Input, command.Id);
-        FloorInputValidator.Apply(floor, command.Input);
+        FloorInputApplier.Apply(floor, command.Input);
         await _floors.UpdateAsync(floor, autoSave: true);
         return await _mapper.MapAsync(floor);
     }

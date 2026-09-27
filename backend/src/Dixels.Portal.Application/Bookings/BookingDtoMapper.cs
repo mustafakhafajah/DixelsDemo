@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
+using Dixels.Portal.Estate;
 using Dixels.Portal.Spaces;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
@@ -45,7 +46,7 @@ public class BookingDtoMapper : ITransientDependency
             StartUtc = b.StartUtc,
             EndUtc = b.EndUtc,
             Status = b.Status,
-            Lifecycle = b.GetLifecycle(now),
+            Lifecycle = b.GetLifecycle(now).ToApiValue(),
             Version = b.Version,
             SeriesId = b.SeriesId,
             Parking = b.Parking,

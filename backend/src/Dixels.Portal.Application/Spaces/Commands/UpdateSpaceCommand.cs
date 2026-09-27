@@ -27,7 +27,7 @@ public class UpdateSpaceCommandHandler : ICommandHandler<UpdateSpaceCommand, Spa
         space.Name = name;
         space.BuildingId = building.Id;
         space.FloorId = floor.Id;
-        SpaceInputValidator.Apply(space, command.Input);
+        SpaceInputApplier.Apply(space, command.Input);
         await _spaces.UpdateAsync(space, autoSave: true);
         return await _mapper.MapAsync(space);
     }

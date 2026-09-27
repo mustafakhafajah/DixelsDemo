@@ -11,7 +11,8 @@ interface SheetProps {
 
 function useEscape(onClose: () => void) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    /* An open dropdown or calendar handles Escape first (and marks it handled); only then close the sheet. */
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])

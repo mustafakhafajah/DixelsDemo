@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { errorText } from '../../api/client'
 import { usePreviewMaintenance, useScheduleMaintenance } from '../../api/hooks'
 import { ErrorLine, plural, RequiredMark } from '../../components/bits'
+import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { addMin, dayKey, fromDateTime, hm, roundUp30 } from '../../lib/dateUtils'
 import { generateOccurrences } from '../../lib/recurrence'
@@ -92,9 +93,8 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="mt-reason">Reason<RequiredMark /></label>
-          <select id="mt-reason" className="inp" value={reason} onChange={(e) => setReason(e.target.value)}>
-            {[...REASONS, OTHER].map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
+          <Dropdown id="mt-reason" value={reason} onChange={setReason}
+            options={[...REASONS, OTHER].map((r) => ({ value: r, label: r }))} />
         </div>
         {reason === OTHER && (
           <div>
@@ -106,25 +106,25 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="mt-start-date">From<RequiredMark /></label>
-          <input type="date" id="mt-start-date" className="inp mono" required value={startDate} onChange={(e) => onStartDate(e.target.value)} />
+          <DatePicker id="mt-start-date" value={startDate} onChange={onStartDate} />
         </div>
         <div>
           <label className="lbl req" htmlFor="mt-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Start time<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <input type="time" id="mt-start" className="inp mono" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <TimePicker id="mt-start" aria-label="Start time" value={startTime} onChange={setStartTime} />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="mt-end-date">Until<RequiredMark /></label>
-          <input type="date" id="mt-end-date" className="inp mono" required value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
+          <DatePicker id="mt-end-date" value={endDate} min={startDate} onChange={setEndDate} />
         </div>
         <div>
           <label className="lbl req" htmlFor="mt-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>End time<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <input type="time" id="mt-end" className="inp mono" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <TimePicker id="mt-end" aria-label="End time" value={endTime} onChange={setEndTime} />
         </div>
       </div>
       <ErrorLine error={bad ? { code: 'validation.end_before_start', message: 'The end must be after the start.' } : null} />

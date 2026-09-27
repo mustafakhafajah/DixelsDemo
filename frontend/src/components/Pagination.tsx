@@ -1,3 +1,5 @@
+import { Dropdown } from './pickers'
+
 export const PAGE_SIZES = [10, 25, 50, 100] as const
 
 /* Page numbers to show: always the first and last, plus the current page and its neighbours. */
@@ -44,12 +46,12 @@ export function Pagination({ page, pageSize, total, noun, onPage, onPageSize }: 
         <button type="button" className="iconbtn" disabled={atEnd} onClick={() => onPage(page + 1)} aria-label="Next page" title="Next page">›</button>
         <button type="button" className="iconbtn" disabled={atEnd} onClick={() => onPage(pageCount)} aria-label="Last page" title="Last page">»</button>
       </div>
-      <label className="pager-size">
+      <div className="pager-size">
         Rows
-        <select className="inp" value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))}>
-          {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </label>
+        <Dropdown size="sm" className="tw:w-[74px]" aria-label="Rows per page" value={String(pageSize)}
+          options={PAGE_SIZES.map((s) => ({ value: String(s), label: String(s) }))}
+          onChange={(v) => onPageSize(Number(v))} />
+      </div>
     </div>
   )
 }

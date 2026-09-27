@@ -1,5 +1,6 @@
 import { useUsers } from '../../../api/hooks'
 import type { Space } from '../../../api/types'
+import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
 import { dayAt, dayName, monthName, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
@@ -26,32 +27,28 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
     <div className="sched-toolbar">
       <div style={{ minWidth: 230 }}>
         <label className="lbl" htmlFor="my-space">Space</label>
-        <select id="my-space" className="inp" value={cfg.spaceId} onChange={(e) => store.patch(id, { spaceId: e.target.value })}>
-          <option value="all">All my spaces</option>
-          {spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
+          options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
       </div>
       {session.isAdmin && (
         <div>
           <label className="lbl" htmlFor="my-user">User</label>
-          <select id="my-user" className="inp" style={{ width: 170 }} value={cfg.userId ?? session.userId}
-            onChange={(e) => store.patch(id, { userId: e.target.value === session.userId ? null : e.target.value })}>
-            {(users.data ?? []).map((u) => (
-              <option key={u.id} value={u.id}>{u.id === session.userId ? 'You' : u.name}{u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}</option>
-            ))}
-            {!users.data && <option value={session.userId}>You</option>}
-          </select>
+          <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId ?? session.userId}
+            onChange={(v) => store.patch(id, { userId: v === session.userId ? null : v })}
+            options={users.data
+              ? users.data.map((u) => ({ value: u.id, label: `${u.id === session.userId ? 'You' : u.name}${u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}` }))
+              : [{ value: session.userId, label: 'You' }]} />
         </div>
       )}
       <div>
         <label className="lbl" htmlFor={`${id}-from`}>From</label>
-        <input type="date" id={`${id}-from`} className="inp mono" style={{ width: 150 }} value={cfg.from}
-          onChange={(e) => store.onRangeInput(id, e.target.value, cfg.to)} />
+        <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
+          onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
       </div>
       <div>
         <label className="lbl" htmlFor={`${id}-to`}>To</label>
-        <input type="date" id={`${id}-to`} className="inp mono" style={{ width: 150 }} value={cfg.to}
-          onChange={(e) => store.onRangeInput(id, cfg.from, e.target.value)} />
+        <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
+          onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
       </div>
       <div className="sched-nav">
         <div className="seg" role="group" aria-label="Schedule view">

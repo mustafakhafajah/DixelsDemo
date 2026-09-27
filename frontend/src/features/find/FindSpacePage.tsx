@@ -3,6 +3,7 @@ import { useBookings, useBuildings, useFloors, useMaintenance, useSpaces } from 
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { Loading, plural } from '../../components/bits'
+import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
@@ -16,7 +17,8 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
   const f = useFindStore()
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
-  const floorNames = [...new Set(floors.filter((x) => x.isBookable && (!f.buildingId || x.buildingId === f.buildingId)).map((x) => x.name))]
+  /* Floor stays locked until a building is picked, then lists only that building's floors. */
+  const floorNames = [...new Set(floors.filter((x) => x.isBookable && !!f.buildingId && x.buildingId === f.buildingId).map((x) => x.name))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   /* Only types some space actually has, as id → name. */
   const types = [...new Map(spaces.map((s) => [s.typeId, s.typeName])).entries()].sort((a, b) => a[1].localeCompare(b[1]))
@@ -29,10 +31,9 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
         <h3>When</h3>
         {/* Stacked, one per row, so neither field is squeezed in the narrow filter column. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <input type="date" className="inp mono" value={f.date} aria-label="Date"
-            onChange={(e) => f.patch({ date: e.target.value || todayKey() })} />
-          <input type="time" className="inp mono" value={minLabel(f.time)} aria-label="Start time"
-            onChange={(e) => { const [h, m] = (e.target.value || '09:00').split(':').map(Number); f.patch({ time: h * 60 + m }) }} />
+          <DatePicker value={f.date} aria-label="Date" onChange={(v) => f.patch({ date: v || todayKey() })} />
+          <TimePicker value={minLabel(f.time)} aria-label="Start time"
+            onChange={(v) => { const [h, m] = v.split(':').map(Number); f.patch({ time: h * 60 + m }) }} />
         </div>
         <div className="dur-row" style={{ marginTop: 10 }}>
           <button type="button" className="dur-chip" onClick={f.now}>Now</button>
@@ -45,8 +46,8 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
         {f.duration === 'custom' && (
           <div style={{ marginTop: 8 }}>
             <label className="lbl" htmlFor="fv-end">End</label>
-            <input type="time" id="fv-end" className="inp mono" value={minLabel(endMin)}
-              onChange={(e) => { const [h, m] = (e.target.value || '10:00').split(':').map(Number); f.patch({ customEnd: h * 60 + m }) }} />
+            <TimePicker id="fv-end" aria-label="End time" value={minLabel(endMin)}
+              onChange={(v) => { const [h, m] = v.split(':').map(Number); f.patch({ customEnd: h * 60 + m }) }} />
           </div>
         )}
       </div>
@@ -55,24 +56,19 @@ function FindFilters({ spaces }: { spaces: Space[] }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
             <label className="lbl" htmlFor="fv-building">Building</label>
-            <select id="fv-building" className="inp" value={f.buildingId} onChange={(e) => f.patch({ buildingId: e.target.value, floorName: '' })}>
-              <option value="">All buildings</option>
-              {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+            <Dropdown id="fv-building" value={f.buildingId} onChange={(v) => f.patch({ buildingId: v, floorName: '' })}
+              options={[{ value: '', label: 'All buildings' }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-floor">Floor</label>
-            <select id="fv-floor" className="inp" value={floorNames.includes(f.floorName) ? f.floorName : ''} onChange={(e) => f.patch({ floorName: e.target.value })}>
-              <option value="">All floors</option>
-              {floorNames.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
+            <Dropdown id="fv-floor" value={floorNames.includes(f.floorName) ? f.floorName : ''} onChange={(v) => f.patch({ floorName: v })}
+              disabled={!f.buildingId} placeholder="Choose a building first"
+              options={f.buildingId ? [{ value: '', label: 'All floors' }, ...floorNames.map((n) => ({ value: n, label: `Floor ${n}` }))] : []} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-capacity">Capacity</label>
-            <select id="fv-capacity" className="inp" value={f.minCapacity} onChange={(e) => f.patch({ minCapacity: Number(e.target.value) })}>
-              <option value={0}>Any capacity</option>
-              {[4, 6, 8, 12].map((n) => <option key={n} value={n}>{n}+</option>)}
-            </select>
+            <Dropdown id="fv-capacity" value={String(f.minCapacity)} onChange={(v) => f.patch({ minCapacity: Number(v) })}
+              options={[{ value: '0', label: 'Any capacity' }, ...[4, 6, 8, 12].map((n) => ({ value: String(n), label: `${n}+` }))]} />
           </div>
           <div>
             <label className="lbl">Space type</label>
@@ -110,7 +106,7 @@ export function FindSpacePage() {
   const candidates = spaces
     .filter((s) => s.canCurrentUserBook)
     .filter((s) => !f.buildingId || s.buildingId === f.buildingId)
-    .filter((s) => !f.floorName || s.floorName === f.floorName)
+    .filter((s) => !f.buildingId || !f.floorName || s.floorName === f.floorName)
     .filter((s) => !f.minCapacity || s.capacity >= f.minCapacity)
     .filter((s) => !f.types.length || f.types.includes(s.typeId))
     .filter((s) => !q || s.name.toLowerCase().includes(q))

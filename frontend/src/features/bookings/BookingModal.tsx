@@ -4,6 +4,7 @@ import { useBookings, useCreateBooking, useCreateBookingSeries, useRescheduleBoo
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
+import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { DEFAULT_MAX_HOURS, DEFAULT_MIN_MINUTES } from '../../lib/constants'
 import { addDays, addMin, dayAt, dayKey, durationLabel, fromDateTime, hm, isoZ, roundUp30, stampOffset } from '../../lib/dateUtils'
@@ -14,6 +15,12 @@ import { toast } from '../../state/toastStore'
 import { defaultRecurrence, OccurrenceList, RecurrenceFields, toRule, type OccurrenceRow } from './Recurrence'
 
 const newKey = () => `idem-${crypto.randomUUID()}`
+
+/* One option per distinct key, sorted by label (e.g. the buildings or floors that have bookable spaces). */
+function uniqueBy(spaces: Space[], key: (s: Space) => string, label: (s: Space) => string) {
+  const m = new Map(spaces.map((s) => [key(s), label(s)]))
+  return [...m].map(([value, l]) => ({ value, label: l })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+}
 
 /* The server says exactly which level blocks it (space, floor or building). */
 function accessError(space: Space) {
@@ -31,6 +38,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const [startTime, setStartTime] = useState(hm(initStart))
   const [endTime, setEndTime] = useState(hm(initEnd))
   const [chosenSpaceId, setChosenSpaceId] = useState(editing?.spaceId ?? prefill.spaceId ?? '')
+  /* null = not touched yet, so a prefilled space can fill in its building and floor once spaces load. */
+  const [chosenBuildingId, setChosenBuildingId] = useState<string | null>(null)
+  const [chosenFloorId, setChosenFloorId] = useState<string | null>(null)
   const [recur, setRecur] = useState(() => defaultRecurrence(initStart, 4))
   const [skipOverrides, setSkipOverrides] = useState<Record<number, boolean>>({})
   const [parking, setParking] = useState(false)
@@ -61,6 +71,13 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const spaces = useMemo(() => spacesQ.data ?? [], [spacesQ.data])
   const eligible = useMemo(() => spaces.filter((s) => s.canCurrentUserBook), [spaces])
 
+  /* Building -> floor -> space: each picker stays locked until the one above it is chosen. */
+  const seed = spaces.find((s) => s.id === (editing?.spaceId ?? prefill.spaceId))
+  const buildingId = chosenBuildingId ?? seed?.buildingId ?? ''
+  const floorId = chosenFloorId ?? (seed && seed.buildingId === buildingId ? seed.floorId : '')
+  const buildingOptions = uniqueBy(eligible, (s) => s.buildingId, (s) => s.buildingName)
+  const floorOptions = buildingId ? uniqueBy(eligible.filter((s) => s.buildingId === buildingId), (s) => s.floorId, (s) => `Floor ${s.floorName}`) : []
+
   /* Only spaces that are eligible AND free for the entered window; the previously chosen one is
    * kept (annotated) rather than vanishing mid-edit, as in the mock. */
   const options = useMemo(() => {
@@ -70,15 +87,17 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     }
     const free = (s: Space) => !hasWindow ||
       (!findOverlap(bookings, s.id, start!, end!) && !validateWindowLocal(s.constraints, s.name, start, end, true))
-    const list = eligible.filter(free).map((space) => ({ space, reason: '' }))
-    const kept = eligible.find((s) => s.id === chosenSpaceId)
+    if (!floorId) return []
+    const onFloor = eligible.filter((s) => s.floorId === floorId)
+    const list = onFloor.filter(free).map((space) => ({ space, reason: '' }))
+    const kept = onFloor.find((s) => s.id === chosenSpaceId)
     if (kept && !list.some((o) => o.space.id === kept.id)) {
       list.unshift({ space: kept, reason: findOverlap(bookings, kept.id, start!, end!) ? ' — booked at this time' : ' — outside its hours' })
     }
     return list
-  }, [editing, spaces, eligible, bookings, hasWindow, start, end, chosenSpaceId])
+  }, [editing, spaces, eligible, floorId, bookings, hasWindow, start, end, chosenSpaceId])
 
-  const spaceId = options.some((o) => o.space.id === chosenSpaceId) ? chosenSpaceId : options[0]?.space.id ?? ''
+  const spaceId = options.some((o) => o.space.id === chosenSpaceId) ? chosenSpaceId : ''
   const space = spaces.find((s) => s.id === spaceId) ?? null
   const c = space?.constraints
   const timeError = validateWindowLocal(c ?? null, space?.name ?? '', start, end)
@@ -183,20 +202,20 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> Required field</p>
       <div>
         <label className="lbl req" htmlFor="m-date">Date<RequiredMark /></label>
-        <input type="date" id="m-date" className="inp mono" required value={date} onChange={(e) => setDate(e.target.value)} />
+        <DatePicker id="m-date" value={date} onChange={setDate} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Start<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <input type="time" id="m-start" className="inp mono" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <TimePicker id="m-start" aria-label="Start" value={startTime} onChange={setStartTime} />
         </div>
         <div>
           <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>End<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <input type="time" id="m-end" className="inp mono" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <TimePicker id="m-end" aria-label="End" value={endTime} onChange={setEndTime} />
         </div>
       </div>
       <div style={{ marginTop: -6 }}>
@@ -225,15 +244,31 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       )}
 
       <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label className="lbl req" htmlFor="m-building">Building<RequiredMark /></label>
+            <Dropdown id="m-building" value={buildingId} disabled={!!editing} placeholder="Choose a building"
+              options={buildingOptions}
+              onChange={(v) => { setChosenBuildingId(v); setChosenFloorId(''); setChosenSpaceId('') }} />
+          </div>
+          <div>
+            <label className="lbl req" htmlFor="m-floor">Floor<RequiredMark /></label>
+            <Dropdown id="m-floor" value={floorId} disabled={!!editing || !buildingId}
+              placeholder={buildingId ? 'Choose a floor' : 'Choose a building first'}
+              options={floorOptions}
+              onChange={(v) => { setChosenBuildingId(buildingId); setChosenFloorId(v); setChosenSpaceId('') }} />
+          </div>
+        </div>
         <label className="lbl req" htmlFor="m-space">Space<RequiredMark /></label>
-        <select id="m-space" className="inp" required value={spaceId} disabled={!!editing || !options.length}
-          onChange={(e) => setChosenSpaceId(e.target.value)}>
-          {options.map(({ space: s, reason }) => <option key={s.id} value={s.id}>{s.name}{reason}</option>)}
-        </select>
+        <Dropdown id="m-space" value={spaceId} disabled={!!editing || !floorId || !options.length}
+          placeholder={!floorId ? 'Choose a floor first' : options.length ? 'Choose a space' : 'No free spaces at this time'}
+          options={options.map(({ space: s, reason }) => ({ value: s.id, label: `${s.name}${reason}` }))}
+          onChange={setChosenSpaceId} />
         <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '6px 0 0' }}>
           {space
             ? `${space.typeName} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
-            : spacesQ.isLoading ? 'Loading spaces…' : 'No spaces are free for this time — try a different window.'}
+            : spacesQ.isLoading ? 'Loading spaces…'
+              : floorId && !options.length ? 'No spaces on this floor are free for this time — try a different window or floor.' : ''}
         </p>
         <ErrorLine error={spaceError} />
       </div>

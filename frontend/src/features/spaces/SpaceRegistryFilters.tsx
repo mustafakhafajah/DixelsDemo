@@ -1,4 +1,5 @@
 import type { Building, Floor, SpaceType } from '../../api/types'
+import { Dropdown } from '../../components/pickers'
 
 export interface SpaceRegistryFilterValues {
   code: string
@@ -18,8 +19,8 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
   types: SpaceType[]
 }) {
   const set = (p: Partial<SpaceRegistryFilterValues>) => onChange({ ...value, ...p })
-  /* With a building picked, only its floors make sense; without one, label floors with their building. */
-  const floorOptions = value.buildingId ? floors.filter((f) => f.buildingId === value.buildingId) : floors
+  /* Floor stays locked until a building is picked, then lists only that building's floors. */
+  const floorOptions = value.buildingId ? floors.filter((f) => f.buildingId === value.buildingId) : []
   const active = Object.values(value).some((v) => v !== '')
 
   return (
@@ -31,20 +32,14 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
       </div>
       <div style={{ width: 180 }}>
         <label className="lbl" htmlFor="sf-building">Building</label>
-        <select id="sf-building" className="inp" value={value.buildingId}
-          onChange={(e) => set({ buildingId: e.target.value, floorId: '' })}>
-          <option value="">All buildings</option>
-          {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
+        <Dropdown id="sf-building" value={value.buildingId} onChange={(v) => set({ buildingId: v, floorId: '' })}
+          options={[{ value: '', label: 'All buildings' }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
       </div>
       <div style={{ width: 180 }}>
         <label className="lbl" htmlFor="sf-floor">Floor</label>
-        <select id="sf-floor" className="inp" value={value.floorId} onChange={(e) => set({ floorId: e.target.value })}>
-          <option value="">All floors</option>
-          {floorOptions.map((f) => (
-            <option key={f.id} value={f.id}>{value.buildingId ? `Floor ${f.name}` : `${f.buildingName} · Floor ${f.name}`}</option>
-          ))}
-        </select>
+        <Dropdown id="sf-floor" value={value.floorId} onChange={(v) => set({ floorId: v })}
+          disabled={!value.buildingId} placeholder="Building first"
+          options={value.buildingId ? [{ value: '', label: 'All floors' }, ...floorOptions.map((f) => ({ value: f.id, label: `Floor ${f.name}` }))] : []} />
       </div>
       <div style={{ flex: 1, minWidth: 180 }}>
         <label className="lbl" htmlFor="sf-name">Space name</label>
@@ -53,10 +48,8 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
       </div>
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="sf-type">Type</label>
-        <select id="sf-type" className="inp" value={value.typeId} onChange={(e) => set({ typeId: e.target.value })}>
-          <option value="">All types</option>
-          {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
+        <Dropdown id="sf-type" value={value.typeId} onChange={(v) => set({ typeId: v })}
+          options={[{ value: '', label: 'All types' }, ...types.map((t) => ({ value: t.id, label: t.name }))]} />
       </div>
       <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_SPACE_FILTERS)}>Clear filters</button>
     </div>

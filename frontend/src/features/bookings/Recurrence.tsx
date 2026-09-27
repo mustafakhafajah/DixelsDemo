@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { DatePicker, Dropdown } from '../../components/pickers'
 import { RECURRENCE_SAFETY_CAP } from '../../lib/constants'
 import { addDays, dayAt, dayKey, dayName, hm } from '../../lib/dateUtils'
 import type { RecurrenceRule, RepeatFreq } from '../../lib/recurrence'
@@ -47,12 +48,13 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 150 }}>
           <label className="lbl" htmlFor={`${idPrefix}-repeat`}>Repeats</label>
-          <select id={`${idPrefix}-repeat`} className="inp" value={value.repeat} onChange={(e) => set({ repeat: e.target.value as RepeatFreq })}>
-            <option value="none">Does not repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
+          <Dropdown id={`${idPrefix}-repeat`} value={value.repeat} onChange={(v) => set({ repeat: v as RepeatFreq })}
+            options={[
+              { value: 'none', label: 'Does not repeat' },
+              { value: 'daily', label: 'Daily' },
+              { value: 'weekly', label: 'Weekly' },
+              { value: 'monthly', label: 'Monthly' },
+            ]} />
         </div>
         {value.repeat !== 'none' && (
           <div style={{ width: 150 }}>
@@ -93,8 +95,8 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
                 <span className="mono" style={{ fontSize: 12, color: 'var(--slate)' }}>occurrences</span>
               </div>
             ) : (
-              <div style={{ width: 170 }}>
-                <input type="date" className="inp mono" value={value.until} onChange={(e) => set({ until: e.target.value })} aria-label="Until" />
+              <div style={{ width: 190 }}>
+                <DatePicker value={value.until} onChange={(v) => set({ until: v })} aria-label="Until" />
               </div>
             )}
           </div>

@@ -4,8 +4,9 @@
   --lp-surface: #ffffff;
   --lp-surface-2: #fafaf9;
   --lp-line: #dce0db;
-  --lp-accent: #6d3fc0;
-  --lp-accent-soft: #f1eafb;
+  --lp-accent: #9c6ca4;
+  --lp-accent-dark: #7a4d82;
+  --lp-accent-soft: #f5eef6;
   --lp-rust: #a5402f;
   --lp-rust-soft: #faeae7;
   --lp-slate: #5c6670;
@@ -44,7 +45,8 @@
 }
 
 .login-page .promo-logo img {
-  height: 22px;
+  /* Three times the original 22px: the image is the mark and the DIXELS name together. */
+  height: 66px;
   width: auto;
   display: block;
 }
@@ -53,6 +55,8 @@
   position: relative;
   z-index: 1;
   max-width: 420px;
+  /* Keep the copy above the decorative grid pinned to the bottom of the panel. */
+  margin-bottom: 190px;
 }
 
 .login-page .promo-copy h1 {
@@ -97,7 +101,7 @@
 }
 
 .login-page .promo-grid .pseg.on.alt {
-  background: #9b6fd6;
+  background: #b994bf;
 }
 
 .login-page .signin-panel {
@@ -112,6 +116,8 @@
 }
 
 .login-page .signin-card h2 {
+  /* Explicit, so the global (dark-mode) heading colour from index.css can't wash it out. */
+  color: var(--lp-ink);
   font-size: 21px;
   font-weight: 700;
   margin: 0 0 5px;
@@ -122,60 +128,6 @@
   font-size: 13px;
   color: var(--lp-slate);
   margin: 0 0 22px;
-}
-
-.login-page .form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-}
-
-.login-page .lbl {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--lp-slate);
-  margin-bottom: 5px;
-}
-
-.login-page .inp {
-  width: 100%;
-  font-family: inherit;
-  font-size: 13.5px;
-  color: var(--lp-ink);
-  background: var(--lp-surface-2);
-  border: 1px solid var(--lp-line);
-  border-radius: 7px;
-  padding: 9px 10px;
-}
-
-.login-page .inp:focus {
-  outline: 2px solid var(--lp-accent);
-  outline-offset: 1px;
-  border-color: var(--lp-accent);
-}
-
-.login-page .err {
-  display: none;
-  font-size: 12px;
-  color: var(--lp-rust);
-  margin: 0;
-  gap: 6px;
-  align-items: baseline;
-}
-
-.login-page .err.show {
-  display: flex;
-}
-
-.login-page .errcode {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 10.5px;
-  color: var(--lp-rust);
-  background: var(--lp-rust-soft);
-  padding: 1px 5px;
-  border-radius: 4px;
-  white-space: nowrap;
 }
 
 .login-page .btn {
@@ -209,108 +161,19 @@
   width: 100%;
 }
 
-.login-page .divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 22px 0 14px;
-}
-
-.login-page .divider .line {
-  height: 1px;
-  background: var(--lp-line);
-  flex: 1;
-}
-
-.login-page .divider .label {
-  font-size: 11.5px;
-  color: var(--lp-slate-2);
-}
-
-.login-page .demo-acct-list {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.login-page .demo-acct {
-  display: flex;
-  gap: 11px;
-  align-items: center;
-  width: 100%;
-  text-align: left;
-  padding: 11px 12px;
-  border: 1px solid var(--lp-line);
-  border-radius: 9px;
-  background: var(--lp-surface);
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.login-page .demo-acct:hover {
-  border-color: var(--lp-accent);
-  background: var(--lp-accent-soft);
-}
-
-.login-page .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: var(--lp-accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12.5px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.login-page .avatar.admin {
-  background: var(--lp-ink);
-}
-
-.login-page .demo-acct-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.login-page .demo-acct-name {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.login-page .demo-acct-role {
-  display: block;
-  font-size: 11.5px;
-  color: var(--lp-slate);
-}
-
-.login-page .demo-acct-use {
-  font-size: 11.5px;
-  color: var(--lp-accent);
-  font-weight: 600;
-}
-
-.login-page .disclaimer {
-  font-size: 11.5px;
-  color: var(--lp-slate-2);
-  margin: 18px 0 0;
-  line-height: 1.55;
-}
-
 .login-page .real-signin-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: var(--lp-accent);
+  background: var(--lp-accent);
   border-color: var(--lp-accent);
+  color: #fff;
 }
 
 .login-page .real-signin-btn:hover {
-  background: var(--lp-accent-soft);
+  background: var(--lp-accent-dark);
+  border-color: var(--lp-accent-dark);
 }
 
 .login-page .real-signin-icon {

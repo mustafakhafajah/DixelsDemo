@@ -28,7 +28,7 @@ function AdminStats({ all, spaces, buildings }: { all: Booking[]; spaces: Space[
   const now = new Date()
   const weekAgo = addDays(now, -7)
   const confirmed = all.filter((b) => b.status === 'Confirmed')
-  const util = spaces.filter((s) => s.status === 'Active').map((s) => {
+  const util = spaces.filter((s) => s.canCurrentUserBook).map((s) => {
     const hoursPerDay = Math.max(1, (s.constraints.closeMinute - s.constraints.openMinute) / 60)
     const mins = confirmed.filter((b) => b.spaceId === s.id && b.start >= weekAgo && b.start < now)
       .reduce((sum, b) => sum + (b.end.getTime() - b.start.getTime()) / 60000, 0)
@@ -119,7 +119,7 @@ export function DashboardPage() {
     [`${todayAll.length}`, 'Bookings today, estate-wide'],
     [`${freeNow}/${bookable.length}`, 'Spaces free right now'],
     [`${buildings.length}`, 'Buildings'],
-    [`${spaces.filter((s) => s.status === 'Inactive').length}`, 'Inactive spaces'],
+    [`${spaces.filter((s) => !s.canCurrentUserBook).length}`, 'Not bookable spaces'],
   ] : [
     [`${upcoming.length}`, 'Upcoming bookings'],
     [`${todayMine.length}`, 'Yours today'],

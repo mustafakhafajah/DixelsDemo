@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Booking, Building, Floor, MaintenanceScopeType, Space } from '../api/types'
+import type { Booking, Building, Floor, MaintenanceScopeType, Space, SpaceType } from '../api/types'
 
 export interface BookingPrefill {
   spaceId?: string
@@ -7,7 +7,14 @@ export interface BookingPrefill {
   end?: Date
 }
 
-export type ScheduleId = 'my' | 'adm'
+export type ScheduleId = 'my'
+
+/* What the 'Make not bookable' dialog acts on. */
+export interface BookableTarget {
+  kind: 'building' | 'floor' | 'space'
+  id: string
+  label: string
+}
 
 export interface MaintenanceTarget {
   scopeType: MaintenanceScopeType
@@ -24,7 +31,9 @@ type Overlay =
   | { kind: 'building'; editing: Building | null }
   | { kind: 'floor'; editing: Floor | null }
   | { kind: 'space'; editing: Space | null }
+  | { kind: 'spaceType'; editing: SpaceType | null }
   | { kind: 'maintenance'; target: MaintenanceTarget }
+  | { kind: 'notBookable'; target: BookableTarget }
 
 interface ModalState {
   overlay: Overlay | null
@@ -48,6 +57,8 @@ export const modals = {
   building: (editing: Building | null = null) => useModalStore.getState().open({ kind: 'building', editing }),
   floor: (editing: Floor | null = null) => useModalStore.getState().open({ kind: 'floor', editing }),
   space: (editing: Space | null = null) => useModalStore.getState().open({ kind: 'space', editing }),
+  spaceType: (editing: SpaceType | null = null) => useModalStore.getState().open({ kind: 'spaceType', editing }),
   maintenance: (target: MaintenanceTarget) => useModalStore.getState().open({ kind: 'maintenance', target }),
+  notBookable: (target: BookableTarget) => useModalStore.getState().open({ kind: 'notBookable', target }),
   close: () => useModalStore.getState().close(),
 }

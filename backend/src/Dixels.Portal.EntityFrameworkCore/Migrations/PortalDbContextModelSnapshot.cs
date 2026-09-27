@@ -25,7 +25,7 @@ namespace Dixels.Portal.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Booking", b =>
+            modelBuilder.Entity("Dixels.Portal.Bookings.Booking", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -115,7 +115,7 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AppBookings", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Building", b =>
+            modelBuilder.Entity("Dixels.Portal.Buildings.Building", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -155,6 +155,9 @@ namespace Dixels.Portal.Migrations
                         .IsRequired()
                         .HasColumnType("date[]");
 
+                    b.Property<bool>("IsBookable")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -183,9 +186,6 @@ namespace Dixels.Portal.Migrations
                     b.Property<int>("OpenHour")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
                     b.Property<string>("TimeZone")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -199,7 +199,7 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AppBuildings", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Floor", b =>
+            modelBuilder.Entity("Dixels.Portal.Floors.Floor", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -238,6 +238,9 @@ namespace Dixels.Portal.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ExtraProperties");
 
+                    b.Property<bool>("IsBookable")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -266,9 +269,6 @@ namespace Dixels.Portal.Migrations
                     b.Property<int?>("OpenHourOverride")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BuildingId", "Name")
@@ -277,7 +277,7 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AppFloors", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.MaintenanceWindow", b =>
+            modelBuilder.Entity("Dixels.Portal.Maintenance.MaintenanceWindow", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -360,7 +360,53 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AppMaintenanceWindows", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Space", b =>
+            modelBuilder.Entity("Dixels.Portal.SpaceTypes.SpaceType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("AppSpaceTypes", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Spaces.Space", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -405,6 +451,9 @@ namespace Dixels.Portal.Migrations
                     b.Property<Guid>("FloorId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsBookable")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -437,16 +486,8 @@ namespace Dixels.Portal.Migrations
                     b.Property<int?>("OpenHourOverride")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TimeZone")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -455,7 +496,9 @@ namespace Dixels.Portal.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("BuildingId", "FloorId", "Status");
+                    b.HasIndex("TypeId");
+
+                    b.HasIndex("BuildingId", "FloorId");
 
                     b.ToTable("AppSpaces", (string)null);
                 });
@@ -2342,44 +2385,50 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AbpTenantConnectionStrings", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Booking", b =>
+            modelBuilder.Entity("Dixels.Portal.Bookings.Booking", b =>
                 {
-                    b.HasOne("Dixels.Portal.Estate.Space", null)
+                    b.HasOne("Dixels.Portal.Spaces.Space", null)
                         .WithMany()
                         .HasForeignKey("SpaceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Floor", b =>
+            modelBuilder.Entity("Dixels.Portal.Floors.Floor", b =>
                 {
-                    b.HasOne("Dixels.Portal.Estate.Building", null)
+                    b.HasOne("Dixels.Portal.Buildings.Building", null)
                         .WithMany()
                         .HasForeignKey("BuildingId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.MaintenanceWindow", b =>
+            modelBuilder.Entity("Dixels.Portal.Maintenance.MaintenanceWindow", b =>
                 {
-                    b.HasOne("Dixels.Portal.Estate.Space", null)
+                    b.HasOne("Dixels.Portal.Spaces.Space", null)
                         .WithMany()
                         .HasForeignKey("SpaceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Dixels.Portal.Estate.Space", b =>
+            modelBuilder.Entity("Dixels.Portal.Spaces.Space", b =>
                 {
-                    b.HasOne("Dixels.Portal.Estate.Building", null)
+                    b.HasOne("Dixels.Portal.Buildings.Building", null)
                         .WithMany()
                         .HasForeignKey("BuildingId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Dixels.Portal.Estate.Floor", null)
+                    b.HasOne("Dixels.Portal.Floors.Floor", null)
                         .WithMany()
                         .HasForeignKey("FloorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dixels.Portal.SpaceTypes.SpaceType", null)
+                        .WithMany()
+                        .HasForeignKey("TypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

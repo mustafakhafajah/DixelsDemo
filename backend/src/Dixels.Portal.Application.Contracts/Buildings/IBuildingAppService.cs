@@ -12,5 +12,5 @@ public interface IBuildingAppService : IApplicationService
     Task<BuildingDto> GetAsync(Guid id);
     Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input);
     Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input);
-    Task<BuildingDto> SetStatusAsync(Guid id, SetStatusDto input);
+    Task<BuildingDto> SetBookableAsync(Guid id, SetBookableDto input);
 }

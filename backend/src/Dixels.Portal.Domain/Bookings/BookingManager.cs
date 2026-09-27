@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -96,29 +97,32 @@ public class BookingManager : DomainService
 
     public static bool CanBook(SpaceContext ctx) => FindBookingBlocker(ctx) == null;
 
-    /* The one list of reasons a space can't be booked, shared by the yes/no check and the throwing check. */
+    /* The sentence the UI shows next to a space that can't be booked, e.g. "HQ North is not bookable". */
+    public static string? FindNotBookableReason(SpaceContext ctx) => FindBookingBlocker(ctx)?.Message;
+
+    /* The one list of reasons a space can't be booked, shared by the yes/no check, the reason text and the
+     * throwing check. The building is checked first, so the message names the level that actually blocks it. */
     private static BusinessException? FindBookingBlocker(SpaceContext ctx)
     {
-        if (ctx.Building.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.BuildingInactive,
-                $"{ctx.Building.Name} is inactive and cannot be booked.");
-        if (ctx.Floor != null && ctx.Floor.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.FloorInactive,
-                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is inactive and cannot be booked.");
-        if (ctx.Space.Status != EstateStatus.Active)
-            return new BusinessException(PortalDomainErrorCodes.SpaceInactive,
-                "This space is inactive and cannot be booked.");
+        if (!ctx.Building.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.BuildingNotBookable,
+                $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.");
+        if (ctx.Floor != null && !ctx.Floor.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.FloorNotBookable,
+                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.");
+        if (!ctx.Space.IsBookable)
+            return new BusinessException(PortalDomainErrorCodes.SpaceNotBookable,
+                $"{ctx.Space.Name} is not bookable.");
         return null;
     }
 
     public async Task EnsureNoMaintenanceAsync(SpaceContext ctx, DateTime startUtc, DateTime endUtc)
     {
-        var m = await _maintenance.FirstOrDefaultAsync(x =>
-            x.SpaceId == ctx.Space.Id && x.Status == MaintenanceStatus.Active &&
-            x.StartUtc < endUtc && startUtc < x.EndUtc);
+        var m = await _maintenance.FirstOrDefaultAsync(new OverlappingMaintenanceSpecification(startUtc, endUtc)
+            .ToExpression().And(x => x.SpaceId == ctx.Space.Id));
         if (m != null)
             throw new BusinessException(PortalDomainErrorCodes.SpaceUnderMaintenance,
-                    $"{ctx.Space.Name} is scheduled for cleaning {Hm(m.StartUtc)}–{Hm(m.EndUtc)} and can't be booked then.")
+                    $"{ctx.Space.Name} is blocked ({m.Note ?? "blocked time"}) from {Stamp(m.StartUtc, m.EndUtc)} and can't be booked then.")
                 .WithData("maintenanceId", m.Id)
                 .WithData("scope", m.ScopeType.ToString());
     }
@@ -161,4 +165,9 @@ public class BookingManager : DomainService
     }
 
     private static string Hm(DateTime d) => d.ToString("HH:mm");
+
+    /* "09:00 to 11:00" on one day, "2026-10-01 09:00 to 2026-10-21 18:00" across days (blocked time can be long). */
+    private static string Stamp(DateTime s, DateTime e) => s.Date == e.Date
+        ? $"{Hm(s)} to {Hm(e)}"
+        : $"{s:yyyy-MM-dd HH:mm} to {e:yyyy-MM-dd HH:mm}";
 }

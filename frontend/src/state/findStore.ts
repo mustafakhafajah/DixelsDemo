@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type { SpaceType } from '../api/types'
 import { addDays, dayAt, dayKey, minOfDay, roundUp30, todayKey } from '../lib/dateUtils'
 
 export type FindDuration = 30 | 60 | 120 | 'custom'
@@ -12,7 +11,8 @@ export interface FindFilters {
   buildingId: string
   floorName: string
   minCapacity: number
-  types: SpaceType[]
+  /* Space type ids. */
+  types: string[]
   query: string
 }
 
@@ -20,7 +20,7 @@ interface FindState extends FindFilters {
   patch: (p: Partial<FindFilters>) => void
   now: () => void
   shiftDay: (dir: 1 | -1) => void
-  toggleType: (t: SpaceType) => void
+  toggleType: (typeId: string) => void
 }
 
 function nowFields() {

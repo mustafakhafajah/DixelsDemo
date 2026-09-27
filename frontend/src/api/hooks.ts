@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from './client'
 import {
@@ -7,7 +7,6 @@ import {
   type Booking,
   type BookingDto,
   type Building,
-  type EstateStatus,
   type Floor,
   type ListResult,
   type Maintenance,
@@ -15,12 +14,13 @@ import {
   type MaintenanceScopeType,
   type Profile,
   type Space,
+  type SpaceRegistryPage,
   type SpaceType,
   type UserLookup,
   type Window,
 } from './types'
 
-const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces']]
+const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces'], ['space-types']]
 
 function useEnabled() {
   return !!useAuth().user?.access_token
@@ -73,6 +73,45 @@ export function useSpaces() {
     queryKey: ['spaces'],
     queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space')).items,
     enabled: useEnabled(),
+  })
+}
+
+export function useSpaceTypes() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['space-types'],
+    queryFn: async () => (await api<ListResult<SpaceType>>('GET', '/api/app/space-type')).items,
+    enabled: useEnabled(),
+  })
+}
+
+export interface SpaceRegistryQuery {
+  page: number
+  pageSize: number
+  code?: string
+  buildingId?: string
+  floorId?: string
+  name?: string
+  typeId?: string
+}
+
+/* Server-side paged and filtered, so the registry stays fast with thousands of spaces. */
+export function useSpaceRegistry(q: SpaceRegistryQuery) {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['spaces', 'registry', q],
+    queryFn: () => api<SpaceRegistryPage>('GET', '/api/app/space/paged-list', undefined, {
+      SkipCount: (q.page - 1) * q.pageSize,
+      MaxResultCount: q.pageSize,
+      Code: q.code,
+      BuildingId: q.buildingId,
+      FloorId: q.floorId,
+      Name: q.name,
+      TypeId: q.typeId,
+    }),
+    enabled: useEnabled(),
+    /* Keep showing the current page while the next one loads, instead of flashing "Loading…". */
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -150,7 +189,8 @@ function useInvalidate() {
   return (keys: string[][]) => Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: k })))
 }
 
-const BOOKING_KEYS = [['bookings'], ['booking']]
+/* The space registry shows upcoming-booking counts, so booking changes refresh it too. */
+const BOOKING_KEYS = [['bookings'], ['booking'], ['spaces', 'registry']]
 
 export interface CreateBookingInput {
   spaceId: string
@@ -245,10 +285,11 @@ export function useScheduleMaintenance() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: MaintenanceScopeInput & { note?: string }) =>
-      api<{ seriesId: string | null; created: number; affectedBookingsCount: number }>(
+    mutationFn: (input: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean }) =>
+      api<{ seriesId: string | null; created: number; affectedBookingsCount: number; cancelledBookingsCount: number }>(
         'POST', '/api/app/maintenance-window/schedule', input),
-    onSuccess: () => invalidate([['maintenance'], ['maintenance-window']]),
+    /* Blocking can cancel bookings, so booking views refresh too. */
+    onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ...BOOKING_KEYS]),
   })
 }
 
@@ -264,7 +305,7 @@ export function useCancelMaintenance() {
 export interface BuildingInput {
   name: string
   timeZone: string
-  status: EstateStatus
+  isBookable: boolean
   openHour: number
   closeHour: number
   minBookingMinutes: number
@@ -275,7 +316,7 @@ export interface BuildingInput {
 export interface FloorInput {
   buildingId: string
   name: string
-  status: EstateStatus
+  isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
   minBookingMinutesOverride: number | null
@@ -284,11 +325,10 @@ export interface FloorInput {
 
 export interface SpaceInput {
   name: string
-  type: SpaceType
-  status: EstateStatus
+  typeId: string
+  isBookable: boolean
   buildingId: string
   floorId: string
-  timeZone: string
   capacity: number
   note: string
   openHourOverride: number | null
@@ -318,6 +358,42 @@ export const useSaveSpace = () =>
   useEstateMutation<{ id?: string; body: SpaceInput }>((api, { id, body }) =>
     id ? api<Space>('PUT', `/api/app/space/${id}`, body) : api<Space>('POST', '/api/app/space', body))
 
-export const useSetStatus = () =>
-  useEstateMutation<{ kind: 'building' | 'floor' | 'space'; id: string; status: EstateStatus }>((api, { kind, id, status }) =>
-    api('POST', `/api/app/${kind}/${id}/set-status`, { status }))
+export type EstateKind = 'building' | 'floor' | 'space'
+
+export const useSetBookable = () =>
+  useEstateMutation<{ kind: EstateKind; id: string; isBookable: boolean }>((api, { kind, id, isBookable }) =>
+    api('POST', `/api/app/${kind}/${id}/set-bookable`, { isBookable }))
+
+export interface EstateScope {
+  scopeType: MaintenanceScopeType
+  scopeId: string
+}
+
+/* Bookings in a space, floor or building that have not started yet (admin only). */
+export function useUpcomingCount(scope: EstateScope | null) {
+  const api = useApi()
+  const ok = useEnabled()
+  return useQuery({
+    queryKey: ['upcoming-count', scope],
+    queryFn: () => api<number>('GET', '/api/app/booking/upcoming-count', undefined, { ScopeType: scope!.scopeType, ScopeId: scope!.scopeId }),
+    enabled: ok && !!scope,
+  })
+}
+
+/* Explicit admin action: cancel exactly those not-yet-started bookings. */
+export function useCancelUpcoming() {
+  const api = useApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('POST', '/api/app/booking/cancel-upcoming', scope),
+    onSettled: () => invalidate([...BOOKING_KEYS, ['upcoming-count']]),
+  })
+}
+
+export const useSaveSpaceType = () =>
+  useEstateMutation<{ id?: string; name: string }>((api, { id, name }) =>
+    id ? api<SpaceType>('PUT', `/api/app/space-type/${id}`, { name }) : api<SpaceType>('POST', '/api/app/space-type', { name }))
+
+/* Only allowed when no space uses the type; the server answers space_type.in_use otherwise. */
+export const useDeleteSpaceType = () =>
+  useEstateMutation<string>((api, id) => api('DELETE', `/api/app/space-type/${id}`))

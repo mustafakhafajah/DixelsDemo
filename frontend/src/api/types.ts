@@ -1,22 +1,21 @@
 import { parseUtc } from '../lib/dateUtils'
 
-export type EstateStatus = 'Active' | 'Inactive'
-export type SpaceType = 'MeetingRoom' | 'Equipment' | 'Desk' | 'Studio'
 export type MaintenanceScopeType = 'Space' | 'Floor' | 'Building'
 export type Lifecycle = 'scheduled' | 'in_progress' | 'ended' | 'cancelled'
 
-export const SPACE_TYPE_LABELS: Record<SpaceType, string> = {
-  MeetingRoom: 'Meeting room',
-  Equipment: 'Equipment',
-  Desk: 'Desk',
-  Studio: 'Studio',
+/* An admin-managed kind of space ("Meeting room", "Desk", ...). */
+export interface SpaceType {
+  id: string
+  name: string
+  spaceCount: number
 }
 
 export interface Building {
   id: string
   name: string
   timeZone: string
-  status: EstateStatus
+  /* Ticked = bookable. Unticking blocks every floor and space in it. */
+  isBookable: boolean
   openHour: number
   closeHour: number
   minBookingMinutes: number
@@ -31,7 +30,7 @@ export interface Floor {
   buildingId: string
   buildingName: string
   name: string
-  status: EstateStatus
+  isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
   minBookingMinutesOverride: number | null
@@ -50,12 +49,15 @@ export interface Constraints {
 export interface Space {
   id: string
   name: string
-  type: SpaceType
-  status: EstateStatus
+  typeId: string
+  typeName: string
+  /* Its own tick; it can still be blocked by its floor or building (see notBookableReason). */
+  isBookable: boolean
   buildingId: string
   buildingName: string
   floorId: string
   floorName: string
+  /* Always the building's time zone. */
   timeZone: string
   capacity: number
   note: string | null
@@ -65,6 +67,8 @@ export interface Space {
   maxBookingHoursOverride: number | null
   constraints: Constraints
   canCurrentUserBook: boolean
+  /* Why it cannot be booked right now, e.g. "HQ North is not bookable ..."; null when it can. */
+  notBookableReason: string | null
 }
 
 export interface BookingDto {
@@ -130,6 +134,15 @@ export interface UserLookup {
 
 export interface ListResult<T> {
   items: T[]
+}
+
+export interface PagedResult<T> extends ListResult<T> {
+  totalCount: number
+}
+
+/* One page of the admin space registry (GET /api/app/space/paged-list). */
+export interface SpaceRegistryPage extends PagedResult<Space> {
+  upcomingBookingCounts: Record<string, number>
 }
 
 export interface Window {

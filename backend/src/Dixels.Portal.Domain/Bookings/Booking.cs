@@ -1,4 +1,5 @@
 using System;
+using Dixels.Portal.Estate;
 using Volo.Abp.Domain.Entities.Auditing;
 
 namespace Dixels.Portal.Bookings;
@@ -27,11 +28,13 @@ public class Booking : FullAuditedAggregateRoot<Guid>
         Status = BookingStatus.Confirmed;
     }
 
-    public string GetLifecycle(DateTime nowUtc)
+    /* Every cancellation bumps the version, so a client holding an old copy can't reschedule it. */
+    public void Cancel()
     {
-        if (Status == BookingStatus.Cancelled) return "cancelled";
-        if (EndUtc <= nowUtc) return "ended";
-        if (StartUtc <= nowUtc) return "in_progress";
-        return "scheduled";
+        Status = BookingStatus.Cancelled;
+        Version++;
     }
+
+    public string GetLifecycle(DateTime nowUtc)
+        => TimeWindowLifecycle.Get(Status == BookingStatus.Cancelled, StartUtc, EndUtc, nowUtc);
 }

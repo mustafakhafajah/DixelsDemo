@@ -5,7 +5,7 @@ import type { ScheduleId } from './modalStore'
 export type ScheduleMode = 'month' | 'week' | 'day'
 
 export interface ScheduleConfig {
-  /* 'all' = every space (only for 'my'), '' = none picked yet. */
+  /* 'all' = every space the user has booked, otherwise one space id. */
   spaceId: string
   /* Whose schedule 'my' shows; null = the signed-in user. */
   userId: string | null
@@ -39,7 +39,7 @@ interface ScheduleState {
 }
 
 export const useScheduleStore = create<ScheduleState>((set, get) => ({
-  configs: { my: initial('all'), adm: initial('') },
+  configs: { my: initial('all') },
   patch: (id, p) => set({ configs: { ...get().configs, [id]: { ...get().configs[id], ...p } } }),
   setPeriod: (id, anchor) => get().patch(id, periodFor(get().configs[id].mode, anchor)),
   setMode: (id, mode) => {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import dixelsLogo from '../assets/dixels-logo.png'
-import { useBookings, useBuildings, useFloors, useSpaces } from '../api/hooks'
+import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { initials } from '../components/bits'
 import { Toasts } from '../components/Toasts'
 import { dayAt, todayKey } from '../lib/dateUtils'
@@ -15,9 +15,13 @@ const PAGE_META: Record<string, [string, string]> = {
   dashboard: ['Dashboard', 'Your day at a glance.'],
   bookings: ['Bookings', 'A calendar view of your bookings.'],
   buildings: ['Buildings', 'The estate every floor and space belongs to.'],
-  floors: ['Floors', 'Every floor across every building, and what cleaning applies to it.'],
+  floors: ['Floors', 'Every floor across every building, and any time blocked on it.'],
   spaces: ['Spaces', 'The units people can book, and who may book them.'],
+  'space-types': ['Space types', 'The kinds of space an admin can give a space.'],
 }
+
+/* "New booking" only where booking is the task at hand. */
+const BOOKING_VIEWS = new Set(['find', 'bookings'])
 
 const Icon = {
   find: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4L14 14" strokeLinecap="round" /></svg>,
@@ -36,13 +40,14 @@ function Sidebar() {
   const spaces = useSpaces()
   const buildings = useBuildings()
   const floors = useFloors()
+  const spaceTypes = useSpaceTypes()
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
 
   return (
     <aside className="sidebar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 6px' }}>
-        <img src={dixelsLogo} alt="Dixels" style={{ height: 20, width: 'auto', display: 'block' }} />
+      <div className="sidebar-logo">
+        <img src={dixelsLogo} alt="Dixels" />
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -53,28 +58,29 @@ function Sidebar() {
         <div>
           <NavLink to="/app/bookings" className={navClass}>
             {Icon.bookings}
-            <span>{session.isAdmin ? 'All bookings' : 'My Schedule'}</span>
+            <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
             <span className="nav-count">{upcoming ?? ''}</span>
           </NavLink>
           {session.isAdmin && (
             <div>
               <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
-              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid rgba(255,255,255,.09)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
+              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
                 <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
                 <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
-                <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.status === 'Active').length ?? ''}</span></NavLink>
+                <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.canCurrentUserBook).length ?? ''}</span></NavLink>
+                <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
               </div>
             </div>
           )}
         </div>
       </nav>
 
-      <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 13 }}>
+      <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
           <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
-            <div style={{ fontSize: 11, color: '#69737C' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--slate)' }}>
               {session.isAdmin ? 'Space administrator' : 'Booking user'}
             </div>
           </div>
@@ -92,7 +98,7 @@ function Topbar() {
   const { isAdmin } = useSession()
   const view = pathname.split('/')[2] || 'find'
   const meta = PAGE_META[view] ?? PAGE_META.find
-  const title = view === 'bookings' ? (isAdmin ? 'All bookings' : 'My Schedule')
+  const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule')
     : view === 'dashboard' ? (isAdmin ? 'Estate dashboard' : 'Dashboard') : meta[0]
   return (
     <header className="topbar">
@@ -100,7 +106,7 @@ function Topbar() {
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>
+      {BOOKING_VIEWS.has(view) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}
     </header>
   )
 }

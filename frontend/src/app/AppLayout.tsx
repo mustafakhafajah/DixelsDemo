@@ -50,14 +50,14 @@ function Sidebar() {
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
-          <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>
-        </div>
-        <div>
           <NavLink to="/app/bookings" className={navClass}>
             {Icon.bookings}
             <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
             <span className="nav-count">{upcoming ?? ''}</span>
           </NavLink>
+        </div>
+        <div>
+          <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>
           {session.isAdmin && (
             <div>
               <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>

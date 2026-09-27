@@ -1,5 +1,4 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from 'react-oidc-context'
 import { queryClient } from './api/queryClient'
@@ -39,7 +38,6 @@ function App() {
             </Route>
           </Routes>
         </BrowserRouter>
-        {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
       </QueryClientProvider>
     </AuthProvider>
   )

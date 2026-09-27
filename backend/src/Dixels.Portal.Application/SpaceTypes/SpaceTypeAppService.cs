@@ -7,12 +7,13 @@ using Dixels.Portal.Localization;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.SpaceTypes;
 
-/* Reading is open to every signed-in user (the Find page filters by type); changes need the SpaceTypes permissions. */
+/* Every action needs its SpaceTypes permission: Default to read, Create / Edit / Delete to change. */
 [Authorize]
 public class SpaceTypeAppService
     : CrudAppService<SpaceType, SpaceTypeDto, Guid, EstateListInput, CreateUpdateSpaceTypeDto>, ISpaceTypeAppService
@@ -27,31 +28,34 @@ public class SpaceTypeAppService
         _spaceTypeManager = spaceTypeManager;
         _spaces = spaces;
         LocalizationResource = typeof(PortalResource);
-        CreatePolicyName = PortalPermissions.SpaceTypes.Create;
-        UpdatePolicyName = PortalPermissions.SpaceTypes.Edit;
-        DeletePolicyName = PortalPermissions.SpaceTypes.Delete;
     }
 
+    [Authorize(PortalPermissions.SpaceTypes.Default)]
+    public override Task<PagedResultDto<SpaceTypeDto>> GetListAsync(EstateListInput input) => base.GetListAsync(input);
+
+    [Authorize(PortalPermissions.SpaceTypes.Default)]
+    public override Task<SpaceTypeDto> GetAsync(Guid id) => base.GetAsync(id);
+
+    [Authorize(PortalPermissions.SpaceTypes.Create)]
     public override async Task<SpaceTypeDto> CreateAsync(CreateUpdateSpaceTypeDto input)
     {
-        await CheckCreatePolicyAsync();
         var type = await _spaceTypeManager.CreateAsync(input.Name);
         await Repository.InsertAsync(type, autoSave: true);
         return await MapToGetOutputDtoAsync(type);
     }
 
+    [Authorize(PortalPermissions.SpaceTypes.Edit)]
     public override async Task<SpaceTypeDto> UpdateAsync(Guid id, CreateUpdateSpaceTypeDto input)
     {
-        await CheckUpdatePolicyAsync();
         var type = await GetEntityByIdAsync(id);
         await _spaceTypeManager.ChangeNameAsync(type, input.Name);
         await Repository.UpdateAsync(type, autoSave: true);
         return await MapToGetOutputDtoAsync(type);
     }
 
+    [Authorize(PortalPermissions.SpaceTypes.Delete)]
     public override async Task DeleteAsync(Guid id)
     {
-        await CheckDeletePolicyAsync();
         var type = await GetEntityByIdAsync(id);
         await _spaceTypeManager.EnsureCanDeleteAsync(type);
         await Repository.DeleteAsync(type, autoSave: true);

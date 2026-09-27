@@ -16,8 +16,8 @@ using Volo.Abp.Users;
 
 namespace Dixels.Portal.Bookings;
 
-/* Any signed-in user may book. "Only your own booking unless you're an admin" depends on the booking,
- * so that check is done in code (EnsureCanActAsync) rather than with an [Authorize] attribute. */
+/* Each action needs its Bookings permission. On top of that, only the owner (or someone with Bookings.ManageAll)
+ * may change a given booking; that depends on the booking, so it is checked in code (EnsureCanActAsync). */
 [Authorize]
 public class BookingAppService : PortalAppService, IBookingAppService
 {
@@ -37,6 +37,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _scopes = scopes;
     }
 
+    [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
     {
         var query = await _bookings.GetQueryableAsync();
@@ -49,8 +50,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return new ListResultDto<BookingDto>(await MapListAsync(list));
     }
 
+    [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<BookingDto> GetAsync(Guid id) => await MapAsync(await GetBookingAsync(id));
 
+    [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
     {
         var key = string.IsNullOrWhiteSpace(input.IdempotencyKey) ? null : input.IdempotencyKey;
@@ -67,6 +70,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     /* The client expands the recurrence rule; each surviving occurrence is created under one series.
      * An occurrence that breaks a rule is skipped and reported; the rest are still booked. */
+    [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<CreateBookingSeriesResultDto> CreateSeriesAsync(CreateBookingSeriesDto input)
     {
         var seriesId = input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
@@ -96,6 +100,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         };
     }
 
+    [Authorize(PortalPermissions.Bookings.Edit)]
     public async Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input)
     {
         var b = await GetBookingAsync(id);
@@ -128,6 +133,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return await MapAsync(b);
     }
 
+    [Authorize(PortalPermissions.Bookings.Delete)]
     public async Task<BookingDto> CancelAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
@@ -136,6 +142,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     }
 
     /* Cancels this booking and every later one in its series; ended occurrences are left alone. */
+    [Authorize(PortalPermissions.Bookings.Delete)]
     public async Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id)
     {
         var anchor = await GetBookingAsync(id);
@@ -160,6 +167,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     }
 
     /* Frees the space now: the booking's end moves to the current time. */
+    [Authorize(PortalPermissions.Bookings.Edit)]
     public async Task<BookingDto> EndEarlyAsync(Guid id)
     {
         var b = await GetBookingAsync(id);

@@ -16,8 +16,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Maintenance;
 
-/* Blocked time. Everyone signed in can see it (the schedule shows it); blocking needs Maintenance.Create
- * and unblocking needs Maintenance.Delete. */
+/* Blocked time: Maintenance.Default to see it, Create to block time (and preview), Delete to unblock. */
 [Authorize]
 public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowAppService
 {
@@ -40,6 +39,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         _scopes = scopes;
     }
 
+    [Authorize(PortalPermissions.Maintenance.Default)]
     public async Task<ListResultDto<MaintenanceWindowDto>> GetListAsync(MaintenanceListFilterDto input)
     {
         var query = await _maintenance.GetQueryableAsync();
@@ -51,6 +51,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         return new ListResultDto<MaintenanceWindowDto>(await MapListAsync(list));
     }
 
+    [Authorize(PortalPermissions.Maintenance.Default)]
     public async Task<MaintenanceWindowDto> GetAsync(Guid id) => await MapAsync(await GetWindowAsync(id));
 
     /* Before blocking time, show the admin how many bookings each window would hit. Changes nothing. */

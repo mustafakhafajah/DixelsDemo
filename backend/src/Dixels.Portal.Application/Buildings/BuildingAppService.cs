@@ -8,12 +8,13 @@ using Dixels.Portal.Localization;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Buildings;
 
-/* Reading is open to every signed-in user (booking screens list buildings); changes need the Buildings permissions. */
+/* Every action needs its Buildings permission: Default to read, Create / Edit / Delete to change. */
 [Authorize]
 public class BuildingAppService
     : CrudAppService<Building, BuildingDto, Guid, EstateListInput, CreateUpdateBuildingDto>, IBuildingAppService
@@ -30,23 +31,29 @@ public class BuildingAppService
         _floors = floors;
         _spaces = spaces;
         LocalizationResource = typeof(PortalResource);
-        CreatePolicyName = PortalPermissions.Buildings.Create;
-        UpdatePolicyName = PortalPermissions.Buildings.Edit;
-        DeletePolicyName = PortalPermissions.Buildings.Delete;
     }
 
+    [Authorize(PortalPermissions.Buildings.Default)]
+    public override Task<PagedResultDto<BuildingDto>> GetListAsync(EstateListInput input) => base.GetListAsync(input);
+
+    [Authorize(PortalPermissions.Buildings.Default)]
+    public override Task<BuildingDto> GetAsync(Guid id) => base.GetAsync(id);
+
+    [Authorize(PortalPermissions.Buildings.Delete)]
+    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
+
+    [Authorize(PortalPermissions.Buildings.Create)]
     public override async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
     {
-        await CheckCreatePolicyAsync();
         var building = await _buildingManager.CreateAsync(input.Name, input.OpenHour, input.CloseHour);
         CopyFields(building, input);
         await Repository.InsertAsync(building, autoSave: true);
         return await MapToGetOutputDtoAsync(building);
     }
 
+    [Authorize(PortalPermissions.Buildings.Edit)]
     public override async Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input)
     {
-        await CheckUpdatePolicyAsync();
         var building = await GetEntityByIdAsync(id);
         await _buildingManager.ChangeNameAsync(building, input.Name);
         BuildingManager.EnsureValidHours(input.OpenHour, input.CloseHour);

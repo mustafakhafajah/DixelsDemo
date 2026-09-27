@@ -14,7 +14,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Floors;
 
-/* Reading is open to every signed-in user (booking screens list floors); changes need the Floors permissions. */
+/* Every action needs its Floors permission: Default to read, Create / Edit / Delete to change. */
 [Authorize]
 public class FloorAppService
     : CrudAppService<Floor, FloorDto, Guid, GetFloorListInput, CreateUpdateFloorDto>, IFloorAppService
@@ -31,16 +31,19 @@ public class FloorAppService
         _buildings = buildings;
         _spaces = spaces;
         LocalizationResource = typeof(PortalResource);
-        CreatePolicyName = PortalPermissions.Floors.Create;
-        UpdatePolicyName = PortalPermissions.Floors.Edit;
-        DeletePolicyName = PortalPermissions.Floors.Delete;
     }
+
+    [Authorize(PortalPermissions.Floors.Default)]
+    public override Task<FloorDto> GetAsync(Guid id) => base.GetAsync(id);
+
+    [Authorize(PortalPermissions.Floors.Delete)]
+    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
 
     /* The whole list, ordered by building name and then floor number ("2" before "10"), which the database
      * can't sort by, so ordering happens after mapping. */
+    [Authorize(PortalPermissions.Floors.Default)]
     public override async Task<PagedResultDto<FloorDto>> GetListAsync(GetFloorListInput input)
     {
-        await CheckGetListPolicyAsync();
         var floors = await AsyncExecuter.ToListAsync(await CreateFilteredQueryAsync(input));
         var dtos = (await MapToGetListOutputDtosAsync(floors))
             .OrderBy(f => f.BuildingName)
@@ -49,18 +52,18 @@ public class FloorAppService
         return new PagedResultDto<FloorDto>(dtos.Count, dtos);
     }
 
+    [Authorize(PortalPermissions.Floors.Create)]
     public override async Task<FloorDto> CreateAsync(CreateUpdateFloorDto input)
     {
-        await CheckCreatePolicyAsync();
         var floor = await _floorManager.CreateAsync(input.BuildingId, input.Name, Overrides(input));
         floor.IsBookable = input.IsBookable;
         await Repository.InsertAsync(floor, autoSave: true);
         return await MapToGetOutputDtoAsync(floor);
     }
 
+    [Authorize(PortalPermissions.Floors.Edit)]
     public override async Task<FloorDto> UpdateAsync(Guid id, CreateUpdateFloorDto input)
     {
-        await CheckUpdatePolicyAsync();
         var floor = await GetEntityByIdAsync(id);
         await _floorManager.UpdateAsync(floor, input.Name, Overrides(input));
         floor.IsBookable = input.IsBookable;

@@ -16,17 +16,18 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
         AddCrud(group, PortalPermissions.SpaceTypes.Default, "Permission:SpaceTypes");
         AddCrud(group, PortalPermissions.Maintenance.Default, "Permission:Maintenance");
 
-        group.AddPermission(PortalPermissions.Bookings.Default, L("Permission:Bookings"))
+        AddCrud(group, PortalPermissions.Bookings.Default, "Permission:Bookings")
             .AddChild(PortalPermissions.Bookings.ManageAll, L("Permission:ManageAll"));
     }
 
     /* The ABP convention: a parent permission to view, with Create / Edit / Delete children. */
-    private static void AddCrud(PermissionGroupDefinition group, string name, string displayName)
+    private static PermissionDefinition AddCrud(PermissionGroupDefinition group, string name, string displayName)
     {
         var parent = group.AddPermission(name, L(displayName));
         parent.AddChild(name + ".Create", L("Permission:Create"));
         parent.AddChild(name + ".Edit", L("Permission:Edit"));
         parent.AddChild(name + ".Delete", L("Permission:Delete"));
+        return parent;
     }
 
     private static LocalizableString L(string name)

@@ -17,7 +17,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Spaces;
 
-/* Reading is open to every signed-in user (finding and booking rooms); changes need the Spaces permissions. */
+/* Every action needs its Spaces permission: Default to read, Create / Edit / Delete to change. */
 [Authorize]
 public class SpaceAppService
     : CrudAppService<Space, SpaceDto, Guid, EstateListInput, CreateUpdateSpaceDto>, ISpaceAppService
@@ -42,23 +42,29 @@ public class SpaceAppService
         _types = types;
         _bookings = bookings;
         LocalizationResource = typeof(PortalResource);
-        CreatePolicyName = PortalPermissions.Spaces.Create;
-        UpdatePolicyName = PortalPermissions.Spaces.Edit;
-        DeletePolicyName = PortalPermissions.Spaces.Delete;
     }
 
+    [Authorize(PortalPermissions.Spaces.Default)]
+    public override Task<PagedResultDto<SpaceDto>> GetListAsync(EstateListInput input) => base.GetListAsync(input);
+
+    [Authorize(PortalPermissions.Spaces.Default)]
+    public override Task<SpaceDto> GetAsync(Guid id) => base.GetAsync(id);
+
+    [Authorize(PortalPermissions.Spaces.Delete)]
+    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
+
+    [Authorize(PortalPermissions.Spaces.Create)]
     public override async Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input)
     {
-        await CheckCreatePolicyAsync();
         var space = await _spaceManager.CreateAsync(input.Name, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
         await Repository.InsertAsync(space, autoSave: true);
         return await MapToGetOutputDtoAsync(space);
     }
 
+    [Authorize(PortalPermissions.Spaces.Edit)]
     public override async Task<SpaceDto> UpdateAsync(Guid id, CreateUpdateSpaceDto input)
     {
-        await CheckUpdatePolicyAsync();
         var space = await GetEntityByIdAsync(id);
         await _spaceManager.UpdateAsync(space, input.Name, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
@@ -76,6 +82,7 @@ public class SpaceAppService
     }
 
     /* "Find a space": bookable spaces matching the filters, filtered in the database. */
+    [Authorize(PortalPermissions.Spaces.Default)]
     public async Task<ListResultDto<SpaceDto>> GetBookableListAsync(FindSpacesInput input)
     {
         var name = input.Name?.Trim().ToLower();
@@ -105,6 +112,7 @@ public class SpaceAppService
     }
 
     /* One filtered page for the admin registry, with each space's upcoming-booking count. */
+    [Authorize(PortalPermissions.Spaces.Default)]
     public async Task<SpaceRegistryPageDto> GetPagedListAsync(GetSpacesInput input)
     {
         var filtered = (await Repository.GetQueryableAsync()).ApplyRegistryFilter(input);

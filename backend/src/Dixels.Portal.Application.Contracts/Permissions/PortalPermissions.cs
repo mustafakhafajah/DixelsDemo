@@ -36,10 +36,14 @@ public static class PortalPermissions
         public const string Delete = Default + ".Delete";
     }
 
+    /* Create = book, Edit = reschedule or end early, Delete = cancel. On your own bookings;
+     * ManageAll also allows acting on everyone's. */
     public static class Bookings
     {
         public const string Default = GroupName + ".Bookings";
-        /* Act on anyone's bookings and list all bookings. */
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
         public const string ManageAll = Default + ".ManageAll";
     }
 

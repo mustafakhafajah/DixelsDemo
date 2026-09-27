@@ -4,9 +4,7 @@
   --ink: #18181b; --paper: #ffffff; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5;
   --line: #e4e4e7; --line-strong: #d4d4d8;
   --accent: #9c6ca4; --accent-dark: #6e3a7a; --accent-soft: #f4ecf5;
-  --btn-gradient: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%); --btn-gradient-hover: linear-gradient(90deg, #6d28d9 0%, #9333ea 100%);
-  --sidebar-gradient: linear-gradient(180deg, #7c3aed 0%, #a855f7 100%);
-  --copper: #a97425; --copper-soft: #faf1e3;
+  --btn-gradient: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%); --btn-gradient-hover: linear-gradient(90deg, #6d28d9 0%, #9333ea 100%);  --copper: #a97425; --copper-soft: #faf1e3;
   --rust: #a5402f; --rust-soft: #faeae7; --rust-line: #e6bdb3;
   --slate: #71717a; --slate-2: #a1a1aa;
   color-scheme: light;
@@ -29,12 +27,9 @@
 .app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-ligatures: none; }
 
 /* ── SHELL ── */
-/* Sidebar uses the same violet gradient as the main-action buttons, top to bottom, with white text. The theme variables are
- * re-pointed inside it so inline styles in AppLayout (var(--ink), var(--slate), var(--line)) follow. */
+/* Light sidebar (reference design): white panel, grey items, the selected item is a soft purple pill. */
 .app-shell .sidebar {
-  --ink: #ffffff; --slate: rgba(255,255,255,.75); --slate-2: rgba(255,255,255,.6);
-  --line: rgba(255,255,255,.22); --surface-3: rgba(255,255,255,.14);
-  background: var(--sidebar-gradient); color: var(--ink); border-right: 1px solid #6d28d9; display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh;
+  background: var(--surface); color: var(--ink); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh;
 }
 .app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--slate); padding: 0 10px; margin: 0 0 6px; }
 .app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #3f3f46; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
@@ -42,17 +37,14 @@
 .app-shell .nav-link.active { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; color: var(--slate); }
 .app-shell .nav-link.active svg { color: var(--accent-dark); }
-.app-shell .sidebar .nav-link { color: rgba(255,255,255,.9); }
-.app-shell .sidebar .nav-link.active { background: #5b21b6; color: #fff; box-shadow: 0 2px 8px rgba(46,16,101,.25); }
-.app-shell .sidebar .nav-link.active svg { color: #fff; }
 .app-shell .nav-count { margin-left: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
-.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; padding: 2px 6px; }
-.app-shell .sidebar-logo img { height: 40px; width: auto; display: block; }
+/* The white-on-dark logo sits in a dark rounded tile, like the reference. */
+.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(24,24,27,.18); }
+.app-shell .sidebar-logo img { height: 44px; width: auto; display: block; }
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
 .app-shell .avatar.admin { background: var(--ink); }
-.app-shell .sidebar .avatar { background: #fff; color: #5b21b6; }
-.app-shell .sidebar .avatar.admin { background: #5b21b6; color: #fff; }
+.app-shell .sidebar .avatar, .app-shell .sidebar .avatar.admin { background: var(--accent-dark); color: #fff; }
 
 .app-shell .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 26px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .app-shell .btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); line-height: normal; box-shadow: 0 1px 2px rgba(24,24,27,.04); }

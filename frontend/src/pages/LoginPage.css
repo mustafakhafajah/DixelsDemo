@@ -45,10 +45,13 @@
 }
 
 .login-page .promo-logo img {
-  /* Three times the original 22px: the image is the mark and the DIXELS name together. */
-  height: 66px;
+  /* About three times the original 22px, at the white logo's native 60px so it stays sharp. */
+  height: 60px;
   width: auto;
   display: block;
+  /* The image carries its own dark background: show it as a rounded tile, as in the sidebar. */
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .login-page .promo-copy {

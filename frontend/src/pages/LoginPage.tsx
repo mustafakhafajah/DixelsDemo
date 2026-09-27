@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAuth } from 'react-oidc-context'
-import dixelsLogo from '../assets/dixels-logo.png'
+/* White-on-dark logo, for dark surfaces (the sidebar tile and the login panel). */
+import dixelsLogo from '../assets/dixels-logo-white.png'
 import './LoginPage.css'
 
 interface PromoSegment {

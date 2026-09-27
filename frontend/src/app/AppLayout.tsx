@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import dixelsLogo from '../assets/dixels-logo.png'
+/* White-on-dark logo, for dark surfaces (the sidebar tile and the login panel). */
+import dixelsLogo from '../assets/dixels-logo-white.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { initials } from '../components/bits'
 import { Toasts } from '../components/Toasts'

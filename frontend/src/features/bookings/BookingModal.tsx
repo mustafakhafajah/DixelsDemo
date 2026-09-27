@@ -251,7 +251,6 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       {conflict && (
         <div style={{ background: 'var(--rust-soft)', border: '1px solid var(--rust-line)', borderRadius: 9, padding: '12px 13px' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <span className="errcode">409 booking.conflict</span>
             <strong style={{ fontSize: 13, color: 'var(--rust)' }}>Slot already booked</strong>
           </div>
           <p style={{ fontSize: 12.5, margin: '0 0 9px' }}>{conflict.message}</p>

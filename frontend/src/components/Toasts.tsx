@@ -10,7 +10,6 @@ export function Toasts() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
                 <strong style={{ fontSize: 13 }}>{t.title}</strong>
-                {t.code && <span className="errcode">{t.code}</span>}
               </div>
               {t.message && <p style={{ fontSize: 12.5, color: 'var(--slate)', margin: '4px 0 0', lineHeight: 1.45 }}>{t.message}</p>}
             </div>

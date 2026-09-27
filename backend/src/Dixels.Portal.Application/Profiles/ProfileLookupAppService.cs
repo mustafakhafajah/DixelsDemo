@@ -1,46 +1,27 @@
-using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Portal.Common;
-using Dixels.Portal.Estate;
+using Dixels.Portal.Cqrs;
 using Dixels.Portal.Permissions;
+using Dixels.Portal.Profiles.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Identity;
-using Volo.Abp.Users;
 
 namespace Dixels.Portal.Profiles;
 
+/* Read-only: this service has queries and no commands. */
 [Authorize]
-public class ProfileLookupAppService : EstateAppServiceBase, IProfileLookupAppService
+public class ProfileLookupAppService : PortalAppService, IProfileLookupAppService
 {
-    private readonly IIdentityUserRepository _users;
+    private readonly IQueryDispatcher _queries;
 
-    public ProfileLookupAppService(IIdentityUserRepository users)
+    public ProfileLookupAppService(IQueryDispatcher queries)
     {
-        _users = users;
+        _queries = queries;
     }
 
-    public async Task<CurrentUserProfileDto> GetCurrentAsync()
-    {
-        var user = await _users.GetAsync(CurrentUser.GetId(), includeDetails: false);
-        return new CurrentUserProfileDto
-        {
-            Id = user.Id,
-            Name = user.GetDisplayName(),
-            Email = user.Email,
-            IsAdmin = await IsAdminAsync(),
-        };
-    }
+    public Task<CurrentUserProfileDto> GetCurrentAsync()
+        => _queries.QueryAsync(new GetCurrentProfileQuery());
 
     [Authorize(PortalPermissions.Bookings.ManageAll)]
-    public async Task<ListResultDto<UserLookupDto>> GetUsersAsync()
-    {
-        var users = await _users.GetListAsync(includeDetails: true);
-        var adminRoles = await _users.GetRoleNamesAsync(users.Select(u => u.Id));
-        var admins = adminRoles.Where(r => r.RoleNames.Contains("admin")).Select(r => r.Id).ToHashSet();
-        return new ListResultDto<UserLookupDto>(users
-            .OrderBy(u => u.GetDisplayName())
-            .Select(u => new UserLookupDto { Id = u.Id, Name = u.GetDisplayName(), IsAdmin = admins.Contains(u.Id) })
-            .ToList());
-    }
+    public Task<ListResultDto<UserLookupDto>> GetUsersAsync()
+        => _queries.QueryAsync(new GetUserLookupListQuery());
 }

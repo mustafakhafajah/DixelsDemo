@@ -1,86 +1,43 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Buildings.Commands;
+using Dixels.Portal.Buildings.Queries;
+using Dixels.Portal.Cqrs;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
-using Volo.Abp;
 using Volo.Abp.Application.Dtos;
-using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Buildings;
 
+/* The HTTP boundary: permissions live here, the work lives in one handler per use case. */
 [Authorize]
-public class BuildingAppService : EstateAppServiceBase, IBuildingAppService
+public class BuildingAppService : PortalAppService, IBuildingAppService
 {
-    private readonly IRepository<Building, Guid> _buildings;
-    private readonly BuildingDtoMapper _mapper;
+    private readonly ICommandDispatcher _commands;
+    private readonly IQueryDispatcher _queries;
 
-    public BuildingAppService(IRepository<Building, Guid> buildings, BuildingDtoMapper mapper)
+    public BuildingAppService(ICommandDispatcher commands, IQueryDispatcher queries)
     {
-        _buildings = buildings;
-        _mapper = mapper;
+        _commands = commands;
+        _queries = queries;
     }
 
-    public async Task<ListResultDto<BuildingDto>> GetListAsync()
-    {
-        var buildings = await _buildings.GetListAsync();
-        return new ListResultDto<BuildingDto>(await _mapper.MapListAsync(buildings.OrderBy(b => b.Name)));
-    }
+    public Task<ListResultDto<BuildingDto>> GetListAsync()
+        => _queries.QueryAsync(new GetBuildingListQuery());
 
-    public async Task<BuildingDto> GetAsync(Guid id) => await _mapper.MapAsync(await _buildings.GetAsync(id));
+    public Task<BuildingDto> GetAsync(Guid id)
+        => _queries.QueryAsync(new GetBuildingQuery(id));
 
     [Authorize(PortalPermissions.Buildings.Manage)]
-    public async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
-    {
-        var name = input.Name.Trim();
-        await ValidateAsync(input, name, null);
-        var building = new Building(GuidGenerator.Create(), name);
-        Apply(building, input);
-        await _buildings.InsertAsync(building, autoSave: true);
-        return await _mapper.MapAsync(building);
-    }
+    public Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
+        => _commands.SendAsync(new CreateBuildingCommand(input));
 
     [Authorize(PortalPermissions.Buildings.Manage)]
-    public async Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input)
-    {
-        var building = await _buildings.GetAsync(id);
-        var name = input.Name.Trim();
-        await ValidateAsync(input, name, id);
-        building.Name = name;
-        Apply(building, input);
-        await _buildings.UpdateAsync(building, autoSave: true);
-        return await _mapper.MapAsync(building);
-    }
+    public Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input)
+        => _commands.SendAsync(new UpdateBuildingCommand(id, input));
 
     [Authorize(PortalPermissions.Buildings.Manage)]
-    public async Task<BuildingDto> SetBookableAsync(Guid id, SetBookableDto input)
-    {
-        var building = await _buildings.GetAsync(id);
-        building.IsBookable = input.IsBookable;
-        await _buildings.UpdateAsync(building, autoSave: true);
-        return await _mapper.MapAsync(building);
-    }
-
-    private async Task ValidateAsync(CreateUpdateBuildingDto input, string name, Guid? excludeId)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new BusinessException(PortalDomainErrorCodes.MissingField, "Give the building a name.");
-        var lower = name.ToLower();
-        if (await _buildings.AnyAsync(b => b.Name.ToLower() == lower && b.Id != excludeId))
-            throw new BusinessException(PortalDomainErrorCodes.BuildingDuplicate, $"{name} is already in the estate.");
-        if (input.CloseHour <= input.OpenHour)
-            throw new BusinessException(PortalDomainErrorCodes.InvalidHours, "Close hour must be after open hour.");
-    }
-
-    private static void Apply(Building b, CreateUpdateBuildingDto input)
-    {
-        b.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
-        b.IsBookable = input.IsBookable;
-        b.OpenHour = input.OpenHour;
-        b.CloseHour = input.CloseHour;
-        b.MinBookingMinutes = input.MinBookingMinutes;
-        b.MaxBookingHours = input.MaxBookingHours;
-        b.Holidays = input.Holidays.Distinct().OrderBy(d => d).ToList();
-    }
+    public Task<BuildingDto> SetBookableAsync(Guid id, SetBookableDto input)
+        => _commands.SendAsync(new SetBuildingBookableCommand(id, input.IsBookable));
 }

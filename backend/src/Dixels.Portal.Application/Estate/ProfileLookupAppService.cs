@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Common;
 using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
@@ -24,7 +25,7 @@ public class ProfileLookupAppService : EstateAppServiceBase, IProfileLookupAppSe
         return new CurrentUserProfileDto
         {
             Id = user.Id,
-            Name = BookingAppService.DisplayName(user),
+            Name = user.GetDisplayName(),
             Email = user.Email,
             IsAdmin = await IsAdminAsync(),
         };
@@ -37,8 +38,8 @@ public class ProfileLookupAppService : EstateAppServiceBase, IProfileLookupAppSe
         var adminRoles = await _users.GetRoleNamesAsync(users.Select(u => u.Id));
         var admins = adminRoles.Where(r => r.RoleNames.Contains("admin")).Select(r => r.Id).ToHashSet();
         return new ListResultDto<UserLookupDto>(users
-            .OrderBy(BookingAppService.DisplayName)
-            .Select(u => new UserLookupDto { Id = u.Id, Name = BookingAppService.DisplayName(u), IsAdmin = admins.Contains(u.Id) })
+            .OrderBy(u => u.GetDisplayName())
+            .Select(u => new UserLookupDto { Id = u.Id, Name = u.GetDisplayName(), IsAdmin = admins.Contains(u.Id) })
             .ToList());
     }
 }

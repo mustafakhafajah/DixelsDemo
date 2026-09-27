@@ -1,4 +1,9 @@
-﻿using Dixels.Portal.Estate;
+﻿using Dixels.Portal.Bookings;
+using Dixels.Portal.Buildings;
+using Dixels.Portal.EntityFrameworkCore.Configurations;
+using Dixels.Portal.Estate;
+using Dixels.Portal.Floors;
+using Dixels.Portal.Spaces;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -85,49 +90,10 @@ public class PortalDbContext :
 
     private static void ConfigureEstate(ModelBuilder builder)
     {
-        builder.Entity<Building>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Buildings", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
-            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
-            b.Property(x => x.Holidays).HasColumnType("date[]");
-            b.HasIndex(x => x.Name).IsUnique();
-        });
-
-        builder.Entity<Floor>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Floors", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxFloorNameLength);
-            b.HasIndex(x => new { x.BuildingId, x.Name }).IsUnique();
-            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        builder.Entity<Space>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Spaces", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(EstateConsts.MaxNameLength);
-            b.Property(x => x.TimeZone).IsRequired().HasMaxLength(EstateConsts.MaxTimeZoneLength);
-            b.Property(x => x.Note).HasMaxLength(EstateConsts.MaxNoteLength);
-            b.HasIndex(x => x.Name).IsUnique();
-            b.HasIndex(x => new { x.BuildingId, x.FloorId, x.Status });
-            b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
-            b.HasOne<Floor>().WithMany().HasForeignKey(x => x.FloorId).OnDelete(DeleteBehavior.Restrict);
-        });
-
-        builder.Entity<Booking>(b =>
-        {
-            b.ToTable(PortalConsts.DbTablePrefix + "Bookings", PortalConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.IdempotencyKey).HasMaxLength(EstateConsts.MaxIdempotencyKeyLength);
-            b.HasIndex(x => new { x.SpaceId, x.Status, x.StartUtc, x.EndUtc });
-            b.HasIndex(x => new { x.OwnerUserId, x.Status, x.StartUtc, x.EndUtc });
-            b.HasIndex(x => x.SeriesId);
-            b.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
-            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId).OnDelete(DeleteBehavior.Restrict);
-        });
+        builder.ApplyConfiguration(new BuildingConfiguration());
+        builder.ApplyConfiguration(new FloorConfiguration());
+        builder.ApplyConfiguration(new SpaceConfiguration());
+        builder.ApplyConfiguration(new BookingConfiguration());
 
         builder.Entity<MaintenanceWindow>(b =>
         {

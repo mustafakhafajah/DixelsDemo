@@ -161,19 +161,22 @@
   width: 100%;
 }
 
+/* Same violet gradient as the app's main-action buttons. */
 .login-page .real-signin-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--lp-accent);
-  border-color: var(--lp-accent);
+  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+  border-color: transparent;
   color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28);
 }
 
 .login-page .real-signin-btn:hover {
-  background: var(--lp-accent-dark);
-  border-color: var(--lp-accent-dark);
+  background: linear-gradient(90deg, #6d28d9 0%, #9333ea 100%);
+  border-color: transparent;
 }
 
 .login-page .real-signin-icon {

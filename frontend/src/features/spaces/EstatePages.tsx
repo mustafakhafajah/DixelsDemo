@@ -3,12 +3,14 @@ import { errorText } from '../../api/client'
 import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
 import { BookablePill, LoadError, Loading, plural } from '../../components/bits'
+import { Dropdown } from '../../components/pickers'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { pad } from '../../lib/dateUtils'
 import { useClientPaging } from '../../lib/useClientPaging'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { modals } from '../../state/modalStore'
+import { useFilteredNavCount } from '../../state/navCountStore'
 import { toast } from '../../state/toastStore'
 import { EMPTY_SPACE_FILTERS, SpaceRegistryFilters, type SpaceRegistryFilterValues } from './SpaceRegistryFilters'
 
@@ -96,12 +98,28 @@ export function FloorsPage() {
   const q = useFloors()
   const buildings = useBuildings()
   const bookableItem = useBookableMenuItem()
-  const paging = useClientPaging(q.data ?? [])
+  const [buildingId, setBuildingId] = useState('')
+  const shown = (q.data ?? []).filter((f) => !buildingId || f.buildingId === buildingId)
+  const paging = useClientPaging(shown)
+  useFilteredNavCount('floors', buildingId ? shown.length : undefined)
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
     <section>
       <RegistryCard title="Floor registry" sub="Every floor across every building. A floor uses its building's time zone." addLabel="Add a floor" onAdd={() => modals.floor()}>
-        {q.isError ? <LoadError what="the floors" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet. Add one above.</p> : (
+        <div className="filter-bar">
+          <div style={{ width: 220 }}>
+            <label className="lbl" htmlFor="ff-building">Building</label>
+            <Dropdown id="ff-building" value={buildingId} onChange={(v) => { setBuildingId(v); paging.setPage(1) }}
+              options={[{ value: '', label: 'All buildings' }, ...(buildings.data ?? []).map((b) => ({ value: b.id, label: b.name }))]} />
+          </div>
+          <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => setBuildingId('')}>Clear filters</button>
+        </div>
+        {q.isError ? <LoadError what="the floors" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet. Add one above.</p> : !shown.length ? (
+          <p className="empty-note">
+            This building has no floors yet.
+            <button type="button" className="btn btn-sm" style={{ marginLeft: 10 }} onClick={() => setBuildingId('')}>Clear filters</button>
+          </p>
+        ) : (
           <>
             <table className="grid">
               <thead>
@@ -176,6 +194,7 @@ export function SpacesPage() {
   const changeFilters = (v: SpaceRegistryFilterValues) => { setFilters(v); setPage(1) }
   const changePageSize = (s: number) => { setPageSize(s); setPage(1) }
   const filtered = Object.values(filters).some((v) => v !== '')
+  useFilteredNavCount('spaces', filtered && q.data ? total : undefined)
 
   return (
     <section>

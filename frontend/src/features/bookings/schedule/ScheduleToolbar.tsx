@@ -25,11 +25,15 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
 
   return (
     <div className="sched-toolbar">
-      <div style={{ minWidth: 230 }}>
-        <label className="lbl" htmlFor="my-space">Space</label>
-        <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
-          options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
-      </div>
+      {/* Space, user and date range are admin tools; employees move through their own schedule
+          with the Month / Week / Day buttons and the arrows. */}
+      {session.isAdmin && (
+        <div style={{ minWidth: 230 }}>
+          <label className="lbl" htmlFor="my-space">Space</label>
+          <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
+            options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
+        </div>
+      )}
       {session.isAdmin && (
         <div>
           <label className="lbl" htmlFor="my-user">User</label>
@@ -40,16 +44,20 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
               : [{ value: session.userId, label: 'You' }]} />
         </div>
       )}
-      <div>
-        <label className="lbl" htmlFor={`${id}-from`}>From</label>
-        <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
-          onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
-      </div>
-      <div>
-        <label className="lbl" htmlFor={`${id}-to`}>To</label>
-        <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
-          onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
-      </div>
+      {session.isAdmin && (
+        <>
+          <div>
+            <label className="lbl" htmlFor={`${id}-from`}>From</label>
+            <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
+              onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
+          </div>
+          <div>
+            <label className="lbl" htmlFor={`${id}-to`}>To</label>
+            <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
+              onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
+          </div>
+        </>
+      )}
       <div className="sched-nav">
         <div className="seg" role="group" aria-label="Schedule view">
           {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (

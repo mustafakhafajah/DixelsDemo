@@ -13,7 +13,8 @@ export function useScheduleData(id: ScheduleId) {
   const spacesQ = useSpaces()
   const from = useMemo(() => dayAt(cfg.from), [cfg.from])
   const to = useMemo(() => addDays(dayAt(cfg.to), 1), [cfg.to])
-  const multiSpace = cfg.spaceId === 'all'
+  /* Employees have no space picker: they always see all of their own bookings. */
+  const multiSpace = !session.isAdmin || cfg.spaceId === 'all'
   const singleSpaceId = multiSpace ? '' : cfg.spaceId
   const ownerId = cfg.userId || session.userId
 

@@ -4,7 +4,7 @@ import { usePreviewMaintenance, useScheduleMaintenance } from '../../api/hooks'
 import { ErrorLine, plural, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
-import { addMin, dayKey, fromDateTime, hm, roundUp30 } from '../../lib/dateUtils'
+import { addMin, dayKey, earliestStart, fromDateTime, hm, roundUp30 } from '../../lib/dateUtils'
 import { generateOccurrences } from '../../lib/recurrence'
 import { modals, type MaintenanceTarget } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
@@ -18,6 +18,8 @@ const OTHER = 'Other'
  * weeks of renovation). Bookings already made there are kept unless the admin ticks "cancel them". */
 export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) {
   const init = useMemo(() => roundUp30(new Date()), [])
+  /* Blocked time starts now at the earliest: past days and times are not offered. */
+  const earliest = earliestStart()
   const [startDate, setStartDate] = useState(dayKey(init))
   const [startTime, setStartTime] = useState(hm(init))
   const [endDate, setEndDate] = useState(dayKey(init))
@@ -60,7 +62,16 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
       if (next) { const moved = new Date(next.getTime() + (end.getTime() - start.getTime())); setEndDate(dayKey(moved)); setEndTime(hm(moved)) }
     }
     setStartDate(v)
+    /* Moved onto today: a start that is now in the past moves up to now, keeping the length. */
+    const s = fromDateTime(v, startTime)
+    if (s && s < earliest) moveStart(earliest)
   }
+  const moveStart = (next: Date) => {
+    const len = start && end && end > start ? end.getTime() - start.getTime() : 3600000
+    const moved = new Date(next.getTime() + len)
+    setStartDate(dayKey(next)); setStartTime(hm(next)); setEndDate(dayKey(moved)); setEndTime(hm(moved))
+  }
+  const onStartTime = (v: string) => { const s = fromDateTime(startDate, v); if (s) moveStart(s); else setStartTime(v) }
 
   const submit = () => {
     if (reason === OTHER && !note) { toast('warn', 'Reason needed', 'Type the reason for blocking this time.'); return }
@@ -106,13 +117,13 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="mt-start-date">From<RequiredMark /></label>
-          <DatePicker id="mt-start-date" value={startDate} onChange={onStartDate} />
+          <DatePicker id="mt-start-date" value={startDate} min={dayKey(earliest)} onChange={onStartDate} />
         </div>
         <div>
           <label className="lbl req" htmlFor="mt-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Start time<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="mt-start" aria-label="Start time" value={startTime} onChange={setStartTime} />
+          <TimePicker id="mt-start" aria-label="Start time" value={startTime} min={startDate === dayKey(earliest) ? hm(earliest) : null} onChange={onStartTime} />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -124,7 +135,7 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
           <label className="lbl req" htmlFor="mt-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>End time<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="mt-end" aria-label="End time" value={endTime} onChange={setEndTime} />
+          <TimePicker id="mt-end" aria-label="End time" value={endTime} min={start && endDate === startDate ? hm(addMin(start, 15)) : null} onChange={setEndTime} />
         </div>
       </div>
       <ErrorLine error={bad ? { code: 'validation.end_before_start', message: 'The end must be after the start.' } : null} />

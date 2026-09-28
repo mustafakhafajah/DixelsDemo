@@ -7,7 +7,7 @@ import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { DEFAULT_MAX_HOURS, DEFAULT_MIN_MINUTES } from '../../lib/constants'
-import { addDays, addMin, dayAt, dayKey, durationLabel, fromDateTime, hm, isoZ, roundUp30, stampOffset } from '../../lib/dateUtils'
+import { addDays, addMin, dayAt, dayKey, durationLabel, earliestStart, fromDateTime, hm, isoZ, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
 import { modals, type BookingPrefill } from '../../state/modalStore'
@@ -31,8 +31,12 @@ function accessError(space: Space) {
 export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; editing: Booking | null }) {
   const session = useSession()
   const spacesQ = useSpaces()
-  const initStart = prefill.start ?? roundUp30(new Date())
-  const initEnd = prefill.end ?? addMin(initStart, 60)
+  /* A new booking never starts in the past: a prefill from an earlier slot is moved up to now. */
+  const earliest = earliestStart()
+  const wantedStart = prefill.start ?? roundUp30(new Date())
+  const wantedEnd = prefill.end ?? addMin(wantedStart, 60)
+  const initStart = !editing && wantedStart < earliest ? earliest : wantedStart
+  const initEnd = new Date(initStart.getTime() + (wantedEnd.getTime() - wantedStart.getTime()))
 
   const [date, setDate] = useState(dayKey(initStart))
   const [startTime, setStartTime] = useState(hm(initStart))
@@ -48,6 +52,24 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
 
   const start = fromDateTime(date, startTime)
   const end = fromDateTime(date, endTime)
+
+  /* Past times are not offered at all: on the first bookable day the start begins at "now",
+   * and the end always begins one step after the start. */
+  const startMin = date === dayKey(earliest) ? hm(earliest) : null
+  const endMin = start ? hm(addMin(start, 15)) : null
+  const applyWindow = (day: string, s: string, e: string) => {
+    const next = keepWindowAhead(day, s, e, earliest)
+    setStartTime(next.startTime); setEndTime(next.endTime)
+  }
+  const onDate = (v: string) => { setDate(v); applyWindow(v, startTime, endTime) }
+  /* Moving the start keeps the booking's length, so the end never lands before it. */
+  const onStart = (v: string) => {
+    const s = fromDateTime(date, v)
+    const len = start && end && end > start ? end.getTime() - start.getTime() : 3600000
+    if (!s) return setStartTime(v)
+    const e = new Date(s.getTime() + len)
+    setStartTime(v); setEndTime(dayKey(e) === date ? hm(e) : '23:45')
+  }
   const hasWindow = !!start && !!end && end > start
 
   const rule = !editing && hasWindow ? toRule(recur, start) : null
@@ -200,20 +222,20 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> Required field</p>
       <div>
         <label className="lbl req" htmlFor="m-date">Date<RequiredMark /></label>
-        <DatePicker id="m-date" value={date} onChange={setDate} />
+        <DatePicker id="m-date" value={date} min={dayKey(earliest)} onChange={onDate} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Start<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-start" aria-label="Start" value={startTime} onChange={setStartTime} />
+          <TimePicker id="m-start" aria-label="Start" value={startTime} min={startMin} onChange={onStart} />
         </div>
         <div>
           <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>End<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-end" aria-label="End" value={endTime} onChange={setEndTime} />
+          <TimePicker id="m-end" aria-label="End" value={endTime} min={endMin} onChange={setEndTime} />
         </div>
       </div>
       <div style={{ marginTop: -6 }}>

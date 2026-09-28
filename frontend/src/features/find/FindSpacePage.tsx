@@ -5,7 +5,7 @@ import { useSession } from '../../app/session'
 import { Loading, plural } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
-import { addDays, addMin, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
+import { addDays, addMin, ceilStep, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { findToday, useFindStore, type FindDuration } from '../../state/findStore'
@@ -13,6 +13,13 @@ import { modals } from '../../state/modalStore'
 import { itemClass, openItem } from '../bookings/schedule/ScheduleCalendar'
 
 const px = (min: number) => (min / 60) * RT_PX_PER_HOUR
+
+/* A free stretch cut at every whole hour, e.g. 09:30–12:00 -> 09:30–10:00, 10:00–11:00, 11:00–12:00. */
+function hourCells(w: MinuteWindow): MinuteWindow[] {
+  const out: MinuteWindow[] = []
+  for (let s = w.start; s < w.end; s = Math.floor(s / 60) * 60 + 60) out.push({ start: s, end: Math.min(w.end, Math.floor(s / 60) * 60 + 60) })
+  return out
+}
 
 const CAPACITY_PRESETS = [4, 6, 8, 12]
 /* Dragged windows snap to quarter hours, the shortest booking most spaces allow. */
@@ -152,13 +159,11 @@ export function FindSpacePage() {
   const freeCount = candidates.filter(isFree).length
   const d = dayAt(f.date)
 
-  const regionPrefill = (s: Space, region: MinuteWindow) => {
-    const wS = minOfDay(winStart)
-    const wE = Math.min(1440, wS + durMin)
-    const fits = wE > wS && wS >= region.start && wE <= region.end
-    const start = fits ? wS : region.start
-    const end = fits ? wE : Math.min(region.end, start + Math.max(60, s.constraints.minBookingMinutes))
-    modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, start), end: dayAt(f.date, 0, end) })
+  /* Clicking an hour books that hour; when the space's minimum is longer, the booking runs on
+   * into the next hours of the same free stretch. */
+  const cellPrefill = (s: Space, cell: MinuteWindow, region: MinuteWindow) => {
+    const end = Math.min(region.end, Math.max(cell.end, cell.start + s.constraints.minBookingMinutes))
+    modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, cell.start), end: dayAt(f.date, 0, end) })
   }
 
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -246,8 +251,13 @@ export function FindSpacePage() {
               {rooms.map((s) => {
                 const segs = items.filter((i) => i.spaceId === s.id).map((i) => daySegment(i, f.date))
                   .filter((g): g is DaySegment => !!g).sort((a, b) => a.s - b.s)
-                const free = computeFree(s.constraints, s.id, items, f.date, open, close)
+                /* Today's free time starts now: the past is never offered as free. */
+                const from = isToday ? Math.max(open, ceilStep(nowMin)) : open
+                const free = computeFree(s.constraints, s.id, items, f.date, from, close)
                   .filter((w) => w.end - w.start >= s.constraints.minBookingMinutes)
+                const cells = free.flatMap((reg) => hourCells(reg)
+                  .filter((c) => reg.end - c.start >= s.constraints.minBookingMinutes)
+                  .map((c) => ({ ...c, reg })))
                 return (
                   <div key={s.id} className="rt-row">
                     <div className="rt-roominfo">
@@ -263,9 +273,9 @@ export function FindSpacePage() {
                           <span>{minLabel(Math.min(drag.from, drag.to))}–{minLabel(Math.max(drag.from, drag.to))}</span>
                         </div>
                       )}
-                      {free.map((reg) => (
-                        <div key={reg.start} className="rt-free" style={{ left: px(reg.start - open), width: px(reg.end - reg.start) }}
-                          onClick={() => regionPrefill(s, reg)} title={`Book ${s.name} ${minLabel(reg.start)}–${minLabel(reg.end)}`} />
+                      {cells.map((c) => (
+                        <div key={c.start} className="rt-free" style={{ left: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
+                          onClick={() => cellPrefill(s, c, c.reg)} title={`Book ${s.name} ${minLabel(c.start)}–${minLabel(c.end)}`} />
                       ))}
                       {segs.map((g) => {
                         const it = g.item

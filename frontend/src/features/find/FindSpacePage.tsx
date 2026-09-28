@@ -308,15 +308,17 @@ export function FindSpacePage() {
       <div className="find-layout">
         <FindFilters />
         <section className="card" style={{ overflow: 'hidden' }}>
+          {/* Today on the left, the date with its arrows in the middle (the empty third column keeps it centred). */}
           <div className="find-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button type="button" className="btn btn-sm" onClick={findToday}>Today</button>
+            <button type="button" className="btn btn-sm find-today" onClick={findToday}>Today</button>
+            <div className="find-date-nav">
               <button type="button" className="iconbtn" onClick={() => f.shiftDay(-1)} aria-label="Previous day">‹</button>
               <span className="mono period-label" style={{ minWidth: 190 }}>
                 {dayName(d).slice(0, 3)}, {monthName(d).slice(0, 3)} {d.getUTCDate()}, {d.getUTCFullYear()}
               </span>
               <button type="button" className="iconbtn" onClick={() => f.shiftDay(1)} aria-label="Next day">›</button>
             </div>
+            <span />
           </div>
           <p className="find-stats">
             {candidates.length ? `${freeCount} of ${plural(candidates.length, 'room')} free ${hm(winStart)}–${hm(winEnd)} · grouped by building and floor.` : ''}

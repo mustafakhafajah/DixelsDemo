@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { P } from '../../../auth/permissions'
 import { lifecycleOf, type ScheduleItem } from '../../../api/types'
 import { useSession } from '../../../app/session'
 import { DEFAULT_MIN_MINUTES, PX_PER_HOUR, SLOT_MIN } from '../../../lib/constants'
@@ -82,7 +83,8 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
 
 function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const { cfg, items, multiSpace, single, shownSpaces, busyOnSpace } = data
-  const { userId } = useSession()
+  const { userId, can } = useSession()
+  const canBook = can(P.Bookings.Create)
   const scroller = useRef<HTMLDivElement>(null)
   const pph = cfg.mode === 'day' ? PX_PER_HOUR.day : PX_PER_HOUR.week
 
@@ -103,7 +105,8 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const now = new Date()
   const today = todayKey()
   const nowMin = minOfDay(now)
-  const bookable = multiSpace || !!single?.canCurrentUserBook
+  /* Without permission to book, every slot is inert: no click-to-book. */
+  const bookable = canBook && (multiSpace || !!single?.canCurrentUserBook)
 
   useEffect(() => {
     if (scroller.current && days.includes(today) && nowMin > open && nowMin < close)
@@ -186,7 +189,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
         </div>
       </div>
       <p className="tg-hint">
-        {bookable ? 'Click an empty slot to book it' : 'This space cannot be booked, so slots are inert'} · click a block for its detail · click a date for the whole day. All times UTC.
+        {bookable ? 'Click an empty slot to book it' : canBook ? 'This space cannot be booked, so slots are inert' : 'You do not have permission to book'} · click a block for its detail · click a date for the whole day. All times UTC.
       </p>
     </div>
   )

@@ -8,7 +8,8 @@ import { dayAt, todayKey } from '../lib/dateUtils'
 import { modals } from '../state/modalStore'
 import { useNavCountStore } from '../state/navCountStore'
 import { Overlays } from './Overlays'
-import { useSession } from './session'
+import { ESTATE_PAGES, manageAny, useSession } from './session'
+import { P } from '../auth/permissions'
 import './appShell.css'
 
 const PAGE_META: Record<string, [string, string]> = {
@@ -18,6 +19,7 @@ const PAGE_META: Record<string, [string, string]> = {
   floors: ['Floors', 'Every floor across every building, and any time blocked on it.'],
   spaces: ['Spaces', 'The units people can book, and who may book them.'],
   'space-types': ['Space types', 'The kinds of space an admin can give a space.'],
+  users: ['User directory', 'Manage portal accounts, their roles and access.'],
 }
 
 /* "New booking" only where booking is the task at hand. */
@@ -26,28 +28,35 @@ const BOOKING_VIEWS = new Set(['find', 'bookings'])
 const Icon = {
   find: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4L14 14" strokeLinecap="round" /></svg>,
   bookings: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2" y="3.2" width="12" height="10.6" rx="1.8" /><path d="M2 6.4h12M5.4 1.8v2.6M10.6 1.8v2.6" strokeLinecap="round" /></svg>,
+  users: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="6" cy="5.4" r="2.6" /><path d="M1.6 13.6c.6-2.4 2.4-3.8 4.4-3.8s3.8 1.4 4.4 3.8M10.6 3.2a2.4 2.4 0 010 4.6M12.2 9.9c1.2.5 1.9 1.6 2.2 3.1" strokeLinecap="round" /></svg>,
   estate: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="1.8" y="1.8" width="12.4" height="12.4" rx="1.5" /><path d="M1.8 7h12.4M7 1.8v12.4" strokeLinecap="round" /></svg>,
   signOut: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`
 
-/* Admin-only menu. Its counts need the estate lists, so they are loaded only when an admin sees it. */
-function SpaceManagementNav() {
+/* Management menu: a link per area the user can change. Its counts need the estate lists,
+ * so they are loaded only when the menu is shown. */
+function SpaceManagementNav({ show }: { show: Record<string, boolean> }) {
   const spaces = useSpaces()
   const buildings = useBuildings()
   const floors = useFloors()
   const spaceTypes = useSpaceTypes()
   /* A filtered Floors or Spaces page puts its match count here instead of the full count. */
   const filtered = useNavCountStore((s) => s.counts)
+  const counts: Record<string, number | undefined> = {
+    '/app/buildings': buildings.data?.length,
+    '/app/floors': filtered.floors ?? floors.data?.length,
+    '/app/spaces': filtered.spaces ?? spaces.data?.length,
+    '/app/space-types': spaceTypes.data?.length,
+  }
   return (
     <div>
       <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
       <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
-        <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
-        <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{filtered.floors ?? floors.data?.length ?? ''}</span></NavLink>
-        <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{filtered.spaces ?? spaces.data?.length ?? ''}</span></NavLink>
-        <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
+        {ESTATE_PAGES.filter((p) => show[p.path]).map((p) => (
+          <NavLink key={p.path} to={p.path} className={navClass}>{p.label}<span className="nav-count">{counts[p.path] ?? ''}</span></NavLink>
+        ))}
       </div>
     </div>
   )
@@ -56,9 +65,11 @@ function SpaceManagementNav() {
 function Sidebar() {
   const session = useSession()
   const today = useMemo(() => dayAt(todayKey()), [])
-  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId)
+  const seesBookings = session.can(P.Bookings.Default)
+  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
+  const showEstate = Object.fromEntries(ESTATE_PAGES.map((p) => [p.path, manageAny(p.area).some(session.can)]))
 
   return (
     <aside className="sidebar">
@@ -67,16 +78,27 @@ function Sidebar() {
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {seesBookings && (
+          <div>
+            <NavLink to="/app/bookings" className={navClass}>
+              {Icon.bookings}
+              <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
+              <span className="nav-count">{upcoming ?? ''}</span>
+            </NavLink>
+          </div>
+        )}
         <div>
-          <NavLink to="/app/bookings" className={navClass}>
-            {Icon.bookings}
-            <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
-            <span className="nav-count">{upcoming ?? ''}</span>
-          </NavLink>
-        </div>
-        <div>
-          <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>
-          {session.isAdmin && <SpaceManagementNav />}
+          {session.can(P.Spaces.Default) && <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>}
+          {Object.values(showEstate).some(Boolean) && <SpaceManagementNav show={showEstate} />}
+          {/* Administration: admin-only tools, shown to whoever holds the permission. */}
+          {session.can(P.Users.Default) && (
+            <div>
+              <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.users}Administration</p>
+              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
+                <NavLink to="/app/users" className={navClass}>User directory</NavLink>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -100,7 +122,7 @@ function Sidebar() {
 
 function Topbar() {
   const { pathname } = useLocation()
-  const { isAdmin } = useSession()
+  const { isAdmin, can } = useSession()
   const view = pathname.split('/')[2] || 'find'
   const meta = PAGE_META[view] ?? PAGE_META.find
   const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule') : meta[0]
@@ -110,7 +132,7 @@ function Topbar() {
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
-      {BOOKING_VIEWS.has(view) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}
+      {BOOKING_VIEWS.has(view) && can(P.Bookings.Create) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}
     </header>
   )
 }

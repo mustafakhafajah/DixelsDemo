@@ -10,7 +10,8 @@ function AuthCallbackPage() {
 
   useEffect(() => {
     if (auth.isLoading || auth.error || !auth.isAuthenticated || !auth.user) return
-    navigate('/app/find', { replace: true })
+    /* /app sends each user on to the first page their permissions let them see. */
+    navigate('/app', { replace: true })
   }, [auth.isLoading, auth.isAuthenticated, auth.error, auth.user, navigate])
 
   if (auth.error) {

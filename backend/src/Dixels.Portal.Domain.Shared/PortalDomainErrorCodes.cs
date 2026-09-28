@@ -40,6 +40,13 @@ public static class PortalDomainErrorCodes
     public const string BookingNotInProgress = "booking.not_in_progress";
     public const string VersionMismatch = "conflict.version_mismatch";
     public const string MaintenanceNotFound = "maintenance.not_found";
+    public const string UserNotFound = "user.not_found";
+    public const string UserInvalidRole = "user.invalid_role";
+    public const string UserIdentityError = "user.identity_error";
+    public const string UserInvalidLock = "user.invalid_lock";
+    public const string UserInvalidPermission = "user.invalid_permission";
+    public const string UserSelfChange = "user.self_change";
+    public const string UserLastAdmin = "user.last_admin";
 
     public static readonly IReadOnlyDictionary<string, HttpStatusCode> StatusCodes = new Dictionary<string, HttpStatusCode>
     {
@@ -74,5 +81,12 @@ public static class PortalDomainErrorCodes
         [BookingNotInProgress] = HttpStatusCode.Conflict,
         [VersionMismatch] = HttpStatusCode.Conflict,
         [MaintenanceNotFound] = HttpStatusCode.NotFound,
+        [UserNotFound] = HttpStatusCode.NotFound,
+        [UserInvalidRole] = HttpStatusCode.BadRequest,
+        [UserIdentityError] = HttpStatusCode.BadRequest,
+        [UserInvalidLock] = HttpStatusCode.BadRequest,
+        [UserInvalidPermission] = HttpStatusCode.BadRequest,
+        [UserSelfChange] = HttpStatusCode.Conflict,
+        [UserLastAdmin] = HttpStatusCode.Conflict,
     };
 }

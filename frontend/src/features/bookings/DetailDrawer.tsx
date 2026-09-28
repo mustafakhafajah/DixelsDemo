@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
 import { lifecycleOf, type Booking, type Maintenance } from '../../api/types'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { Loading, StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
 import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
@@ -28,6 +29,9 @@ function BookingDetail({ b }: { b: Booking }) {
   else if (!mine) note = 'Someone else booked this. You can only change your own bookings.'
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
+  const showReschedule = may && session.can(P.Bookings.Edit) && state === 'scheduled'
+  const showEndNow = may && session.can(P.Bookings.Edit) && state === 'in_progress'
+  const showCancel = may && session.can(P.Bookings.Delete) && (state === 'scheduled' || state === 'in_progress')
 
   return (
     <>
@@ -49,7 +53,7 @@ function BookingDetail({ b }: { b: Booking }) {
       </dl>
       {note && <p className="muted-box" style={{ margin: '0 0 14px' }}>{note}</p>}
 
-      {askSeries ? (
+      {askSeries && showCancel ? (
         <div className="muted-box" style={{ marginBottom: 18 }}>
           <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>This booking is part of a repeating series. What should be cancelled?</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -60,10 +64,10 @@ function BookingDetail({ b }: { b: Booking }) {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {may && state === 'scheduled' && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>Reschedule</button>}
-          {may && state === 'in_progress' && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>End now</button>}
-          {may && (state === 'scheduled' || state === 'in_progress') && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>Cancel booking</button>}
-          {(!may || state === 'ended' || state === 'cancelled') && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
+          {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>Reschedule</button>}
+          {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>End now</button>}
+          {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>Cancel booking</button>}
+          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
         </div>
       )}
     </>
@@ -92,7 +96,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
         <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>
       <div style={{ display: 'flex', gap: 8 }}>
-        {session.isAdmin && m.status === 'Active' && state !== 'ended'
+        {session.can(P.Maintenance.Delete) && m.status === 'Active' && state !== 'ended'
           ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Unblock this time</button>
           : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
       </div>

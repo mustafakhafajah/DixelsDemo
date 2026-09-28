@@ -18,6 +18,11 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
 
         AddCrud(group, PortalPermissions.Bookings.Default, "Permission:Bookings")
             .AddChild(PortalPermissions.Bookings.ManageAll, L("Permission:ManageAll"));
+
+        var users = group.AddPermission(PortalPermissions.Users.Default, L("Permission:Users"));
+        users.AddChild(PortalPermissions.Users.Create, L("Permission:Users.Create"));
+        users.AddChild(PortalPermissions.Users.Edit, L("Permission:Users.Edit"));
+        users.AddChild(PortalPermissions.Users.ManagePermissions, L("Permission:Users.ManagePermissions"));
     }
 
     /* The ABP convention: a parent permission to view, with Create / Edit / Delete children. */

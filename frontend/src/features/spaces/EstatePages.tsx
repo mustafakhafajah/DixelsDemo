@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
+import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { BookablePill, LoadError, Loading, plural } from '../../components/bits'
 import { Dropdown } from '../../components/pickers'
 import { Pagination } from '../../components/Pagination'
@@ -28,12 +30,16 @@ function useBookableMenuItem() {
       }
 }
 
-function RegistryCard({ title, sub, addLabel, onAdd, children }: { title: string; sub: string; addLabel: string; onAdd: () => void; children: ReactNode }) {
+/* A row-menu entry only for those allowed to use it. */
+const when = <T,>(allowed: boolean, item: T): T[] => (allowed ? [item] : [])
+
+/* Without onAdd (no permission to create) there is no add button. */
+function RegistryCard({ title, sub, addLabel, onAdd, children }: { title: string; sub: string; addLabel: string; onAdd?: () => void; children: ReactNode }) {
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
       <div className="card-head">
         <div><h2 className="card-title">{title}</h2><p className="card-sub">{sub}</p></div>
-        <button type="button" className="btn btn-accent btn-sm" onClick={onAdd}>{addLabel}</button>
+        {onAdd && <button type="button" className="btn btn-accent btn-sm" onClick={onAdd}>{addLabel}</button>}
       </div>
       {children}
     </div>
@@ -50,11 +56,12 @@ function Actions({ children }: { children: ReactNode }) {
 
 export function BuildingsPage() {
   const q = useBuildings()
+  const { can } = useSession()
   const bookableItem = useBookableMenuItem()
   const paging = useClientPaging(q.data ?? [])
   return (
     <section>
-      <RegistryCard title="Building registry" sub="Every building in the estate. Its time zone applies to every floor and space in it." addLabel="Add a building" onAdd={() => modals.building()}>
+      <RegistryCard title="Building registry" sub="Every building in the estate. Its time zone applies to every floor and space in it." addLabel="Add a building" onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
         {q.isError ? <LoadError what="the buildings" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet. Add one above.</p> : (
           <>
             <table className="grid">
@@ -75,9 +82,9 @@ export function BuildingsPage() {
                     <td><BookablePill bookable={b.isBookable} /></td>
                     <Actions>
                       <RowMenu items={[
-                        { label: 'Edit', onClick: () => modals.building(b) },
-                        bookableItem('building', b.id, b.name, b.isBookable),
-                        { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Building', scopeId: b.id, label: b.name }) },
+                        ...when(can(P.Buildings.Edit), { label: 'Edit', onClick: () => modals.building(b) }),
+                        ...when(can(P.Buildings.Edit), bookableItem('building', b.id, b.name, b.isBookable)),
+                        ...when(can(P.Maintenance.Create), { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Building', scopeId: b.id, label: b.name }) }),
                       ]} />
                     </Actions>
                   </tr>
@@ -97,6 +104,7 @@ export function BuildingsPage() {
 export function FloorsPage() {
   const q = useFloors()
   const buildings = useBuildings()
+  const { can } = useSession()
   const bookableItem = useBookableMenuItem()
   const [buildingId, setBuildingId] = useState('')
   const shown = (q.data ?? []).filter((f) => !buildingId || f.buildingId === buildingId)
@@ -105,7 +113,7 @@ export function FloorsPage() {
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
     <section>
-      <RegistryCard title="Floor registry" sub="Every floor across every building. A floor uses its building's time zone." addLabel="Add a floor" onAdd={() => modals.floor()}>
+      <RegistryCard title="Floor registry" sub="Every floor across every building. A floor uses its building's time zone." addLabel="Add a floor" onAdd={can(P.Floors.Create) ? () => modals.floor() : undefined}>
         <div className="filter-bar">
           <div style={{ width: 220 }}>
             <label className="lbl" htmlFor="ff-building">Building</label>
@@ -148,9 +156,9 @@ export function FloorsPage() {
                       </td>
                       <Actions>
                         <RowMenu items={[
-                          { label: 'Edit', onClick: () => modals.floor(f) },
-                          bookableItem('floor', f.id, `${f.buildingName} · Floor ${f.name}`, f.isBookable),
-                          { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Floor', scopeId: f.id, label: `${f.buildingName} · Floor ${f.name}` }) },
+                          ...when(can(P.Floors.Edit), { label: 'Edit', onClick: () => modals.floor(f) }),
+                          ...when(can(P.Floors.Edit), bookableItem('floor', f.id, `${f.buildingName} · Floor ${f.name}`, f.isBookable)),
+                          ...when(can(P.Maintenance.Create), { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Floor', scopeId: f.id, label: `${f.buildingName} · Floor ${f.name}` }) }),
                         ]} />
                       </Actions>
                     </tr>
@@ -172,6 +180,7 @@ export function SpacesPage() {
   const buildings = useBuildings()
   const floors = useFloors()
   const types = useSpaceTypes()
+  const { can } = useSession()
   const bookableItem = useBookableMenuItem()
   const [filters, setFilters] = useState<SpaceRegistryFilterValues>(EMPTY_SPACE_FILTERS)
   const [page, setPage] = useState(1)
@@ -201,7 +210,7 @@ export function SpacesPage() {
       <div className="card" style={{ overflow: 'hidden' }}>
         <div className="card-head">
           <div><h2 className="card-title">Space registry</h2><p className="card-sub">One row is one physical unit. Inactive units cannot be booked. A space uses its building's time zone.</p></div>
-          <button type="button" className="btn btn-accent btn-sm" onClick={() => modals.space()}>Add a space</button>
+          {can(P.Spaces.Create) && <button type="button" className="btn btn-accent btn-sm" onClick={() => modals.space()}>Add a space</button>}
         </div>
         <SpaceRegistryFilters value={filters} onChange={changeFilters}
           buildings={buildings.data ?? []} floors={floors.data ?? []} types={types.data ?? []} />
@@ -229,9 +238,9 @@ export function SpacesPage() {
                   </td>
                   <Actions>
                     <RowMenu items={[
-                      { label: 'Edit', onClick: () => modals.space(s) },
-                      bookableItem('space', s.id, s.name, s.isBookable),
-                      { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Space', scopeId: s.id, label: s.name }) },
+                      ...when(can(P.Spaces.Edit), { label: 'Edit', onClick: () => modals.space(s) }),
+                      ...when(can(P.Spaces.Edit), bookableItem('space', s.id, s.name, s.isBookable)),
+                      ...when(can(P.Maintenance.Create), { label: 'Block time', onClick: () => modals.maintenance({ scopeType: 'Space', scopeId: s.id, label: s.name }) }),
                     ]} />
                   </Actions>
                 </tr>
@@ -251,6 +260,7 @@ export function SpacesPage() {
 
 export function SpaceTypesPage() {
   const q = useSpaceTypes()
+  const { can } = useSession()
   const del = useDeleteSpaceType()
   const paging = useClientPaging(q.data ?? [])
 
@@ -267,7 +277,7 @@ export function SpaceTypesPage() {
 
   return (
     <section>
-      <RegistryCard title="Space types" sub="The kinds of space an admin can give a space. Renaming a type updates every space that uses it." addLabel="Add a space type" onAdd={() => modals.spaceType()}>
+      <RegistryCard title="Space types" sub="The kinds of space an admin can give a space. Renaming a type updates every space that uses it." addLabel="Add a space type" onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
         {q.isError ? <LoadError what="the space types" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet. Add one above.</p> : (
           <>
             <table className="grid">
@@ -281,8 +291,8 @@ export function SpaceTypesPage() {
                     <td>{plural(t.spaceCount, 'space')}</td>
                     <Actions>
                       <RowMenu items={[
-                        { label: 'Edit', onClick: () => modals.spaceType(t) },
-                        { label: 'Delete', onClick: () => remove(t) },
+                        ...when(can(P.SpaceTypes.Edit), { label: 'Edit', onClick: () => modals.spaceType(t) }),
+                        ...when(can(P.SpaceTypes.Delete), { label: 'Delete', onClick: () => remove(t) }),
                       ]} />
                     </Actions>
                   </tr>

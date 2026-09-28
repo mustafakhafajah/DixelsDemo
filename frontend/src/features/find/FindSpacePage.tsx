@@ -2,6 +2,7 @@ import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react
 import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { LoadError, Loading, plural } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
@@ -134,6 +135,8 @@ export function FindSpacePage() {
   const f = useFindStore()
   const session = useSession()
   const { userId } = session
+  /* Without permission to book, the timeline is read-only: no free cells to click and no drag. */
+  const canBook = session.can(P.Bookings.Create)
   /* The room criteria are filtered on the server; typing in the search box waits a moment before asking. */
   const name = useDebouncedValue(f.query.trim())
   const findQ = useFindSpaces({
@@ -203,7 +206,7 @@ export function FindSpacePage() {
       return Math.min(close, Math.max(open, Math.round(raw / DRAG_SNAP) * DRAG_SNAP))
     }
     startDrag = (e, s) => {
-      if (e.button !== 0 || (e.target as HTMLElement).closest('.rt-block')) return
+      if (!canBook || e.button !== 0 || (e.target as HTMLElement).closest('.rt-block')) return
       const m = minuteAt(e)
       setDrag({ spaceId: s.id, from: m, to: m, moved: false })
     }
@@ -258,7 +261,7 @@ export function FindSpacePage() {
                 const from = isToday ? Math.max(open, ceilStep(nowMin)) : open
                 const free = computeFree(s.constraints, s.id, items, f.date, from, close)
                   .filter((w) => w.end - w.start >= s.constraints.minBookingMinutes)
-                const cells = free.flatMap((reg) => hourCells(reg)
+                const cells = !canBook ? [] : free.flatMap((reg) => hourCells(reg)
                   .filter((c) => reg.end - c.start >= s.constraints.minBookingMinutes)
                   .map((c) => ({ ...c, reg })))
                 return (

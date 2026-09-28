@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { ApiError, errorText } from '../../api/client'
-import { useBookings, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
+import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
-import { DEFAULT_MAX_HOURS, DEFAULT_MIN_MINUTES } from '../../lib/constants'
-import { addDays, addMin, dayAt, dayKey, durationLabel, fromDateTime, hm, isoZ, roundUp30, stampOffset } from '../../lib/dateUtils'
+import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
 import { modals, type BookingPrefill } from '../../state/modalStore'
@@ -31,8 +30,12 @@ function accessError(space: Space) {
 export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; editing: Booking | null }) {
   const session = useSession()
   const spacesQ = useSpaces()
-  const initStart = prefill.start ?? roundUp30(new Date())
-  const initEnd = prefill.end ?? addMin(initStart, 60)
+  /* A new booking never starts in the past: a prefill from an earlier slot is moved up to now. */
+  const earliest = earliestStart()
+  const wantedStart = prefill.start ?? roundUp30(new Date())
+  const wantedEnd = prefill.end ?? addMin(wantedStart, 60)
+  const initStart = !editing && wantedStart < earliest ? earliest : wantedStart
+  const initEnd = new Date(initStart.getTime() + (wantedEnd.getTime() - wantedStart.getTime()))
 
   const [date, setDate] = useState(dayKey(initStart))
   const [startTime, setStartTime] = useState(hm(initStart))
@@ -43,12 +46,29 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const [chosenFloorId, setChosenFloorId] = useState<string | null>(null)
   const [recur, setRecur] = useState(() => defaultRecurrence(initStart, 4))
   const [skipOverrides, setSkipOverrides] = useState<Record<number, boolean>>({})
-  const [parking, setParking] = useState(false)
   const [idempotencyKey] = useState(newKey)
   const [conflict, setConflict] = useState<{ message: string; suggested: { start: Date; end: Date } | null } | null>(null)
 
   const start = fromDateTime(date, startTime)
   const end = fromDateTime(date, endTime)
+
+  /* Past times are not offered at all: on the first bookable day the start begins at "now",
+   * and the end always begins one step after the start. */
+  const startMin = date === dayKey(earliest) ? hm(earliest) : null
+  const endMin = start ? hm(addMin(start, 15)) : null
+  const applyWindow = (day: string, s: string, e: string) => {
+    const next = keepWindowAhead(day, s, e, earliest)
+    setStartTime(next.startTime); setEndTime(next.endTime)
+  }
+  const onDate = (v: string) => { setDate(v); applyWindow(v, startTime, endTime) }
+  /* Moving the start keeps the booking's length, so the end never lands before it. */
+  const onStart = (v: string) => {
+    const s = fromDateTime(date, v)
+    const len = start && end && end > start ? end.getTime() - start.getTime() : 3600000
+    if (!s) return setStartTime(v)
+    const e = new Date(s.getTime() + len)
+    setStartTime(v); setEndTime(dayKey(e) === date ? hm(e) : '23:45')
+  }
   const hasWindow = !!start && !!end && end > start
 
   const rule = !editing && hasWindow ? toRule(recur, start) : null
@@ -65,7 +85,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const rangeFrom = start ? dayAt(dayKey(start)) : undefined
   const lastOcc = generated?.occurrences.at(-1)?.end ?? end
   const rangeTo = lastOcc ? addDays(dayAt(dayKey(lastOcc)), 1) : undefined
-  const bookingsQ = useBookings({ from: rangeFrom, to: rangeTo }, hasWindow)
+  const bookingsQ = useAvailability({ from: rangeFrom, to: rangeTo }, session, hasWindow)
   const bookings = useMemo(() => bookingsQ.data ?? [], [bookingsQ.data])
 
   const spaces = useMemo(() => spacesQ.data ?? [], [spacesQ.data])
@@ -107,7 +127,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     if (!generated || !spaceId) return []
     return generated.occurrences.map((o) => {
       const clash = findOverlap(bookings, spaceId, o.start, o.end)
-      const self = !clash ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end) : undefined
+      /* Employees can't hold two spaces at once; admins can, so their other bookings don't count. */
+      const self = !clash && !session.isAdmin
+        ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end)
+        : undefined
       const hit = clash ?? self
       const t = o.start.getTime()
       return {
@@ -115,10 +138,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         end: o.end,
         flagged: !!hit,
         skip: skipOverrides[t] ?? !!hit,
-        note: hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : `taken by ${hit.ownerName}`) : undefined,
+        note: hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.isAdmin ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, session.userId, skipOverrides])
+  }, [generated, bookings, spaceId, session.userId, session.isAdmin, skipOverrides])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()
@@ -135,7 +158,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const stillBusy = suggested && findOverlap(bookings, space.id, suggested.start, suggested.end)
       setConflict({
         message: clash
-          ? `${space.name} is held by ${clash.ownerName} from ${hm(clash.start)} to ${hm(clash.end)} UTC (${shortId(clash.id)}). Bookings on one space may never overlap.`
+          ? `${space.name} is already booked${session.isAdmin ? ` by ${clash.ownerName}` : ''} from ${hm(clash.start)} to ${hm(clash.end)} UTC. Bookings on one space may never overlap.`
           : message,
         suggested: stillBusy ? null : suggested,
       })
@@ -158,7 +181,6 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         if (!wanted.length) { toast('warn', 'Nothing selected', 'Tick at least one occurrence.'); return }
         const r = await createSeries.mutateAsync({
           spaceId: space.id,
-          parking: session.isAdmin && parking,
           occurrences: wanted.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() })),
         })
         if (r.created.length) {
@@ -171,7 +193,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       }
       const b = await create.mutateAsync({
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
-        parking: session.isAdmin && parking, idempotencyKey,
+        idempotencyKey,
       })
       toast('ok', 'Booking confirmed', `${shortId(b.id)} · ${space.name} · ${stampOffset(start)} → ${hm(end)}.`)
       modals.close()
@@ -194,7 +216,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         <>
           <button type="button" className="btn" onClick={modals.close}>Discard</button>
           <button type="button" className="btn btn-primary" disabled={busy || !!timeError || !!spaceError || !spaceId} onClick={submit}>
-            {editing ? 'Save new window' : 'Confirm booking'}
+            {editing ? 'Save new window' : 'Make a booking'}
           </button>
         </>
       )}
@@ -202,31 +224,23 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> Required field</p>
       <div>
         <label className="lbl req" htmlFor="m-date">Date<RequiredMark /></label>
-        <DatePicker id="m-date" value={date} onChange={setDate} />
+        <DatePicker id="m-date" value={date} min={dayKey(earliest)} onChange={onDate} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Start<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-start" aria-label="Start" value={startTime} onChange={setStartTime} />
+          <TimePicker id="m-start" aria-label="Start" value={startTime} min={startMin} onChange={onStart} />
         </div>
         <div>
           <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>End<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-end" aria-label="End" value={endTime} onChange={setEndTime} />
+          <TimePicker id="m-end" aria-label="End" value={endTime} min={endMin} onChange={setEndTime} />
         </div>
       </div>
-      <div style={{ marginTop: -6 }}>
-        {hasWindow && (
-          <p style={{ fontSize: 12, color: 'var(--slate)' }}>
-            Duration <strong>{durationLabel((end!.getTime() - start!.getTime()) / 60000)}</strong> · allowed {c?.minBookingMinutes ?? DEFAULT_MIN_MINUTES}m
-            to {c?.maxBookingHours ?? DEFAULT_MAX_HOURS}h · <span className="mono">{isoZ(start!)}</span> → <span className="mono">{isoZ(end!)}</span>
-          </p>
-        )}
-        <ErrorLine error={timeError} />
-      </div>
+      {timeError && <div style={{ marginTop: -6 }}><ErrorLine error={timeError} /></div>}
 
       {!editing && (
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
@@ -267,21 +281,12 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '6px 0 0' }}>
           {space
             ? `${space.typeName} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
+            : spacesQ.isError ? `Couldn't load the spaces: ${errorText(spacesQ.error).message}`
             : spacesQ.isLoading ? 'Loading spaces…'
               : floorId && !options.length ? 'No spaces on this floor are free for this time — try a different window or floor.' : ''}
         </p>
         <ErrorLine error={spaceError} />
       </div>
-
-      {session.isAdmin && !editing && (
-        <div>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-            <input type="checkbox" checked={parking} onChange={(e) => setParking(e.target.checked)} />
-            🚗 Reserve parking for this booking
-          </label>
-          <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '5px 0 0' }}>Management-only — reserved for the visitor or guest attending this booking.</p>
-        </div>
-      )}
 
       {conflict && (
         <div style={{ background: 'var(--rust-soft)', border: '1px solid var(--rust-line)', borderRadius: 9, padding: '12px 13px' }}>

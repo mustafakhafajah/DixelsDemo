@@ -82,9 +82,6 @@ namespace Dixels.Portal.Migrations
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("Parking")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid?>("SeriesId")
                         .HasColumnType("uuid");
 

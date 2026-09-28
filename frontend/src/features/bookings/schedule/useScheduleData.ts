@@ -13,7 +13,8 @@ export function useScheduleData(id: ScheduleId) {
   const spacesQ = useSpaces()
   const from = useMemo(() => dayAt(cfg.from), [cfg.from])
   const to = useMemo(() => addDays(dayAt(cfg.to), 1), [cfg.to])
-  const multiSpace = cfg.spaceId === 'all'
+  /* Employees have no space picker: they always see all of their own bookings. */
+  const multiSpace = !session.isAdmin || cfg.spaceId === 'all'
   const singleSpaceId = multiSpace ? '' : cfg.spaceId
   const ownerId = cfg.userId || session.userId
 
@@ -40,9 +41,12 @@ export function useScheduleData(id: ScheduleId) {
       single,
       multiSpace,
       loading: scoped.isLoading || maint.isLoading,
+      /* The first failed request, if any, and a way to ask again. */
+      error: [spacesQ, scoped, spaceAll, maint].find((q) => q.isError)?.error ?? null,
+      retry: () => { spacesQ.refetch(); scoped.refetch(); spaceAll.refetch(); maint.refetch() },
       spaces,
     }
-  }, [spacesQ.data, scoped.data, spaceAll.data, maint.data, cfg, multiSpace, singleSpaceId, scoped.isLoading, maint.isLoading])
+  }, [spacesQ.data, scoped.data, spaceAll.data, maint.data, cfg, multiSpace, singleSpaceId, scoped.isLoading, maint.isLoading, spacesQ, scoped, spaceAll, maint])
 }
 
 export type ScheduleData = ReturnType<typeof useScheduleData>

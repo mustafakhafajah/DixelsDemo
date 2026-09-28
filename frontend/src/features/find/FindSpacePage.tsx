@@ -1,11 +1,11 @@
 import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useBookings, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
+import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
-import { Loading, plural } from '../../components/bits'
+import { LoadError, Loading, plural } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
-import { addDays, addMin, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
+import { addDays, addMin, ceilStep, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { findToday, useFindStore, type FindDuration } from '../../state/findStore'
@@ -13,6 +13,13 @@ import { modals } from '../../state/modalStore'
 import { itemClass, openItem } from '../bookings/schedule/ScheduleCalendar'
 
 const px = (min: number) => (min / 60) * RT_PX_PER_HOUR
+
+/* A free stretch cut at every whole hour, e.g. 09:30–12:00 -> 09:30–10:00, 10:00–11:00, 11:00–12:00. */
+function hourCells(w: MinuteWindow): MinuteWindow[] {
+  const out: MinuteWindow[] = []
+  for (let s = w.start; s < w.end; s = Math.floor(s / 60) * 60 + 60) out.push({ start: s, end: Math.min(w.end, Math.floor(s / 60) * 60 + 60) })
+  return out
+}
 
 const CAPACITY_PRESETS = [4, 6, 8, 12]
 /* Dragged windows snap to quarter hours, the shortest booking most spaces allow. */
@@ -125,7 +132,8 @@ function FindFilters() {
 
 export function FindSpacePage() {
   const f = useFindStore()
-  const { userId } = useSession()
+  const session = useSession()
+  const { userId } = session
   /* The room criteria are filtered on the server; typing in the search box waits a moment before asking. */
   const name = useDebouncedValue(f.query.trim())
   const findQ = useFindSpaces({
@@ -137,7 +145,7 @@ export function FindSpacePage() {
   })
   const dayFrom = useMemo(() => dayAt(f.date), [f.date])
   const dayTo = useMemo(() => addDays(dayAt(f.date), 1), [f.date])
-  const bookingsQ = useBookings({ from: dayFrom, to: dayTo })
+  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo }, session)
   const maintQ = useMaintenance({ from: dayFrom, to: dayTo })
 
   const items: ScheduleItem[] = useMemo(() => [...(bookingsQ.data ?? []), ...(maintQ.data ?? [])], [bookingsQ.data, maintQ.data])
@@ -152,13 +160,11 @@ export function FindSpacePage() {
   const freeCount = candidates.filter(isFree).length
   const d = dayAt(f.date)
 
-  const regionPrefill = (s: Space, region: MinuteWindow) => {
-    const wS = minOfDay(winStart)
-    const wE = Math.min(1440, wS + durMin)
-    const fits = wE > wS && wS >= region.start && wE <= region.end
-    const start = fits ? wS : region.start
-    const end = fits ? wE : Math.min(region.end, start + Math.max(60, s.constraints.minBookingMinutes))
-    modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, start), end: dayAt(f.date, 0, end) })
+  /* Clicking an hour books that hour; when the space's minimum is longer, the booking runs on
+   * into the next hours of the same free stretch. */
+  const cellPrefill = (s: Space, cell: MinuteWindow, region: MinuteWindow) => {
+    const end = Math.min(region.end, Math.max(cell.end, cell.start + s.constraints.minBookingMinutes))
+    modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, cell.start), end: dayAt(f.date, 0, end) })
   }
 
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -168,7 +174,9 @@ export function FindSpacePage() {
   let endDrag = (_s: Space) => {}
 
   let body
-  if (!findQ.data) body = <Loading />
+  const failed = [findQ, bookingsQ, maintQ].find((q) => q.isError)
+  if (failed) body = <LoadError what="the rooms" error={failed.error} onRetry={() => { findQ.refetch(); bookingsQ.refetch(); maintQ.refetch() }} />
+  else if (!findQ.data) body = <Loading />
   else if (!candidates.length) {
     body = (
       <div className="sched-empty">
@@ -246,8 +254,13 @@ export function FindSpacePage() {
               {rooms.map((s) => {
                 const segs = items.filter((i) => i.spaceId === s.id).map((i) => daySegment(i, f.date))
                   .filter((g): g is DaySegment => !!g).sort((a, b) => a.s - b.s)
-                const free = computeFree(s.constraints, s.id, items, f.date, open, close)
+                /* Today's free time starts now: the past is never offered as free. */
+                const from = isToday ? Math.max(open, ceilStep(nowMin)) : open
+                const free = computeFree(s.constraints, s.id, items, f.date, from, close)
                   .filter((w) => w.end - w.start >= s.constraints.minBookingMinutes)
+                const cells = free.flatMap((reg) => hourCells(reg)
+                  .filter((c) => reg.end - c.start >= s.constraints.minBookingMinutes)
+                  .map((c) => ({ ...c, reg })))
                 return (
                   <div key={s.id} className="rt-row">
                     <div className="rt-roominfo">
@@ -263,13 +276,13 @@ export function FindSpacePage() {
                           <span>{minLabel(Math.min(drag.from, drag.to))}–{minLabel(Math.max(drag.from, drag.to))}</span>
                         </div>
                       )}
-                      {free.map((reg) => (
-                        <div key={reg.start} className="rt-free" style={{ left: px(reg.start - open), width: px(reg.end - reg.start) }}
-                          onClick={() => regionPrefill(s, reg)} title={`Book ${s.name} ${minLabel(reg.start)}–${minLabel(reg.end)}`} />
+                      {cells.map((c) => (
+                        <div key={c.start} className="rt-free" style={{ left: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
+                          onClick={() => cellPrefill(s, c, c.reg)} title={`Book ${s.name} ${minLabel(c.start)}–${minLabel(c.end)}`} />
                       ))}
                       {segs.map((g) => {
                         const it = g.item
-                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerUserId === userId ? 'You' : it.ownerName
+                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.busy ? 'Busy' : it.ownerUserId === userId ? 'You' : it.ownerName
                         return (
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
                             style={{ left: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
@@ -295,15 +308,17 @@ export function FindSpacePage() {
       <div className="find-layout">
         <FindFilters />
         <section className="card" style={{ overflow: 'hidden' }}>
+          {/* Today on the left, the date with its arrows in the middle (the empty third column keeps it centred). */}
           <div className="find-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button type="button" className="btn btn-sm" onClick={findToday}>Today</button>
+            <button type="button" className="btn btn-sm find-today" onClick={findToday}>Today</button>
+            <div className="find-date-nav">
               <button type="button" className="iconbtn" onClick={() => f.shiftDay(-1)} aria-label="Previous day">‹</button>
               <span className="mono period-label" style={{ minWidth: 190 }}>
                 {dayName(d).slice(0, 3)}, {monthName(d).slice(0, 3)} {d.getUTCDate()}, {d.getUTCFullYear()}
               </span>
               <button type="button" className="iconbtn" onClick={() => f.shiftDay(1)} aria-label="Next day">›</button>
             </div>
+            <span />
           </div>
           <p className="find-stats">
             {candidates.length ? `${freeCount} of ${plural(candidates.length, 'room')} free ${hm(winStart)}–${hm(winEnd)} · grouped by building and floor.` : ''}

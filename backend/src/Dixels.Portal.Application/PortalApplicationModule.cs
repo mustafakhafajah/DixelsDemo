@@ -1,4 +1,3 @@
-﻿using Dixels.Portal.Cqrs;
 using Volo.Abp.Account;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
@@ -26,6 +25,5 @@ public class PortalApplicationModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddMapperlyObjectMapper<PortalApplicationModule>();
-        context.Services.AddCqrsHandlers(typeof(PortalApplicationModule).Assembly);
     }
 }

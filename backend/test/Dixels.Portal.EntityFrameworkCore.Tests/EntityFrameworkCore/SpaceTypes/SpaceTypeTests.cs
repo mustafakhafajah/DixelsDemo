@@ -33,7 +33,7 @@ public class SpaceTypeTests : PortalEntityFrameworkCoreTestBase
     [Fact]
     public async Task The_four_default_types_are_seeded()
     {
-        var names = (await _types.GetListAsync()).Items.Select(t => t.Name).ToList();
+        var names = (await _types.GetListAsync(new EstateListInput())).Items.Select(t => t.Name).ToList();
 
         names.ShouldContain("Meeting room");
         names.ShouldContain("Equipment");
@@ -52,7 +52,7 @@ public class SpaceTypeTests : PortalEntityFrameworkCoreTestBase
 
         space.TypeId.ShouldBe(booth.Id);
         space.TypeName.ShouldBe(renamed.Name);
-        (await _types.GetListAsync()).Items.Single(t => t.Id == booth.Id).SpaceCount.ShouldBe(1);
+        (await _types.GetListAsync(new EstateListInput())).Items.Single(t => t.Id == booth.Id).SpaceCount.ShouldBe(1);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class SpaceTypeTests : PortalEntityFrameworkCoreTestBase
         ex.Code.ShouldBe(PortalDomainErrorCodes.SpaceTypeInUse);
 
         await _types.DeleteAsync(unused.Id);
-        (await _types.GetListAsync()).Items.ShouldNotContain(t => t.Id == unused.Id);
+        (await _types.GetListAsync(new EstateListInput())).Items.ShouldNotContain(t => t.Id == unused.Id);
     }
 
     [Fact]

@@ -13,7 +13,6 @@ public class Booking : FullAuditedAggregateRoot<Guid>
     public BookingStatus Status { get; set; }
     public int Version { get; set; } = 1;
     public Guid? SeriesId { get; set; }
-    public bool Parking { get; set; }
     public string? IdempotencyKey { get; set; }
 
     protected Booking() { }

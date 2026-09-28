@@ -111,7 +111,7 @@ public class PortalWebModule : AbpModule
         ConfigureBundles();
         ConfigureVirtualFileSystem(hostingEnvironment);
         ConfigureNavigationServices();
-        ConfigureAutoApiControllers();
+        /* No auto API controllers: our API is the hand-written controllers in Dixels.Portal.HttpApi. */
         ConfigureSwaggerServices(context.Services);
         ConfigureCors(context, configuration);
         ConfigureErrorStatusCodes();
@@ -181,14 +181,6 @@ public class PortalWebModule : AbpModule
         Configure<AbpNavigationOptions>(options =>
         {
             options.MenuContributors.Add(new PortalMenuContributor());
-        });
-    }
-
-    private void ConfigureAutoApiControllers()
-    {
-        Configure<AbpAspNetCoreMvcOptions>(options =>
-        {
-            options.ConventionalControllers.Create(typeof(PortalApplicationModule).Assembly);
         });
     }
 

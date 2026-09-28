@@ -68,6 +68,27 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task An_owner_allowed_several_spaces_can_hold_two_at_once()
+    {
+        var (roomA, roomB) = await CreateTwoSpacesAsync();
+        var admin = Guid.NewGuid();
+        await BookAsync(roomA, admin, 0, 1, ownerMayHoldSeveralSpaces: true);
+
+        await Should.NotThrowAsync(() => BookAsync(roomB, admin, 0.5, 1.5, ownerMayHoldSeveralSpaces: true));
+    }
+
+    [Fact]
+    public async Task Holding_several_spaces_still_never_double_books_one_space()
+    {
+        var (roomA, _) = await CreateTwoSpacesAsync();
+        await BookAsync(roomA, Guid.NewGuid(), 0, 1);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() =>
+            BookAsync(roomA, Guid.NewGuid(), 0.5, 1.5, ownerMayHoldSeveralSpaces: true));
+        ex.Code.ShouldBe(PortalDomainErrorCodes.BookingConflict);
+    }
+
+    [Fact]
     public async Task Specification_combines_with_other_conditions_in_a_count_query()
     {
         var (roomA, roomB) = await CreateTwoSpacesAsync();
@@ -82,10 +103,11 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         count.ShouldBe(1);
     }
 
-    private Task BookAsync(Space space, Guid ownerId, double fromHours, double toHours)
+    private Task BookAsync(Space space, Guid ownerId, double fromHours, double toHours, bool ownerMayHoldSeveralSpaces = false)
         => WithUnitOfWorkAsync(async () =>
         {
-            var booking = await _manager.CreateAsync(space.Id, ownerId, Ten.AddHours(fromHours), Ten.AddHours(toHours));
+            var booking = await _manager.CreateAsync(space.Id, ownerId, Ten.AddHours(fromHours), Ten.AddHours(toHours),
+                ownerMayHoldSeveralSpaces: ownerMayHoldSeveralSpaces);
             await _bookings.InsertAsync(booking, autoSave: true);
         });
 

@@ -9,9 +9,12 @@
     "Permission:Buildings": "Buildings",
     "Permission:Floors": "Floors",
     "Permission:Spaces": "Spaces",
+    "Permission:SpaceTypes": "Space types",
     "Permission:Bookings": "Bookings",
-    "Permission:Maintenance": "Maintenance",
-    "Permission:Manage": "Manage",
+    "Permission:Maintenance": "Blocked time",
+    "Permission:Create": "Create",
+    "Permission:Edit": "Edit",
+    "Permission:Delete": "Delete",
     "Permission:ManageAll": "Manage everyone's"
   }
 }

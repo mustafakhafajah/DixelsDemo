@@ -24,7 +24,7 @@ public class MaintenanceScopeResolver : DomainService
     {
         var ids = await FindSpaceIdsAsync(type, scopeId);
         if (ids.Count == 0)
-            throw new BusinessException(PortalDomainErrorCodes.SpaceNotFound, "That scope has no spaces to block.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "That scope has no spaces to block.");
         return ids;
     }
 

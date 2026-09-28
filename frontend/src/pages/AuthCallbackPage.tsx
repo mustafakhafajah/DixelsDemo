@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { SplashScreen } from '../components/SplashScreen'
 
 /* Admins and booking users share one app shell; the role only gates what's inside it. */
 function AuthCallbackPage() {
@@ -22,11 +23,7 @@ function AuthCallbackPage() {
     )
   }
 
-  return (
-    <div style={{ padding: 40, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
-      <p>Signing you in…</p>
-    </div>
-  )
+  return <SplashScreen detail="Signing you in" />
 }
 
 export default AuthCallbackPage

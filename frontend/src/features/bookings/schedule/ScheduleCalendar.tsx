@@ -9,13 +9,18 @@ import type { ScheduleData } from './useScheduleData'
 
 export function itemClass(i: ScheduleItem, myId: string): string {
   if (i.kind === 'maintenance') return 'cleaning'
+  if (i.busy) return 'busy'
   const st = lifecycleOf(i)
   if (st === 'in_progress') return 'inprog'
   if (st === 'ended') return 'ended'
   return i.ownerUserId === myId ? 'mine' : 'other'
 }
 
-export const openItem = (i: ScheduleItem) => modals.detail(i.kind === 'booking' ? 'booking' : 'maintenance', i.id)
+/* A grey busy block is someone else's booking: there is nothing to open. */
+export const openItem = (i: ScheduleItem) => {
+  if (i.kind === 'booking' && i.busy) return
+  modals.detail(i.kind === 'booking' ? 'booking' : 'maintenance', i.id)
+}
 
 function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const { cfg, items, multiSpace } = data

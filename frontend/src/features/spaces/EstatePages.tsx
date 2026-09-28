@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
-import { BookablePill, Loading, plural, shortId } from '../../components/bits'
+import { BookablePill, LoadError, Loading, plural, shortId } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { pad } from '../../lib/dateUtils'
@@ -54,7 +54,7 @@ export function BuildingsPage() {
   return (
     <section>
       <RegistryCard title="Building registry" sub="Every building in the estate. Its time zone applies to every floor and space in it." addLabel="Add a building" onAdd={() => modals.building()}>
-        {!q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet. Add one above.</p> : (
+        {q.isError ? <LoadError what="the buildings" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet. Add one above.</p> : (
           <>
             <table className="grid">
               <thead>
@@ -103,7 +103,7 @@ export function FloorsPage() {
   return (
     <section>
       <RegistryCard title="Floor registry" sub="Every floor across every building. A floor uses its building's time zone." addLabel="Add a floor" onAdd={() => modals.floor()}>
-        {!q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet. Add one above.</p> : (
+        {q.isError ? <LoadError what="the floors" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet. Add one above.</p> : (
           <>
             <table className="grid">
               <thead>
@@ -190,7 +190,7 @@ export function SpacesPage() {
         </div>
         <SpaceRegistryFilters value={filters} onChange={changeFilters}
           buildings={buildings.data ?? []} floors={floors.data ?? []} types={types.data ?? []} />
-        {!q.data ? <Loading /> : !q.data.items.length ? (
+        {q.isError ? <LoadError what="the spaces" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
           <p className="empty-note">
             {filtered ? 'No spaces match these filters.' : 'No spaces yet. Add one above.'}
             {filtered && <button type="button" className="btn btn-sm" style={{ marginLeft: 10 }} onClick={() => changeFilters(EMPTY_SPACE_FILTERS)}>Clear filters</button>}
@@ -254,7 +254,7 @@ export function SpaceTypesPage() {
   return (
     <section>
       <RegistryCard title="Space types" sub="The kinds of space an admin can give a space. Renaming a type updates every space that uses it." addLabel="Add a space type" onAdd={() => modals.spaceType()}>
-        {!q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet. Add one above.</p> : (
+        {q.isError ? <LoadError what="the space types" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet. Add one above.</p> : (
           <>
             <table className="grid">
               <thead>

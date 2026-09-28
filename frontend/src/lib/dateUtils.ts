@@ -79,3 +79,26 @@ export const todayKey = () => dayKey(new Date())
 export function parseUtc(s: string): Date {
   return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}Z`)
 }
+
+/* The next whole step (default 15 min) at or after this minute of the day, e.g. 10:07 -> 10:15. */
+export const ceilStep = (min: number, step = 15) => Math.ceil(min / step) * step
+
+/* The earliest start a form may offer: now, rounded up to the next 15 minutes (may be tomorrow). */
+export function earliestStart(now = new Date()): Date {
+  const d = new Date(now)
+  d.setUTCSeconds(0, 0)
+  return addMin(d, ceilStep(d.getUTCMinutes()) - d.getUTCMinutes())
+}
+
+/* Moves a start/end pair on a day so the start is not before `earliest`, keeping its length.
+ * Returns the (possibly unchanged) times as "HH:MM"; the end also stays after the start. */
+export function keepWindowAhead(day: string, startTime: string, endTime: string, earliest: Date, fallbackMin = 60) {
+  const s = fromDateTime(day, startTime)
+  const e = fromDateTime(day, endTime)
+  if (!s || !e) return { startTime, endTime }
+  const length = e > s ? e.getTime() - s.getTime() : fallbackMin * 60000
+  const start = s < earliest ? earliest : s
+  const end = new Date(start.getTime() + length)
+  /* The end cannot spill into the next day on a single-day form: stop at 23:59 worth of steps. */
+  return { startTime: hm(start), endTime: dayKey(end) === day ? hm(end) : '23:45' }
+}

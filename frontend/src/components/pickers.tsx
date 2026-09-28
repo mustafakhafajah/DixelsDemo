@@ -94,29 +94,40 @@ export function DatePicker({ id, value, onChange, min, max, placeholder = 'Pick 
 
 const HOURS = Array.from({ length: 24 }, (_, h) => pad(h))
 
-/* "HH:MM" as two dropdowns: hour, then minutes in steps (00/15/30/45 by default). */
-export function TimePicker({ id, value, onChange, minuteStep = 15, disabled, className, 'aria-label': ariaLabel = 'Time' }: {
+/* "HH:MM" as two dropdowns: hour, then minutes in steps (00/15/30/45 by default).
+ * min ("HH:MM") leaves every earlier time out of the lists, so it cannot be picked at all.
+ * The time already chosen always stays in the list, so it never shows as blank. */
+export function TimePicker({ id, value, onChange, min, minuteStep = 15, disabled, className, 'aria-label': ariaLabel = 'Time' }: {
   id?: string
   value: string
   onChange: (value: string) => void
+  min?: string | null
   minuteStep?: number
   disabled?: boolean
   className?: string
   'aria-label'?: string
 }) {
   const [h = '', m = ''] = value ? value.split(':') : []
+  const [minH, minM] = min ? min.split(':').map(Number) : [0, 0]
   const minutes = Array.from({ length: Math.ceil(60 / minuteStep) }, (_, i) => pad(i * minuteStep))
   /* Keep an off-step minute (e.g. a booking saved at 10:10) visible instead of blanking it. */
   if (m && !minutes.includes(m)) { minutes.push(m); minutes.sort() }
+  const allowed = (hour: number, minute: number) => hour * 60 + minute >= minH * 60 + minM
+  /* Changing the hour keeps the minutes when they are still allowed, else takes the first allowed ones. */
+  const pickHour = (x: string) => {
+    const hour = Number(x)
+    const keep = m && allowed(hour, Number(m)) ? m : minutes.find((mm) => allowed(hour, Number(mm))) ?? '00'
+    onChange(`${x}:${keep}`)
+  }
   return (
     <div className={cn('tw:flex tw:items-center tw:gap-1.5', className)} role="group" aria-label={ariaLabel}>
       <Dropdown id={id} value={h} placeholder="HH" disabled={disabled} aria-label={`${ariaLabel} hour`}
-        options={HOURS.map((x) => ({ value: x, label: x }))}
-        onChange={(x) => onChange(`${x}:${m || '00'}`)} />
+        options={HOURS.filter((x) => x === h || minutes.some((mm) => allowed(Number(x), Number(mm)))).map((x) => ({ value: x, label: x }))}
+        onChange={pickHour} />
       <span className="tw:text-sm tw:font-semibold tw:text-muted-foreground">:</span>
       <Dropdown value={m} placeholder="MM" disabled={disabled} aria-label={`${ariaLabel} minutes`}
-        options={minutes.map((x) => ({ value: x, label: x }))}
-        onChange={(x) => onChange(`${h || '09'}:${x}`)} />
+        options={minutes.filter((x) => x === m || !h || allowed(Number(h), Number(x))).map((x) => ({ value: x, label: x }))}
+        onChange={(x) => onChange(`${h || pad(minH)}:${x}`)} />
     </div>
   )
 }

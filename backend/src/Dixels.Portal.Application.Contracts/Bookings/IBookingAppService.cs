@@ -10,6 +10,8 @@ public interface IBookingAppService : IApplicationService
 {
     Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input);
     Task<BookingDto> GetAsync(Guid id);
+    /* Other people's confirmed bookings as bare "taken from .. to .." windows (no id, owner or name). */
+    Task<ListResultDto<BusyWindowDto>> GetBusyListAsync(BusyListFilterDto input);
     Task<BookingDto> CreateAsync(CreateBookingDto input);
     Task<CreateBookingSeriesResultDto> CreateSeriesAsync(CreateBookingSeriesDto input);
     Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input);

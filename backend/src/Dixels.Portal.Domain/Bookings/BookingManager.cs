@@ -36,15 +36,16 @@ public class BookingManager : DomainService
     }
 
     /* Factory: the only way to make a new booking, so no caller can skip the rules. */
+    /* ownerMayHoldSeveralSpaces: the owner may have other spaces booked at the same time (admins may; who is
+     * an admin is an application concern, so the caller decides). */
     public async Task<Booking> CreateAsync(Guid spaceId, Guid ownerId, DateTime startUtc, DateTime endUtc,
-        bool parking = false, Guid? seriesId = null, string? idempotencyKey = null)
+        Guid? seriesId = null, string? idempotencyKey = null, bool ownerMayHoldSeveralSpaces = false)
     {
         var ctx = await GetSpaceContextAsync(spaceId);
-        await ValidateNewBookingAsync(ctx, ownerId, startUtc, endUtc);
+        await ValidateNewBookingAsync(ctx, ownerId, startUtc, endUtc, ownerMayHoldSeveralSpaces);
         return new Booking(GuidGenerator.Create(), spaceId, ownerId, startUtc, endUtc)
         {
             SeriesId = seriesId,
-            Parking = parking,
             IdempotencyKey = idempotencyKey,
         };
     }
@@ -52,7 +53,7 @@ public class BookingManager : DomainService
     public async Task<SpaceContext> GetSpaceContextAsync(Guid spaceId)
     {
         var space = await _spaces.FindAsync(spaceId)
-            ?? throw new BusinessException(PortalDomainErrorCodes.SpaceNotFound, "No space with that ID.");
+            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "No space with that ID.");
         var building = await _buildings.GetAsync(space.BuildingId);
         var floor = await _floors.FindAsync(space.FloorId);
         return new SpaceContext(space, floor, building);
@@ -61,31 +62,31 @@ public class BookingManager : DomainService
     public void ValidateWindow(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
     {
         if (startUtc == default || endUtc == default)
-            throw new BusinessException(PortalDomainErrorCodes.MissingField, "Start and end are both required.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.");
         if (endUtc <= startUtc)
-            throw new BusinessException(PortalDomainErrorCodes.EndBeforeStart, "End must be after start.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.");
         if (!allowPast && startUtc < Clock.Now)
-            throw new BusinessException(PortalDomainErrorCodes.StartInPast, "Start must not be in the past.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: "Start must not be in the past.");
 
         var c = ctx.Constraints;
         var day = DateOnly.FromDateTime(startUtc);
         if (c.Holidays.Contains(day))
-            throw new BusinessException(PortalDomainErrorCodes.HolidayClosed,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message:
                 $"{ctx.Space.Name}'s building is closed for a holiday on {day:yyyy-MM-dd}.");
 
         var sMin = startUtc.Hour * 60 + startUtc.Minute;
         var eMin = endUtc.Hour * 60 + endUtc.Minute;
         if (eMin == 0) eMin = 1440;
         if (sMin < c.OpenMinute || eMin > c.CloseMinute || endUtc.Date > startUtc.Date && eMin != 1440)
-            throw new BusinessException(PortalDomainErrorCodes.OutsideHours,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
                 $"{ctx.Space.Name} can only be booked between {c.OpenMinute / 60:00}:00 and {c.CloseMinute / 60:00}:00.");
 
         var mins = (endUtc - startUtc).TotalMinutes;
         if (mins < c.MinBookingMinutes)
-            throw new BusinessException(PortalDomainErrorCodes.DurationBelowMin,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
                 $"Minimum booking length here is {c.MinBookingMinutes} minutes.");
         if (mins > c.MaxBookingHours * 60)
-            throw new BusinessException(PortalDomainErrorCodes.DurationAboveMax,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
                 $"Maximum booking length here is {c.MaxBookingHours} hours.");
     }
 
@@ -105,13 +106,13 @@ public class BookingManager : DomainService
     private static BusinessException? FindBookingBlocker(SpaceContext ctx)
     {
         if (!ctx.Building.IsBookable)
-            return new BusinessException(PortalDomainErrorCodes.BuildingNotBookable,
+            return new UserFriendlyException(code: PortalDomainErrorCodes.BuildingNotBookable, message:
                 $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.");
         if (ctx.Floor != null && !ctx.Floor.IsBookable)
-            return new BusinessException(PortalDomainErrorCodes.FloorNotBookable,
+            return new UserFriendlyException(code: PortalDomainErrorCodes.FloorNotBookable, message:
                 $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.");
         if (!ctx.Space.IsBookable)
-            return new BusinessException(PortalDomainErrorCodes.SpaceNotBookable,
+            return new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotBookable, message:
                 $"{ctx.Space.Name} is not bookable.");
         return null;
     }
@@ -121,7 +122,7 @@ public class BookingManager : DomainService
         var m = await _maintenance.FirstOrDefaultAsync(new OverlappingMaintenanceSpecification(startUtc, endUtc)
             .ToExpression().And(x => x.SpaceId == ctx.Space.Id));
         if (m != null)
-            throw new BusinessException(PortalDomainErrorCodes.SpaceUnderMaintenance,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceUnderMaintenance, message:
                     $"{ctx.Space.Name} is blocked ({m.Note ?? "blocked time"}) from {Stamp(m.StartUtc, m.EndUtc)} and can't be booked then.")
                 .WithData("maintenanceId", m.Id)
                 .WithData("scope", m.ScopeType.ToString());
@@ -132,7 +133,7 @@ public class BookingManager : DomainService
         var c = await _bookings.FirstOrDefaultAsync(new OverlappingBookingsSpecification(startUtc, endUtc)
             .ToExpression().And(b => b.SpaceId == spaceId && b.Id != excludeId));
         if (c != null)
-            throw new BusinessException(PortalDomainErrorCodes.BookingConflict,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingConflict, message:
                     "The space is already booked for part of that window.")
                 .WithData("conflictingBookingId", c.Id)
                 .WithData("conflictStart", c.StartUtc.ToString("o"))
@@ -147,7 +148,7 @@ public class BookingManager : DomainService
         if (so != null)
         {
             var other = await _spaces.FindAsync(so.SpaceId);
-            throw new BusinessException(PortalDomainErrorCodes.BookingSelfOverlap,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingSelfOverlap, message:
                     $"You already have {other?.Name ?? "another space"} booked from {Hm(so.StartUtc)} to {Hm(so.EndUtc)}.")
                 .WithData("conflictingBookingId", so.Id)
                 .WithData("conflictingSpace", so.SpaceId);
@@ -155,13 +156,15 @@ public class BookingManager : DomainService
     }
 
     /* Full create-time check chain in the mock's order. */
-    private async Task ValidateNewBookingAsync(SpaceContext ctx, Guid ownerId, DateTime startUtc, DateTime endUtc)
+    private async Task ValidateNewBookingAsync(SpaceContext ctx, Guid ownerId, DateTime startUtc, DateTime endUtc,
+        bool ownerMayHoldSeveralSpaces)
     {
         ValidateWindow(ctx, startUtc, endUtc);
         EnsureBookable(ctx);
         await EnsureNoMaintenanceAsync(ctx, startUtc, endUtc);
         await EnsureNoConflictAsync(ctx.Space.Id, startUtc, endUtc, null);
-        await EnsureNoSelfOverlapAsync(ownerId, ctx.Space.Id, startUtc, endUtc, null);
+        if (!ownerMayHoldSeveralSpaces)
+            await EnsureNoSelfOverlapAsync(ownerId, ctx.Space.Id, startUtc, endUtc, null);
     }
 
     private static string Hm(DateTime d) => d.ToString("HH:mm");

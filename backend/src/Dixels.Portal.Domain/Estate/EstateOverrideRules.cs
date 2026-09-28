@@ -10,20 +10,20 @@ public static class EstateOverrideRules
         int? openOv, int? closeOv, int? minOv, int? maxOv)
     {
         if (openOv.HasValue && openOv < bounds.OpenHour)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.NarrowingViolation, message:
                 $"{subject} cannot open earlier ({openOv}) than {parent} ({bounds.OpenHour}).");
         if (closeOv.HasValue && closeOv > bounds.CloseHour)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.NarrowingViolation, message:
                 $"{subject} cannot close later ({closeOv}) than {parent} ({bounds.CloseHour}).");
         var effOpen = openOv ?? bounds.OpenHour;
         var effClose = closeOv ?? bounds.CloseHour;
         if (effClose <= effOpen)
-            throw new BusinessException(PortalDomainErrorCodes.InvalidHours, "Close hour must be after open hour.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidHours, message: "Close hour must be after open hour.");
         if (minOv.HasValue && minOv < bounds.MinBookingMinutes)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.NarrowingViolation, message:
                 $"{subject}'s minimum duration cannot be less than {parentPossessive} ({bounds.MinBookingMinutes}m).");
         if (maxOv.HasValue && maxOv > bounds.MaxBookingHours)
-            throw new BusinessException(PortalDomainErrorCodes.NarrowingViolation,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.NarrowingViolation, message:
                 $"{subject}'s maximum duration cannot exceed {parentPossessive} ({bounds.MaxBookingHours}h).");
     }
 }

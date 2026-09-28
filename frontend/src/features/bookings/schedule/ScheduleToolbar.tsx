@@ -25,11 +25,15 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
 
   return (
     <div className="sched-toolbar">
-      <div style={{ minWidth: 230 }}>
-        <label className="lbl" htmlFor="my-space">Space</label>
-        <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
-          options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
-      </div>
+      {/* Space, user and date range are admin tools; employees move through their own schedule
+          with the Month / Week / Day buttons and the arrows. */}
+      {session.isAdmin && (
+        <div style={{ minWidth: 230 }}>
+          <label className="lbl" htmlFor="my-space">Space</label>
+          <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
+            options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
+        </div>
+      )}
       {session.isAdmin && (
         <div>
           <label className="lbl" htmlFor="my-user">User</label>
@@ -40,17 +44,22 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
               : [{ value: session.userId, label: 'You' }]} />
         </div>
       )}
-      <div>
-        <label className="lbl" htmlFor={`${id}-from`}>From</label>
-        <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
-          onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
-      </div>
-      <div>
-        <label className="lbl" htmlFor={`${id}-to`}>To</label>
-        <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
-          onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
-      </div>
-      <div className="sched-nav">
+      {session.isAdmin && (
+        <>
+          <div>
+            <label className="lbl" htmlFor={`${id}-from`}>From</label>
+            <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
+              onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
+          </div>
+          <div>
+            <label className="lbl" htmlFor={`${id}-to`}>To</label>
+            <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
+              onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
+          </div>
+        </>
+      )}
+      {/* Employees have only this row: views on the left, the date in the middle. */}
+      <div className={`sched-nav${session.isAdmin ? '' : ' sched-nav-spread'}`}>
         <div className="seg" role="group" aria-label="Schedule view">
           {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (
             <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(id, m)}>
@@ -58,10 +67,12 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             </button>
           ))}
         </div>
-        <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
-        <span className="mono period-label">{periodLabel(cfg)}</span>
-        <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
-        <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
+        <div className="sched-period">
+          <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
+          <span className="mono period-label">{periodLabel(cfg)}</span>
+          <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
+          <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
+        </div>
       </div>
     </div>
   )

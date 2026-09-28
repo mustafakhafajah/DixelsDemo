@@ -1,12 +1,97 @@
+using Dixels.Portal.Bookings;
+using Dixels.Portal.Buildings;
+using Dixels.Portal.Floors;
+using Dixels.Portal.Maintenance;
+using Dixels.Portal.Spaces;
+using Dixels.Portal.SpaceTypes;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
 namespace Dixels.Portal;
 
-[Mapper]
-public partial class PortalApplicationMappers
+/* Entity → DTO mappings used through ABP's ObjectMapper. Fields that need other tables (names, counts,
+ * resolved rules, lifecycle) are ignored here and filled in by the app service after mapping. */
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class BuildingToBuildingDtoMapper : MapperBase<Building, BuildingDto>
 {
-    /* You can configure your Mapperly mapping configuration here.
-     * Alternatively, you can split your mapping configurations
-     * into multiple mapper classes for a better organization. */
+    [MapperIgnoreTarget(nameof(BuildingDto.FloorCount))]
+    [MapperIgnoreTarget(nameof(BuildingDto.SpaceCount))]
+    public override partial BuildingDto Map(Building source);
+
+    [MapperIgnoreTarget(nameof(BuildingDto.FloorCount))]
+    [MapperIgnoreTarget(nameof(BuildingDto.SpaceCount))]
+    public override partial void Map(Building source, BuildingDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class FloorToFloorDtoMapper : MapperBase<Floor, FloorDto>
+{
+    [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
+    [MapperIgnoreTarget(nameof(FloorDto.SpaceCount))]
+    public override partial FloorDto Map(Floor source);
+
+    [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
+    [MapperIgnoreTarget(nameof(FloorDto.SpaceCount))]
+    public override partial void Map(Floor source, FloorDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class SpaceToSpaceDtoMapper : MapperBase<Space, SpaceDto>
+{
+    [MapperIgnoreTarget(nameof(SpaceDto.TypeName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.TimeZone))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Constraints))]
+    [MapperIgnoreTarget(nameof(SpaceDto.CanCurrentUserBook))]
+    [MapperIgnoreTarget(nameof(SpaceDto.NotBookableReason))]
+    public override partial SpaceDto Map(Space source);
+
+    [MapperIgnoreTarget(nameof(SpaceDto.TypeName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
+    [MapperIgnoreTarget(nameof(SpaceDto.TimeZone))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Constraints))]
+    [MapperIgnoreTarget(nameof(SpaceDto.CanCurrentUserBook))]
+    [MapperIgnoreTarget(nameof(SpaceDto.NotBookableReason))]
+    public override partial void Map(Space source, SpaceDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class SpaceTypeToSpaceTypeDtoMapper : MapperBase<SpaceType, SpaceTypeDto>
+{
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.SpaceCount))]
+    public override partial SpaceTypeDto Map(SpaceType source);
+
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.SpaceCount))]
+    public override partial void Map(SpaceType source, SpaceTypeDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class BookingToBookingDtoMapper : MapperBase<Booking, BookingDto>
+{
+    [MapperIgnoreTarget(nameof(BookingDto.SpaceName))]
+    [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
+    [MapperIgnoreTarget(nameof(BookingDto.Lifecycle))]
+    public override partial BookingDto Map(Booking source);
+
+    [MapperIgnoreTarget(nameof(BookingDto.SpaceName))]
+    [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
+    [MapperIgnoreTarget(nameof(BookingDto.Lifecycle))]
+    public override partial void Map(Booking source, BookingDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class MaintenanceWindowToMaintenanceWindowDtoMapper : MapperBase<MaintenanceWindow, MaintenanceWindowDto>
+{
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.SpaceName))]
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.ScopeLabel))]
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.Lifecycle))]
+    public override partial MaintenanceWindowDto Map(MaintenanceWindow source);
+
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.SpaceName))]
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.ScopeLabel))]
+    [MapperIgnoreTarget(nameof(MaintenanceWindowDto.Lifecycle))]
+    public override partial void Map(MaintenanceWindow source, MaintenanceWindowDto destination);
 }

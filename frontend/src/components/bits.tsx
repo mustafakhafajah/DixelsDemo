@@ -1,3 +1,4 @@
+import { errorText } from '../api/client'
 import { lifecycleOf, type ScheduleItem } from '../api/types'
 
 export function StatusPill({ item }: { item: ScheduleItem }) {
@@ -47,4 +48,15 @@ export function initials(name: string): string {
   const parts = name.replace(/[^\p{L}\s.]/gu, ' ').split(/[\s.]+/).filter(Boolean)
   if (!parts.length) return '?'
   return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/* Shown instead of "Loading…" when a request failed, so the screen never waits forever. */
+export function LoadError({ what, error, onRetry }: { what: string; error: unknown; onRetry: () => void }) {
+  return (
+    <div className="load-error" role="alert">
+      <p className="load-error-title">Couldn't load {what}.</p>
+      <p className="load-error-msg">{errorText(error).message}</p>
+      <button type="button" className="btn btn-sm" onClick={onRetry}>Try again</button>
+    </div>
+  )
 }

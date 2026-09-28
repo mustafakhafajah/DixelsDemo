@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { SplashScreen } from '../components/SplashScreen'
 import { useSession } from './session'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
-  if (auth.isLoading) return <p style={{ padding: 40, fontFamily: 'Inter, sans-serif' }}>Loading…</p>
+  if (auth.isLoading) return <SplashScreen />
   if (!auth.isAuthenticated) return <Navigate to="/" replace />
   return <>{children}</>
 }

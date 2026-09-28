@@ -66,11 +66,6 @@ function BookingDetail({ b }: { b: Booking }) {
           {(!may || state === 'ended' || state === 'cancelled') && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
         </div>
       )}
-
-      <details>
-        <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--slate)' }}>Raw record</summary>
-        <pre className="json" style={{ marginTop: 9 }}>{JSON.stringify({ ...b, start: b.start.toISOString(), end: b.end.toISOString(), lifecycle: state }, null, 2)}</pre>
-      </details>
     </>
   )
 }

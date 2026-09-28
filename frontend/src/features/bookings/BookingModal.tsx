@@ -6,8 +6,7 @@ import { useSession } from '../../app/session'
 import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
-import { DEFAULT_MAX_HOURS, DEFAULT_MIN_MINUTES } from '../../lib/constants'
-import { addDays, addMin, dayAt, dayKey, durationLabel, earliestStart, fromDateTime, hm, isoZ, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
+import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
 import { modals, type BookingPrefill } from '../../state/modalStore'
@@ -238,15 +237,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
           <TimePicker id="m-end" aria-label="End" value={endTime} min={endMin} onChange={setEndTime} />
         </div>
       </div>
-      <div style={{ marginTop: -6 }}>
-        {hasWindow && (
-          <p style={{ fontSize: 12, color: 'var(--slate)' }}>
-            Duration <strong>{durationLabel((end!.getTime() - start!.getTime()) / 60000)}</strong> · allowed {c?.minBookingMinutes ?? DEFAULT_MIN_MINUTES}m
-            to {c?.maxBookingHours ?? DEFAULT_MAX_HOURS}h · <span className="mono">{isoZ(start!)}</span> → <span className="mono">{isoZ(end!)}</span>
-          </p>
-        )}
-        <ErrorLine error={timeError} />
-      </div>
+      {timeError && <div style={{ marginTop: -6 }}><ErrorLine error={timeError} /></div>}
 
       {!editing && (
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
 import { lifecycleOf, type Booking, type Maintenance } from '../../api/types'
 import { useSession } from '../../app/session'
-import { Loading, shortId, StatusPill } from '../../components/bits'
+import { Loading, StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
 import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
 import { modals } from '../../state/modalStore'
@@ -34,7 +34,7 @@ function BookingDetail({ b }: { b: Booking }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <StatusPill item={b} />
         <span className="tag mono">v{b.version}</span>
-        {b.seriesId && <span className="tag mono">{shortId(b.seriesId, 'SR')}</span>}
+        {b.seriesId && <span className="tag">Repeating</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>Space</dt>
@@ -86,7 +86,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
         <span className={`pill ${cls}`}><span className="dot" />{label}</span>
         <span className="tag">{m.scopeType} blocked</span>
-        {m.seriesId && <span className="tag mono">{shortId(m.seriesId, 'MS')}</span>}
+        {m.seriesId && <span className="tag">Repeating</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>Scope</dt><dd>{m.scopeLabel}</dd>
@@ -110,12 +110,12 @@ export function DetailDrawer({ entity, id }: { entity: 'booking' | 'maintenance'
   const maint = useMaintenanceWindow(entity === 'maintenance' ? id : null)
   const b = booking.data
   const m = maint.data
-  const title = entity === 'booking' ? shortId(id) : shortId(id, 'MT')
+  const title = entity === 'booking' ? 'Booking' : 'Blocked time'
   const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `${m.note || 'Blocked'} · ${m.scopeLabel}` : ''
   const failed = booking.error || maint.error
 
   return (
-    <Drawer title={title} titleClassName="mono" subtitle={subtitle} onClose={modals.close}>
+    <Drawer title={title} subtitle={subtitle} onClose={modals.close}>
       {b ? <BookingDetail b={b} /> : m ? <MaintenanceDetail m={m} /> : failed ? <p className="muted-box">This record could not be loaded.</p> : <Loading />}
     </Drawer>
   )

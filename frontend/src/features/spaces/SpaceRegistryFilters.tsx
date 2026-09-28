@@ -2,14 +2,13 @@ import type { Building, Floor, SpaceType } from '../../api/types'
 import { Dropdown } from '../../components/pickers'
 
 export interface SpaceRegistryFilterValues {
-  code: string
   buildingId: string
   floorId: string
   name: string
   typeId: string
 }
 
-export const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { code: '', buildingId: '', floorId: '', name: '', typeId: '' }
+export const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { buildingId: '', floorId: '', name: '', typeId: '' }
 
 export function SpaceRegistryFilters({ value, onChange, buildings, floors, types }: {
   value: SpaceRegistryFilterValues
@@ -25,11 +24,6 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
 
   return (
     <div className="filter-bar">
-      <div style={{ width: 150 }}>
-        <label className="lbl" htmlFor="sf-code">ID</label>
-        <input id="sf-code" className="inp mono" placeholder="SP-3F2A…" value={value.code}
-          onChange={(e) => set({ code: e.target.value })} />
-      </div>
       <div style={{ width: 180 }}>
         <label className="lbl" htmlFor="sf-building">Building</label>
         <Dropdown id="sf-building" value={value.buildingId} onChange={(v) => set({ buildingId: v, floorId: '' })}

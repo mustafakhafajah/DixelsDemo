@@ -3,7 +3,7 @@ import { ApiError, errorText } from '../../api/client'
 import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
-import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
+import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
@@ -209,7 +209,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     <Modal
       title={editing ? 'Reschedule booking' : 'New booking'}
       subtitle={editing
-        ? `${shortId(editing.id)} · ${editing.spaceName}${onBehalf ? ` · owned by ${editing.ownerName}` : ''} · moving the window only`
+        ? `${editing.spaceName}${onBehalf ? ` · owned by ${editing.ownerName}` : ''} · moving the window only`
         : 'Reserve one space for one window of time.'}
       onClose={modals.close}
       footer={(

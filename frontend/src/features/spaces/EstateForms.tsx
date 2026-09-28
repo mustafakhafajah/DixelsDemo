@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, Floor, Space, SpaceType } from '../../api/types'
-import { ErrorLine, plural, RequiredMark, shortId } from '../../components/bits'
+import { ErrorLine, plural, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { modals } from '../../state/modalStore'
@@ -278,7 +278,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
 
   return (
     <Modal title={editing ? 'Edit space' : 'Add a space'}
-      subtitle={editing ? `${shortId(editing.id, 'SP')} · changes apply to new bookings straight away` : 'One record is one physical unit.'}
+      subtitle={editing ? 'Changes apply to new bookings straight away.' : 'One record is one physical unit.'}
       onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add space'} busy={save.isPending} />}>
       <p className="req-note"><RequiredMark /> Required field</p>
       <Field id="sp-name" label="Name" required>

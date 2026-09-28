@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
-import { BookablePill, LoadError, Loading, plural, shortId } from '../../components/bits'
+import { BookablePill, LoadError, Loading, plural } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { pad } from '../../lib/dateUtils'
@@ -39,7 +39,6 @@ function RegistryCard({ title, sub, addLabel, onAdd, children }: { title: string
 }
 
 const muted = { fontSize: 11, color: 'var(--slate)' } as const
-const idCell = { fontSize: 12, color: 'var(--slate)' } as const
 
 function Actions({ children }: { children: ReactNode }) {
   return <td style={{ textAlign: 'right' }}><div style={{ display: 'inline-block' }}>{children}</div></td>
@@ -58,12 +57,11 @@ export function BuildingsPage() {
           <>
             <table className="grid">
               <thead>
-                <tr><th>ID</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Floors · Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Floors · Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
               </thead>
               <tbody>
                 {paging.rows.map((b) => (
                   <tr key={b.id}>
-                    <td className="mono" style={idCell}>{shortId(b.id, 'BD')}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{b.name}</div>
                       <div style={muted}>{b.holidays.length ? plural(b.holidays.length, 'holiday') : 'No holidays'}</div>
@@ -107,7 +105,7 @@ export function FloorsPage() {
           <>
             <table className="grid">
               <thead>
-                <tr><th>ID</th><th>Floor</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>Floor</th><th>Building</th><th>Time zone</th><th>Hours (UTC)</th><th>Booking length</th><th>Spaces</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
               </thead>
               <tbody>
                 {paging.rows.map((f) => {
@@ -115,7 +113,6 @@ export function FloorsPage() {
                   const overridden = [f.openHourOverride, f.closeHourOverride, f.minBookingMinutesOverride, f.maxBookingHoursOverride].some((v) => v != null)
                   return (
                     <tr key={f.id}>
-                      <td className="mono" style={idCell}>{shortId(f.id, 'FL')}</td>
                       <td style={{ fontWeight: 600 }}>Floor {f.name}</td>
                       <td>{f.buildingName}</td>
                       <td className="mono" style={{ fontSize: 11.5 }}>{b?.timeZone ?? '—'}</td>
@@ -162,11 +159,10 @@ export function SpacesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
   /* Only the typed fields are debounced; dropdowns apply at once. */
-  const code = useDebouncedValue(filters.code.trim())
   const name = useDebouncedValue(filters.name.trim())
 
   const q = useSpaceRegistry({
-    page, pageSize, code: code || undefined, name: name || undefined,
+    page, pageSize, name: name || undefined,
     buildingId: filters.buildingId || undefined, floorId: filters.floorId || undefined, typeId: filters.typeId || undefined,
   })
   const total = q.data?.totalCount ?? 0
@@ -198,12 +194,11 @@ export function SpacesPage() {
         ) : (
           <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
             <thead>
-              <tr><th>ID</th><th>Space</th><th>Type</th><th>Location</th><th>Time zone</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+              <tr><th>Space</th><th>Type</th><th>Location</th><th>Time zone</th><th>Bookable</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
             </thead>
             <tbody>
               {q.data.items.map((s) => (
                 <tr key={s.id}>
-                  <td className="mono" style={idCell}>{shortId(s.id, 'SP')}</td>
                   <td><div style={{ fontWeight: 600 }}>{s.name}</div><div style={muted}>{s.note || 'No description'}</div></td>
                   <td>{s.typeName}</td>
                   <td>{s.buildingName}<div style={muted}>Floor {s.floorName}</div></td>
@@ -258,12 +253,11 @@ export function SpaceTypesPage() {
           <>
             <table className="grid">
               <thead>
-                <tr><th>ID</th><th>Type</th><th>Spaces using it</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>Type</th><th>Spaces using it</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
               </thead>
               <tbody>
                 {paging.rows.map((t) => (
                   <tr key={t.id}>
-                    <td className="mono" style={idCell}>{shortId(t.id, 'ST')}</td>
                     <td style={{ fontWeight: 600 }}>{t.name}</td>
                     <td>{plural(t.spaceCount, 'space')}</td>
                     <Actions>

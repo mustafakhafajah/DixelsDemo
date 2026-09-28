@@ -40,8 +40,6 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
   return <p style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12.5, color: 'var(--slate)', margin: 0 }}>{label}</p>
 }
 
-export const shortId = (id: string, prefix = 'BK') => `${prefix}-${id.slice(0, 8).toUpperCase()}`
-
 export const plural =(n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 export function initials(name: string): string {

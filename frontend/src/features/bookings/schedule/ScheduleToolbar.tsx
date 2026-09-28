@@ -23,18 +23,42 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const session = useSession()
   const users = useUsers(session.isAdmin)
 
+  const views = (
+    <div className="seg" role="group" aria-label="Schedule view">
+      {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (
+        <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(id, m)}>
+          {m[0].toUpperCase() + m.slice(1)}
+        </button>
+      ))}
+    </div>
+  )
+  const period = (
+    <div className="sched-period">
+      <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
+      <span className="mono period-label">{periodLabel(cfg)}</span>
+      <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
+      <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
+    </div>
+  )
+
+  /* Employees: one row, Month / Week / Day on the left and the period on the far right. */
+  if (!session.isAdmin) {
+    return (
+      <div className="sched-toolbar">
+        <div className="sched-row">{views}{period}</div>
+      </div>
+    )
+  }
+
+  /* Admins: Space, User and the period on top; Month / Week / Day under them, the From / To range on the far right. */
   return (
     <div className="sched-toolbar">
-      {/* Space, user and date range are admin tools; employees move through their own schedule
-          with the Month / Week / Day buttons and the arrows. */}
-      {session.isAdmin && (
+      <div className="sched-row sched-row-top">
         <div style={{ minWidth: 230 }}>
           <label className="lbl" htmlFor="my-space">Space</label>
           <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
             options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
         </div>
-      )}
-      {session.isAdmin && (
         <div>
           <label className="lbl" htmlFor="my-user">User</label>
           <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId ?? session.userId}
@@ -43,9 +67,11 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
               ? users.data.map((u) => ({ value: u.id, label: `${u.id === session.userId ? 'You' : u.name}${u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}` }))
               : [{ value: session.userId, label: 'You' }]} />
         </div>
-      )}
-      {session.isAdmin && (
-        <>
+        {period}
+      </div>
+      <div className="sched-row">
+        {views}
+        <div className="sched-range">
           <div>
             <label className="lbl" htmlFor={`${id}-from`}>From</label>
             <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
@@ -56,22 +82,6 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
               onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
           </div>
-        </>
-      )}
-      {/* Employees have only this row: views on the left, the date in the middle. */}
-      <div className={`sched-nav${session.isAdmin ? '' : ' sched-nav-spread'}`}>
-        <div className="seg" role="group" aria-label="Schedule view">
-          {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (
-            <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(id, m)}>
-              {m[0].toUpperCase() + m.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="sched-period">
-          <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
-          <span className="mono period-label">{periodLabel(cfg)}</span>
-          <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
-          <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
         </div>
       </div>
     </div>

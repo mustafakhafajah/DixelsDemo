@@ -213,7 +213,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         <>
           <button type="button" className="btn" onClick={modals.close}>Discard</button>
           <button type="button" className="btn btn-primary" disabled={busy || !!timeError || !!spaceError || !spaceId} onClick={submit}>
-            {editing ? 'Save new window' : 'Confirm booking'}
+            {editing ? 'Save new window' : 'Make a booking'}
           </button>
         </>
       )}

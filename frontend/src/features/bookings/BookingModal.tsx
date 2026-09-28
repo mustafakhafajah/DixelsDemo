@@ -172,7 +172,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     try {
       if (editing) {
         await reschedule.mutateAsync({ id: editing.id, startUtc: start.toISOString(), endUtc: end.toISOString(), expectedVersion: editing.version })
-        toast('ok', 'Booking rescheduled', `${shortId(editing.id)} now ${stampOffset(start)} → ${hm(end)}.`)
+        toast('ok', 'Booking rescheduled', `${editing.spaceName} · now ${stampOffset(start)} → ${hm(end)}.`)
         modals.close()
         return
       }
@@ -191,11 +191,11 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         }
         return
       }
-      const b = await create.mutateAsync({
+      await create.mutateAsync({
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
         idempotencyKey,
       })
-      toast('ok', 'Booking confirmed', `${shortId(b.id)} · ${space.name} · ${stampOffset(start)} → ${hm(end)}.`)
+      toast('ok', 'Booking confirmed', `${space.name} · ${stampOffset(start)} → ${hm(end)}.`)
       modals.close()
     } catch (e) {
       showError(e)

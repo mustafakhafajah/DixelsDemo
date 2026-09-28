@@ -1,11 +1,10 @@
 namespace Dixels.Portal.Users;
 
-/* The two roles the user directory hands out. "admin" is ABP's own role (it holds every permission);
- * "employee" is seeded by RoleDataSeedContributor. */
+/* Role names the user directory relies on. Any ABP role can be handed out; "admin" is ABP's own role
+ * (it holds every permission, and the last active admin is protected), "employee" is seeded by
+ * RoleDataSeedContributor and is the usual role for a new user. */
 public static class UserDirectoryRoles
 {
     public const string Admin = "admin";
     public const string Employee = "employee";
-
-    public static readonly string[] All = { Admin, Employee };
 }

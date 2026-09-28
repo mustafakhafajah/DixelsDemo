@@ -9,6 +9,6 @@ public class CreateUserDirectoryDto
     /* Defaults to the email. */
     [StringLength(256)] public string? UserName { get; set; }
     [Required] [StringLength(128)] public string Password { get; set; } = null!;
-    /* "admin" or "employee". */
+    /* The name of an existing role, ignoring case. */
     [Required] public string Role { get; set; } = null!;
 }

@@ -10,14 +10,14 @@ import { parseUtc } from '../../lib/dateUtils'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useScheduleStore } from '../../state/scheduleStore'
 import { toast } from '../../state/toastStore'
-import { useLockUser, useSetUserActive, useSetUserRole, useUnlockUser, useUserDirectory, type UserDirectoryItem, type UserRole } from './api'
+import { roleLabel, useLockUser, useSetUserActive, useUnlockUser, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
+import { ChangeRoleModal } from './ChangeRoleModal'
 import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
 import { UserFormModal } from './UserFormModal'
 import { UserPermissionsModal } from './UserPermissionsModal'
 import './users.css'
 
 const LOCK_LABEL = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })
-const DAY_MS = 24 * 60 * 60_000
 
 /* "Locked until 3 Oct 2026 14:00" (UTC); a lockout with no end, or one years away, reads as just "Locked". */
 function LockCell({ user }: { user: UserDirectoryItem }) {
@@ -27,10 +27,13 @@ function LockCell({ user }: { user: UserDirectoryItem }) {
   return <span className="lock-on" title={open ? 'Until someone unlocks it' : 'Time in UTC'}>{open ? 'Locked' : `Locked until ${LOCK_LABEL.format(end)}`}</span>
 }
 
-function RolePill({ role }: { role: UserRole | null }) {
-  if (role === 'admin') return <span className="pill pill-confirmed"><span className="dot" />Admin</span>
-  if (role === 'employee') return <span className="pill pill-ended"><span className="dot" />Employee</span>
-  return <span className="lock-off">No role</span>
+const isAdminRole = (role: UserRole | null, roles?: UserDirectoryRole[]) =>
+  !!role && (role.toLowerCase() === 'admin' || !!roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())?.isAdmin)
+
+/* Admin-type roles get the accent pill; every other role is grey. */
+function RolePill({ role, roles }: { role: UserRole | null; roles?: UserDirectoryRole[] }) {
+  if (!role) return <span className="lock-off">No role</span>
+  return <span className={`pill ${isAdminRole(role, roles) ? 'pill-confirmed' : 'pill-ended'}`}><span className="dot" />{roleLabel(role, roles)}</span>
 }
 
 function StatusPill({ active }: { active: boolean }) {
@@ -49,17 +52,18 @@ export function UserDirectoryPage() {
   const [pageSize, setPageSize] = useState(25)
   const [adding, setAdding] = useState(false)
   const [permsFor, setPermsFor] = useState<UserDirectoryItem | null>(null)
+  const [roleFor, setRoleFor] = useState<UserDirectoryItem | null>(null)
   /* Only the typed search is debounced; dropdowns apply at once. */
   const search = useDebouncedValue(filters.search.trim())
 
-  const setRole = useSetUserRole()
+  const roles = useUserRoles().data
   const lock = useLockUser()
   const unlock = useUnlockUser()
   const setActive = useSetUserActive()
 
   const q = useUserDirectory({
     page, pageSize, filter: search || undefined,
-    role: (filters.role || undefined) as UserRole | undefined,
+    role: filters.role || undefined,
     isActive: filters.status ? filters.status === 'active' : undefined,
     isLocked: filters.lock ? filters.lock === 'locked' : undefined,
   })
@@ -79,35 +83,25 @@ export function UserDirectoryPage() {
   const canAdd = can(P.Users.Create)
   const canPermissions = can(P.Users.ManagePermissions)
 
-  const lockFor = (u: UserDirectoryItem, days: number | null) => {
-    if (days == null && !window.confirm(`Lock ${u.name} until someone unlocks the account? They are signed out and cannot sign in.`)) return
-    const until = days == null ? null : new Date(Date.now() + days * DAY_MS).toISOString()
-    lock.mutateAsync({ id: u.id, until }).then(
-      () => toast('ok', 'User locked', days == null ? `${u.name} stays locked until unlocked.` : `${u.name} is locked for ${days === 1 ? '1 day' : `${days} days`}.`),
-      rejected)
+  /* Locks until someone unlocks the account. */
+  const lockUser = (u: UserDirectoryItem) => {
+    if (!window.confirm(`Lock ${u.name}? They won't be able to sign in until you unlock them.`)) return
+    lock.mutateAsync({ id: u.id, until: null }).then(
+      () => toast('ok', 'User locked', `${u.name} stays locked until unlocked.`), rejected)
   }
 
   const menuItems = (u: UserDirectoryItem): RowMenuItem[] => {
     const self = u.id === userId
     const items: RowMenuItem[] = []
     if (canEdit && !self) {
-      const nextRole: UserRole = u.role === 'admin' ? 'employee' : 'admin'
-      items.push({
-        label: nextRole === 'admin' ? 'Make admin' : 'Make employee',
-        onClick: () => setRole.mutateAsync({ id: u.id, role: nextRole }).then(
-          () => toast('ok', 'Role changed', `${u.name} is now ${nextRole === 'admin' ? 'an admin' : 'an employee'}.`), rejected),
-      })
+      items.push({ label: 'Change role…', onClick: () => setRoleFor(u) })
       if (u.isLocked) {
         items.push({
           label: 'Unlock',
           onClick: () => unlock.mutateAsync(u.id).then(() => toast('ok', 'User unlocked', `${u.name} can sign in again.`), rejected),
         })
       } else {
-        items.push(
-          { label: 'Lock for 1 day', onClick: () => lockFor(u, 1) },
-          { label: 'Lock for 7 days', onClick: () => lockFor(u, 7) },
-          { label: 'Lock until unlocked', onClick: () => lockFor(u, null) },
-        )
+        items.push({ label: 'Lock', onClick: () => lockUser(u) })
       }
       items.push(u.isActive
         ? {
@@ -158,7 +152,7 @@ export function UserDirectoryPage() {
                     <tr key={u.id}>
                       <td>
                         <div className="user-cell">
-                          <span className={`avatar${u.role === 'admin' ? ' admin' : ''}`} aria-hidden="true">{initials(u.name || u.userName)}</span>
+                          <span className={`avatar${isAdminRole(u.role, roles) ? ' admin' : ''}`} aria-hidden="true">{initials(u.name || u.userName)}</span>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600 }}>{u.name || u.userName}{u.id === userId && <span className="lock-off" style={{ fontWeight: 400 }}> (you)</span>}</div>
                             <div className="user-email">{u.email}</div>
@@ -166,7 +160,7 @@ export function UserDirectoryPage() {
                         </div>
                       </td>
                       <td className="mono" style={{ fontSize: 12 }}>{u.userName}</td>
-                      <td><RolePill role={u.role} /></td>
+                      <td><RolePill role={u.role} roles={roles} /></td>
                       <td><StatusPill active={u.isActive} /></td>
                       <td><LockCell user={u} /></td>
                       <td style={{ textAlign: 'right' }}>
@@ -184,6 +178,7 @@ export function UserDirectoryPage() {
         )}
       </div>
       {adding && <UserFormModal onClose={() => setAdding(false)} />}
+      {roleFor && <ChangeRoleModal user={roleFor} onClose={() => setRoleFor(null)} />}
       {permsFor && (
         <UserPermissionsModal userId={permsFor.id} userName={permsFor.name || permsFor.userName}
           readOnly={permsFor.id === userId} onClose={() => setPermsFor(null)} />

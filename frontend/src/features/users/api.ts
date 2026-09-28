@@ -4,14 +4,24 @@ import { useApi } from '../../api/client'
 
 /* ─── Shapes (camelCase, as the server sends them) ─── */
 
-export type UserRole = 'admin' | 'employee'
+/* A role's name, e.g. 'admin' or 'employee'; any role the server has. */
+export type UserRole = string
+
+export interface UserDirectoryRole {
+  name: UserRole
+  displayName: string
+  /* ABP's admin role, or a role that can manage everyone's bookings. */
+  isAdmin: boolean
+}
 
 export interface UserDirectoryItem {
   id: string
   name: string
   userName: string
   email: string
+  /* The main role (admin wins), or null when the user has none. */
   role: UserRole | null
+  roles: UserRole[]
   isActive: boolean
   /* UTC ISO instant, or null when the account has no lockout. */
   lockoutEnd: string | null
@@ -81,6 +91,24 @@ export function useUserDirectory(q: UserDirectoryQuery) {
     /* Keep showing the current page while the next one loads, instead of flashing "Loading…". */
     placeholderData: keepPreviousData,
   })
+}
+
+/* Every role a user can be given, admin first. */
+export function useUserRoles() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['users', 'roles'],
+    queryFn: async () => (await api<ListResult<UserDirectoryRole>>('GET', `${BASE}/roles`)).items,
+    enabled: useEnabled(),
+  })
+}
+
+/* "front_desk" -> "Front desk": for a role the roles list doesn't (yet) have. */
+export function roleLabel(role: UserRole, roles?: UserDirectoryRole[]) {
+  const known = roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())
+  if (known) return known.displayName
+  const words = role.replace(/[_-]/g, ' ').trim()
+  return words ? words[0].toUpperCase() + words.slice(1) : role
 }
 
 export function useUserPermissions(id: string | null) {

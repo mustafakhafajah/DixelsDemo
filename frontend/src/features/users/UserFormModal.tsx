@@ -4,15 +4,14 @@ import { Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { useFieldErrors, type FieldError } from '../../lib/useFieldErrors'
 import { toast } from '../../state/toastStore'
-import { useCreateUser, type UserRole } from './api'
+import { useCreateUser, useUserRoles, type UserDirectoryRole, type UserRole } from './api'
 
 const missing = (message: string): FieldError => ({ code: 'validation.missing_field', message })
 const invalid = (message: string): FieldError => ({ code: 'validation.invalid', message })
 
-export const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'employee', label: 'Employee' },
-]
+/* New users are employees unless that role is gone; then the first role there is. */
+const defaultRole = (roles: UserDirectoryRole[]): UserRole =>
+  roles.find((r) => r.name.toLowerCase() === 'employee')?.name ?? roles[0]?.name ?? ''
 
 const PASSWORD_HINT = 'At least 6 characters with upper, lower and a digit'
 /* The same rule the server's identity options apply, so the message shows before sending. */
@@ -38,13 +37,17 @@ export function UserFormModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('')
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<UserRole>('employee')
+  const roles = useUserRoles()
+  /* null until someone picks one: the default follows the roles list once it loads. */
+  const [picked, setPicked] = useState<UserRole | null>(null)
+  const role = picked ?? defaultRole(roles.data ?? [])
 
   const submit = () => {
     if (fields.show({
       'uf-name': name.trim() ? undefined : missing('Give the user a name.'),
       'uf-email': !email.trim() ? missing('Enter an email address.') : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : invalid('Enter a valid email address.'),
       'uf-password': !password ? missing('Set a password.') : passwordOk(password) ? undefined : invalid(`${PASSWORD_HINT}.`),
+      'uf-role': role ? undefined : missing('Pick a role.'),
     })) return
     create.mutateAsync({ name: name.trim(), email: email.trim(), userName: userName.trim() || undefined, password, role }).then((u) => {
       toast('ok', 'User added', `${u.name} can now sign in as ${u.userName}.`)
@@ -80,7 +83,8 @@ export function UserFormModal({ onClose }: { onClose: () => void }) {
           onChange={(e) => { setPassword(e.target.value); fields.clear('uf-password') }} onKeyDown={onEnter} />
       </Field>
       <Field id="uf-role" label="Role" required error={fields.errors['uf-role']}>
-        <Dropdown id="uf-role" value={role} onChange={(v) => { setRole(v as UserRole); fields.clear('uf-role') }} options={ROLE_OPTIONS} />
+        <Dropdown id="uf-role" value={role} placeholder={roles.isLoading ? 'Loading…' : 'Select…'} onChange={(v) => { setPicked(v); fields.clear('uf-role') }}
+          options={(roles.data ?? []).map((r) => ({ value: r.name, label: r.displayName }))} />
       </Field>
     </Modal>
   )

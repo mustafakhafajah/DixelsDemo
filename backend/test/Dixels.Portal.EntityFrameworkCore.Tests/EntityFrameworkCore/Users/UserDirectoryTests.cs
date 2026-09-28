@@ -12,6 +12,8 @@ using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Security.Claims;
 using Xunit;
+using IdentityRole = Volo.Abp.Identity.IdentityRole;
+using IdentityRoleManager = Volo.Abp.Identity.IdentityRoleManager;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 using IdentityUserManager = Volo.Abp.Identity.IdentityUserManager;
 
@@ -27,6 +29,7 @@ public class UserDirectoryTests : PortalEntityFrameworkCoreTestBase
 
     private readonly IUserDirectoryAppService _directory;
     private readonly IdentityUserManager _userManager;
+    private readonly IdentityRoleManager _roleManager;
     private readonly IPermissionGrantRepository _grants;
     private readonly ICurrentPrincipalAccessor _principal;
     private readonly IPermissionChecker _checker;
@@ -35,6 +38,7 @@ public class UserDirectoryTests : PortalEntityFrameworkCoreTestBase
     {
         _directory = GetRequiredService<IUserDirectoryAppService>();
         _userManager = GetRequiredService<IdentityUserManager>();
+        _roleManager = GetRequiredService<IdentityRoleManager>();
         _grants = GetRequiredService<IPermissionGrantRepository>();
         _principal = GetRequiredService<ICurrentPrincipalAccessor>();
         /* The concrete checker: IPermissionChecker itself is replaced by "always allow" in tests. */
@@ -137,6 +141,65 @@ public class UserDirectoryTests : PortalEntityFrameworkCoreTestBase
         });
         (await _checker.IsGrantedAsync(PrincipalFor(user.Id, UserDirectoryRoles.Admin), PortalPermissions.Bookings.Create))
             .ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Lists_the_roles_admin_first()
+    {
+        var roles = (await _directory.GetRolesAsync()).Items;
+
+        roles.Select(r => r.Name).ShouldBe(new[] { UserDirectoryRoles.Admin, UserDirectoryRoles.Employee });
+        roles.Select(r => r.DisplayName).ShouldBe(new[] { "Admin", "Employee" });
+        roles.Select(r => r.IsAdmin).ShouldBe(new[] { true, false });
+    }
+
+    [Fact]
+    public async Task Any_existing_role_can_be_given_filtered_on_and_listed()
+    {
+        await CreateRoleAsync("front_desk");
+        var roles = (await _directory.GetRolesAsync()).Items;
+        roles.Select(r => r.Name).ShouldBe(new[] { UserDirectoryRoles.Admin, UserDirectoryRoles.Employee, "front_desk" });
+        roles.Single(r => r.Name == "front_desk").DisplayName.ShouldBe("Front desk");
+        roles.Single(r => r.Name == "front_desk").IsAdmin.ShouldBeFalse();
+
+        var desk = await CreateAsync("Desk Person", "desk@dixels.io", "Front_Desk");
+        desk.Role.ShouldBe("front_desk");
+        desk.Roles.ShouldBe(new[] { "front_desk" });
+        (await ListAsync(new UserDirectoryListInput { Role = "FRONT_DESK" })).ShouldBe(new[] { desk.Id });
+
+        var employee = await CreateAsync("Moved Employee", "moved@dixels.io", UserDirectoryRoles.Employee);
+        (await _directory.SetRoleAsync(employee.Id, new SetUserRoleDto { Role = "front_desk" })).Role.ShouldBe("front_desk");
+        (await ListAsync(new UserDirectoryListInput { Role = "front_desk" })).Count.ShouldBe(2);
+        (await ListAsync(new UserDirectoryListInput { Role = "employee", Filter = "moved" })).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Admin_is_the_main_role_and_setting_a_role_removes_the_others()
+    {
+        await CreateRoleAsync("front_desk");
+        var user = await CreateAsync("Two Hats", "two.hats@dixels.io", "front_desk");
+        await WithUnitOfWorkAsync(async () =>
+            await _userManager.AddToRoleAsync(await _userManager.GetByIdAsync(user.Id), UserDirectoryRoles.Admin));
+
+        var listed = (await _directory.GetListAsync(new UserDirectoryListInput { Filter = "two.hats" })).Items.Single();
+        listed.Role.ShouldBe(UserDirectoryRoles.Admin);
+        listed.Roles.ShouldBe(new[] { UserDirectoryRoles.Admin, "front_desk" });
+
+        var changed = await _directory.SetRoleAsync(user.Id, new SetUserRoleDto { Role = UserDirectoryRoles.Employee });
+        changed.Roles.ShouldBe(new[] { UserDirectoryRoles.Employee });
+    }
+
+    [Fact]
+    public async Task Unknown_roles_are_rejected()
+    {
+        var employeeId = (await ListAsync(new UserDirectoryListInput { Role = "employee" })).Single();
+
+        var set = await Should.ThrowAsync<UserFriendlyException>(() =>
+            _directory.SetRoleAsync(employeeId, new SetUserRoleDto { Role = "superuser" }));
+        set.Code.ShouldBe(PortalDomainErrorCodes.UserInvalidRole);
+        set.Message.ShouldBe("That role doesn't exist.");
+        (await Should.ThrowAsync<UserFriendlyException>(() => ListAsync(new UserDirectoryListInput { Role = "superuser" })))
+            .Code.ShouldBe(PortalDomainErrorCodes.UserInvalidRole);
     }
 
     [Fact]
@@ -320,6 +383,9 @@ public class UserDirectoryTests : PortalEntityFrameworkCoreTestBase
 
     private Task<UserDirectoryItemDto> CreateAsync(string name, string email, string role) =>
         _directory.CreateAsync(new CreateUserDirectoryDto { Name = name, Email = email, Password = Password, Role = role });
+
+    private Task CreateRoleAsync(string name) => WithUnitOfWorkAsync(async () =>
+        (await _roleManager.CreateAsync(new IdentityRole(Guid.NewGuid(), name))).Succeeded.ShouldBeTrue());
 
     private async Task<List<Guid>> ListAsync(UserDirectoryListInput input) =>
         (await _directory.GetListAsync(input)).Items.Select(u => u.Id).ToList();

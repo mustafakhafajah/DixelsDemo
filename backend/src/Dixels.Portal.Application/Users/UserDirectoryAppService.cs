@@ -33,15 +33,17 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
     private const string PortalPrefix = PortalPermissions.GroupName + ".";
 
     private readonly IIdentityUserRepository _users;
+    private readonly IIdentityRoleRepository _roles;
     private readonly IdentityUserManager _userManager;
     private readonly IPermissionManager _permissionManager;
     private readonly IPermissionGrantRepository _grants;
     private readonly IPermissionDefinitionManager _definitions;
 
-    public UserDirectoryAppService(IIdentityUserRepository users, IdentityUserManager userManager,
+    public UserDirectoryAppService(IIdentityUserRepository users, IIdentityRoleRepository roles, IdentityUserManager userManager,
         IPermissionManager permissionManager, IPermissionGrantRepository grants, IPermissionDefinitionManager definitions)
     {
         _users = users;
+        _roles = roles;
         _userManager = userManager;
         _permissionManager = permissionManager;
         _grants = grants;
@@ -52,9 +54,14 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
     [Authorize(PortalPermissions.Users.Default)]
     public async Task<PagedResultDto<UserDirectoryItemDto>> GetListAsync(UserDirectoryListInput input)
     {
-        var role = string.IsNullOrWhiteSpace(input.Role) ? null : NormalizeRole(input.Role);
-        var roles = await GetRoleMapAsync();
-        IEnumerable<IdentityUser> users = await _users.GetListAsync();
+        var role = string.IsNullOrWhiteSpace(input.Role) ? null : await ResolveRoleAsync(input.Role);
+        var roleNames = (await _roles.GetListAsync()).ToDictionary(r => r.Id, r => r.Name);
+        var all = await _users.GetListAsync(includeDetails: true);
+        var roles = all.ToDictionary(u => u.Id, u => OrderRoles(u.Roles
+            .Select(r => roleNames.GetValueOrDefault(r.RoleId))
+            .Where(n => n != null)
+            .Select(n => n!)));
+        IEnumerable<IdentityUser> users = all;
 
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
@@ -62,7 +69,7 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
             users = users.Where(u => Matches(u.GetDisplayName(), filter) || Matches(u.Name, filter) ||
                                      Matches(u.Surname, filter) || Matches(u.UserName, filter) || Matches(u.Email, filter));
         }
-        if (role != null) users = users.Where(u => roles.GetValueOrDefault(u.Id) == role);
+        if (role != null) users = users.Where(u => roles[u.Id].Contains(role));
         if (input.IsActive.HasValue) users = users.Where(u => u.IsActive == input.IsActive.Value);
         if (input.IsLocked.HasValue) users = users.Where(u => IsLocked(u) == input.IsLocked.Value);
 
@@ -73,15 +80,33 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
         var page = ordered
             .Skip(Math.Max(0, input.SkipCount))
             .Take(Math.Clamp(input.MaxResultCount, 1, MaxPageSize))
-            .Select(u => Map(u, roles.GetValueOrDefault(u.Id)))
+            .Select(u => Map(u, roles[u.Id]))
             .ToList();
         return new PagedResultDto<UserDirectoryItemDto>(ordered.Count, page);
+    }
+
+    /* Every role, admin first then by name. A role counts as an admin role when it is ABP's "admin" or it can
+     * manage everyone's bookings. */
+    [Authorize(PortalPermissions.Users.Default)]
+    public async Task<ListResultDto<UserDirectoryRoleDto>> GetRolesAsync()
+    {
+        var items = new List<UserDirectoryRoleDto>();
+        foreach (var role in await _roles.GetListAsync())
+        {
+            var isAdmin = IsAdminRole(role.Name) ||
+                          await _grants.FindAsync(PortalPermissions.Bookings.ManageAll, RolePermissionValueProvider.ProviderName, role.Name) != null;
+            items.Add(new UserDirectoryRoleDto { Name = role.Name, DisplayName = RoleDisplayName(role.Name), IsAdmin = isAdmin });
+        }
+        return new ListResultDto<UserDirectoryRoleDto>(items
+            .OrderBy(r => IsAdminRole(r.Name) ? 0 : 1)
+            .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList());
     }
 
     [Authorize(PortalPermissions.Users.Create)]
     public async Task<UserDirectoryItemDto> CreateAsync(CreateUserDirectoryDto input)
     {
-        var role = NormalizeRole(input.Role);
+        var role = await ResolveRoleAsync(input.Role);
         var email = input.Email.Trim();
         var userName = string.IsNullOrWhiteSpace(input.UserName) ? email : input.UserName.Trim();
 
@@ -95,22 +120,21 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
         return await MapAsync(user);
     }
 
-    /* The user ends up with exactly one of admin / employee, and loses any permissions given or taken away by hand. */
+    /* The chosen role becomes the user's only role, and they lose any permissions given or taken away by hand. */
     [Authorize(PortalPermissions.Users.Edit)]
     public async Task<UserDirectoryItemDto> SetRoleAsync(Guid id, SetUserRoleDto input)
     {
-        var role = NormalizeRole(input.Role);
+        var role = await ResolveRoleAsync(input.Role);
         var user = await GetUserAsync(id);
         EnsureNotSelf(user, "You can't change your own role.");
-        if (role != UserDirectoryRoles.Admin)
+        if (!IsAdminRole(role))
             await EnsureNotLastAdminAsync(user, "demoted");
 
-        foreach (var other in UserDirectoryRoles.All.Where(r => r != role))
-        {
-            if (await _userManager.IsInRoleAsync(user, other))
-                Check(await _userManager.RemoveFromRoleAsync(user, other), "Could not change the role");
-        }
-        if (!await _userManager.IsInRoleAsync(user, role))
+        var current = await _userManager.GetRolesAsync(user);
+        var others = current.Where(r => !string.Equals(r, role, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (others.Count > 0)
+            Check(await _userManager.RemoveFromRolesAsync(user, others), "Could not change the role");
+        if (!current.Contains(role, StringComparer.OrdinalIgnoreCase))
             Check(await _userManager.AddToRoleAsync(user, role), "Could not change the role");
 
         await ClearOverridesAsync(user.Id);
@@ -315,27 +339,11 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
                ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.UserNotFound, message: "No user with that ID.");
     }
 
-    /* Admin wins over employee for someone who somehow has both. */
-    private async Task<Dictionary<Guid, string>> GetRoleMapAsync()
-    {
-        var map = new Dictionary<Guid, string>();
-        foreach (var u in await _userManager.GetUsersInRoleAsync(UserDirectoryRoles.Employee))
-            map[u.Id] = UserDirectoryRoles.Employee;
-        foreach (var u in await _userManager.GetUsersInRoleAsync(UserDirectoryRoles.Admin))
-            map[u.Id] = UserDirectoryRoles.Admin;
-        return map;
-    }
+    private async Task<UserDirectoryItemDto> MapAsync(IdentityUser user) =>
+        Map(user, OrderRoles(await _userManager.GetRolesAsync(user)));
 
-    private async Task<UserDirectoryItemDto> MapAsync(IdentityUser user)
-    {
-        var roles = await _userManager.GetRolesAsync(user);
-        var role = roles.Contains(UserDirectoryRoles.Admin, StringComparer.OrdinalIgnoreCase) ? UserDirectoryRoles.Admin
-            : roles.Contains(UserDirectoryRoles.Employee, StringComparer.OrdinalIgnoreCase) ? UserDirectoryRoles.Employee
-            : null;
-        return Map(user, role);
-    }
-
-    private static UserDirectoryItemDto Map(IdentityUser user, string? role)
+    /* roles: already in OrderRoles order, so the first one is the user's main role. */
+    private static UserDirectoryItemDto Map(IdentityUser user, string[] roles)
     {
         var locked = IsLocked(user);
         return new UserDirectoryItemDto
@@ -344,7 +352,8 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
             Name = user.GetDisplayName(),
             UserName = user.UserName,
             Email = user.Email,
-            Role = role,
+            Role = roles.FirstOrDefault(),
+            Roles = roles,
             IsActive = user.IsActive,
             LockoutEnd = locked ? user.LockoutEnd!.Value.UtcDateTime : null,
             IsLocked = locked,
@@ -358,13 +367,27 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
     private static bool Matches(string? value, string filter) =>
         value != null && value.Contains(filter, StringComparison.OrdinalIgnoreCase);
 
-    private static string NormalizeRole(string role)
+    /* The existing role's own name for what was sent, ignoring case. */
+    private async Task<string> ResolveRoleAsync(string role)
     {
-        var normalized = role.Trim().ToLowerInvariant();
-        if (!UserDirectoryRoles.All.Contains(normalized))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.UserInvalidRole,
-                message: "The role must be admin or employee.");
-        return normalized;
+        var wanted = role.Trim();
+        return (await _roles.GetListAsync()).FirstOrDefault(r => string.Equals(r.Name, wanted, StringComparison.OrdinalIgnoreCase))?.Name
+               ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.UserInvalidRole, message: "That role doesn't exist.");
+    }
+
+    private static bool IsAdminRole(string role) => string.Equals(role, UserDirectoryRoles.Admin, StringComparison.OrdinalIgnoreCase);
+
+    /* "admin" first, then by name. */
+    private static string[] OrderRoles(IEnumerable<string> roles) => roles
+        .OrderBy(r => IsAdminRole(r) ? 0 : 1)
+        .ThenBy(r => r, StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    /* "employee" -> "Employee", "front_desk" -> "Front desk". */
+    private static string RoleDisplayName(string role)
+    {
+        var words = role.Replace('_', ' ').Replace('-', ' ').Trim();
+        return words.Length == 0 ? role : char.ToUpperInvariant(words[0]) + words[1..];
     }
 
     /* Identity reports problems (taken email, weak password, ...) as a result; show them as one sentence. */

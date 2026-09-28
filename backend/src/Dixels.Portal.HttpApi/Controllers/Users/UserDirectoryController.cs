@@ -23,6 +23,10 @@ public class UserDirectoryController : PortalController, IUserDirectoryAppServic
     [HttpGet]
     public Task<PagedResultDto<UserDirectoryItemDto>> GetListAsync([FromQuery] UserDirectoryListInput input) => _users.GetListAsync(input);
 
+    /* Every role a user can be given, admin first. */
+    [HttpGet("roles")]
+    public Task<ListResultDto<UserDirectoryRoleDto>> GetRolesAsync() => _users.GetRolesAsync();
+
     [HttpPost]
     public Task<UserDirectoryItemDto> CreateAsync([FromBody] CreateUserDirectoryDto input) => _users.CreateAsync(input);
 

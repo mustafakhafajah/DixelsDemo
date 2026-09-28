@@ -8,6 +8,7 @@ namespace Dixels.Portal.Users;
 public interface IUserDirectoryAppService : IApplicationService
 {
     Task<PagedResultDto<UserDirectoryItemDto>> GetListAsync(UserDirectoryListInput input);
+    Task<ListResultDto<UserDirectoryRoleDto>> GetRolesAsync();
     Task<UserDirectoryItemDto> CreateAsync(CreateUserDirectoryDto input);
     Task<UserDirectoryItemDto> SetRoleAsync(Guid id, SetUserRoleDto input);
     Task<UserDirectoryItemDto> LockAsync(Guid id, LockUserDto input);

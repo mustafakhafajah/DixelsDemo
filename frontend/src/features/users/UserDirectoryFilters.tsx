@@ -1,8 +1,9 @@
 import { Dropdown } from '../../components/pickers'
+import { useUserRoles } from './api'
 
 export interface UserDirectoryFilterValues {
   search: string
-  /* '' | 'admin' | 'employee' */
+  /* '' or a role name */
   role: string
   /* '' | 'active' | 'inactive' */
   status: string
@@ -16,6 +17,7 @@ export function UserDirectoryFilters({ value, onChange }: {
   value: UserDirectoryFilterValues
   onChange: (v: UserDirectoryFilterValues) => void
 }) {
+  const roles = useUserRoles()
   const set = (p: Partial<UserDirectoryFilterValues>) => onChange({ ...value, ...p })
   const active = Object.values(value).some((v) => v !== '')
 
@@ -29,7 +31,7 @@ export function UserDirectoryFilters({ value, onChange }: {
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="udf-role-filter">Role</label>
         <Dropdown id="udf-role-filter" value={value.role} onChange={(v) => set({ role: v })}
-          options={[{ value: '', label: 'All roles' }, { value: 'admin', label: 'Admin' }, { value: 'employee', label: 'Employee' }]} />
+          options={[{ value: '', label: 'All roles' }, ...(roles.data ?? []).map((r) => ({ value: r.name, label: r.displayName }))]} />
       </div>
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="udf-status">Status</label>

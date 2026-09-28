@@ -58,7 +58,8 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
           </div>
         </>
       )}
-      <div className="sched-nav">
+      {/* Employees have only this row: views on the left, the date in the middle. */}
+      <div className={`sched-nav${session.isAdmin ? '' : ' sched-nav-spread'}`}>
         <div className="seg" role="group" aria-label="Schedule view">
           {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (
             <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(id, m)}>
@@ -66,10 +67,12 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             </button>
           ))}
         </div>
-        <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
-        <span className="mono period-label">{periodLabel(cfg)}</span>
-        <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
-        <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
+        <div className="sched-period">
+          <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label="Previous period" title="Previous">‹</button>
+          <span className="mono period-label">{periodLabel(cfg)}</span>
+          <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label="Next period" title="Next">›</button>
+          <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>Today</button>
+        </div>
       </div>
     </div>
   )

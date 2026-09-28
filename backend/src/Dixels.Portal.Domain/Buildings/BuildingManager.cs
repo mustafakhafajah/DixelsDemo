@@ -31,7 +31,7 @@ public class BuildingManager : DomainService
     public static void EnsureValidHours(int openHour, int closeHour)
     {
         if (closeHour <= openHour)
-            throw new BusinessException(PortalDomainErrorCodes.InvalidHours, "Close hour must be after open hour.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidHours, message: "Close hour must be after open hour.");
     }
 
     /* Returns the trimmed name. excludeId is the building being edited, so it doesn't clash with itself. */
@@ -39,10 +39,10 @@ public class BuildingManager : DomainService
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new BusinessException(PortalDomainErrorCodes.MissingField, "Give the building a name.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the building a name.");
         var lower = trimmed.ToLower();
         if (await _buildings.AnyAsync(b => b.Name.ToLower() == lower && b.Id != excludeId))
-            throw new BusinessException(PortalDomainErrorCodes.BuildingDuplicate, $"{trimmed} is already in the estate.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BuildingDuplicate, message: $"{trimmed} is already in the estate.");
         return trimmed;
     }
 }

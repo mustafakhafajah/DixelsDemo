@@ -78,9 +78,9 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         foreach (var o in input.Occurrences)
         {
             if (o.StartUtc == default || o.EndUtc == default)
-                throw new BusinessException(PortalDomainErrorCodes.MissingField, "Start and end are both required.");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.");
             if (o.EndUtc <= o.StartUtc)
-                throw new BusinessException(PortalDomainErrorCodes.EndBeforeStart, "End must be after start.");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.");
         }
 
         var note = string.IsNullOrWhiteSpace(input.Note) ? "Blocked" : input.Note.Trim();
@@ -128,7 +128,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
 
     private async Task<MaintenanceWindow> GetWindowAsync(Guid id)
         => await _maintenance.FindAsync(id)
-           ?? throw new BusinessException(PortalDomainErrorCodes.MaintenanceNotFound, "No blocked time with that ID.");
+           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MaintenanceNotFound, message: "No blocked time with that ID.");
 
     /* The preview and the real schedule count "affected" the same way: confirmed bookings overlapping the window. */
     private async Task<int> CountAffectedAsync(List<Guid> spaceIds, DateTime startUtc, DateTime endUtc)

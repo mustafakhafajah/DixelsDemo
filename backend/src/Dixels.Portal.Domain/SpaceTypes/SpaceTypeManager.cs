@@ -31,7 +31,7 @@ public class SpaceTypeManager : DomainService
     {
         var used = await _spaces.CountAsync(s => s.TypeId == type.Id);
         if (used > 0)
-            throw new BusinessException(PortalDomainErrorCodes.SpaceTypeInUse,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceTypeInUse, message:
                 $"{used} space{(used == 1 ? " uses" : "s use")} \"{type.Name}\". Give them another type first.");
     }
 
@@ -40,10 +40,10 @@ public class SpaceTypeManager : DomainService
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new BusinessException(PortalDomainErrorCodes.MissingField, "Give the space type a name.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the space type a name.");
         var lower = trimmed.ToLower();
         if (await _types.AnyAsync(t => t.Name.ToLower() == lower && t.Id != excludeId))
-            throw new BusinessException(PortalDomainErrorCodes.SpaceTypeDuplicate, $"There is already a space type called \"{trimmed}\".");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceTypeDuplicate, message: $"There is already a space type called \"{trimmed}\".");
         return trimmed;
     }
 }

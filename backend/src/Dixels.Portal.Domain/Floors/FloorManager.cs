@@ -39,15 +39,15 @@ public class FloorManager : DomainService
 
     private async Task<Building> GetBuildingAsync(Guid id)
         => await _buildings.FindAsync(id)
-           ?? throw new BusinessException(PortalDomainErrorCodes.MissingField, "Pick a building first.");
+           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Pick a building first.");
 
     private async Task<string> CheckAsync(Building building, string? name, ConstraintOverrides o, Guid? excludeId)
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new BusinessException(PortalDomainErrorCodes.MissingField, "Type a floor name or number.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Type a floor name or number.");
         if (await _floors.AnyAsync(f => f.BuildingId == building.Id && f.Name == trimmed && f.Id != excludeId))
-            throw new BusinessException(PortalDomainErrorCodes.FloorDuplicate, $"{building.Name} already has floor {trimmed}.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.FloorDuplicate, message: $"{building.Name} already has floor {trimmed}.");
         EstateOverrideRules.EnsureOnlyNarrows("Floor", "the building", "the building's",
             ConstraintResolver.ResolveBounds(building, null),
             o.OpenHour, o.CloseHour, o.MinBookingMinutes, o.MaxBookingHours);

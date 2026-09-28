@@ -127,7 +127,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     if (!generated || !spaceId) return []
     return generated.occurrences.map((o) => {
       const clash = findOverlap(bookings, spaceId, o.start, o.end)
-      const self = !clash ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end) : undefined
+      /* Employees can't hold two spaces at once; admins can, so their other bookings don't count. */
+      const self = !clash && !session.isAdmin
+        ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end)
+        : undefined
       const hit = clash ?? self
       const t = o.start.getTime()
       return {
@@ -138,7 +141,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         note: hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.isAdmin ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, session.userId, skipOverrides])
+  }, [generated, bookings, spaceId, session.userId, session.isAdmin, skipOverrides])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()

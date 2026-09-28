@@ -59,7 +59,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     {
         var b = await GetBookingAsync(id);
         if (b.OwnerUserId != CurrentUser.Id && !await SeesAllBookingsAsync())
-            throw new BusinessException(PortalDomainErrorCodes.BookingNotFound, "No booking with that ID.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: "No booking with that ID.");
         return await MapAsync(b);
     }
 
@@ -134,13 +134,13 @@ public class BookingAppService : PortalAppService, IBookingAppService
         await EnsureCanActAsync(b, "You can only change your own bookings.");
         var state = b.GetLifecycle(Clock.Now);
         if (state is TimeWindowState.Ended or TimeWindowState.Cancelled)
-            throw new BusinessException(PortalDomainErrorCodes.BookingLocked, $"A {state.ToApiValue()} booking cannot be changed.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: $"A {state.ToApiValue()} booking cannot be changed.");
         if (state == TimeWindowState.InProgress)
-            throw new BusinessException(PortalDomainErrorCodes.BookingInProgress,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingInProgress, message:
                 "A booking that has started can only be cancelled or ended early.");
         /* Optimistic concurrency: refuse if someone changed the booking after the client loaded it. */
         if (input.ExpectedVersion.HasValue && input.ExpectedVersion.Value != b.Version)
-            throw new BusinessException(PortalDomainErrorCodes.VersionMismatch,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.VersionMismatch, message:
                     "This booking changed since you loaded it. Reload and try again.")
                 .WithData("expected", input.ExpectedVersion.Value)
                 .WithData("current", b.Version);
@@ -151,7 +151,9 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _manager.ValidateWindow(ctx, start, end);
         await _manager.EnsureNoMaintenanceAsync(ctx, start, end);
         await _manager.EnsureNoConflictAsync(b.SpaceId, start, end, b.Id);
-        await _manager.EnsureNoSelfOverlapAsync(b.OwnerUserId, b.SpaceId, start, end, b.Id);
+        /* The owner's rule applies: an admin moving an employee's booking still can't give them two rooms at once. */
+        if (!(b.OwnerUserId == CurrentUser.Id && await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll)))
+            await _manager.EnsureNoSelfOverlapAsync(b.OwnerUserId, b.SpaceId, start, end, b.Id);
 
         b.StartUtc = start;
         b.EndUtc = end;
@@ -200,7 +202,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var b = await GetBookingAsync(id);
         await EnsureCanActAsync(b, "You can only end your own bookings.");
         if (b.GetLifecycle(Clock.Now) != TimeWindowState.InProgress)
-            throw new BusinessException(PortalDomainErrorCodes.BookingNotInProgress,
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotInProgress, message:
                 "Only a booking that has already started can be ended early.");
         b.EndUtc = Clock.Now;
         b.Version++;
@@ -224,19 +226,20 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task<Booking> GetBookingAsync(Guid id)
         => await _bookings.FindAsync(id)
-           ?? throw new BusinessException(PortalDomainErrorCodes.BookingNotFound, "No booking with that ID.");
+           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: "No booking with that ID.");
 
     /* Owners act on their own bookings; admins (Bookings.ManageAll) on anyone's. */
     private async Task EnsureCanActAsync(Booking b, string message)
     {
         if (b.OwnerUserId != CurrentUser.Id && !await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll))
-            throw new BusinessException(PortalDomainErrorCodes.AccessForbidden, message);
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.AccessForbidden, message: message);
     }
 
     private async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? seriesId, string? idempotencyKey)
     {
+        /* Admins may hold several spaces at the same time; employees may not. */
         var booking = await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
-            seriesId: seriesId, idempotencyKey: idempotencyKey);
+            seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll));
         await _bookings.InsertAsync(booking, autoSave: true);
         return booking;
     }
@@ -246,7 +249,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         await EnsureCanActAsync(b, "You can only cancel your own bookings.");
         var state = b.GetLifecycle(Clock.Now);
         if (state == TimeWindowState.Ended)
-            throw new BusinessException(PortalDomainErrorCodes.BookingLocked, "An ended booking cannot be cancelled.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: "An ended booking cannot be cancelled.");
         if (state == TimeWindowState.Cancelled) return;
         b.Cancel();
         await _bookings.UpdateAsync(b, autoSave: true);

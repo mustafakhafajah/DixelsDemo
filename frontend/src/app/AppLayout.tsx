@@ -31,14 +31,29 @@ const Icon = {
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`
 
-function Sidebar() {
-  const session = useSession()
-  const today = useMemo(() => dayAt(todayKey()), [])
-  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId)
+/* Admin-only menu. Its counts need the estate lists, so they are loaded only when an admin sees it. */
+function SpaceManagementNav() {
   const spaces = useSpaces()
   const buildings = useBuildings()
   const floors = useFloors()
   const spaceTypes = useSpaceTypes()
+  return (
+    <div>
+      <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
+      <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
+        <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
+        <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
+        <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.canCurrentUserBook).length ?? ''}</span></NavLink>
+        <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
+      </div>
+    </div>
+  )
+}
+
+function Sidebar() {
+  const session = useSession()
+  const today = useMemo(() => dayAt(todayKey()), [])
+  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId)
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
 
@@ -58,17 +73,7 @@ function Sidebar() {
         </div>
         <div>
           <NavLink to="/app/find" className={({ isActive }) => `${navClass({ isActive })} nav-primary`}>{Icon.find}Find a space</NavLink>
-          {session.isAdmin && (
-            <div>
-              <p className="nav-group-title" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>{Icon.estate}Space management</p>
-              <div style={{ marginLeft: 6, paddingLeft: 9, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 8 }}>
-                <NavLink to="/app/buildings" className={navClass}>Buildings<span className="nav-count">{buildings.data?.length ?? ''}</span></NavLink>
-                <NavLink to="/app/floors" className={navClass}>Floors<span className="nav-count">{floors.data?.length ?? ''}</span></NavLink>
-                <NavLink to="/app/spaces" className={navClass}>Spaces<span className="nav-count">{spaces.data?.filter((s) => s.canCurrentUserBook).length ?? ''}</span></NavLink>
-                <NavLink to="/app/space-types" className={navClass}>Space types<span className="nav-count">{spaceTypes.data?.length ?? ''}</span></NavLink>
-              </div>
-            </div>
-          )}
+          {session.isAdmin && <SpaceManagementNav />}
         </div>
       </nav>
 

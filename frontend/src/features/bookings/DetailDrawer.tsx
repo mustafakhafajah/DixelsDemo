@@ -25,7 +25,7 @@ function BookingDetail({ b }: { b: Booking }) {
   else if (state === 'cancelled') note = 'Cancelled. The record is kept and the window is bookable again.'
   else if (state === 'in_progress') note = 'This booking has already started, so it can only be cancelled or ended early.'
   else if (!mine && session.isAdmin) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it.`
-  else if (!mine) note = `Owned by ${b.ownerName}. You can only change your own bookings.`
+  else if (!mine) note = 'Someone else booked this. You can only change your own bookings.'
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
 
@@ -40,7 +40,7 @@ function BookingDetail({ b }: { b: Booking }) {
         <dt>Space</dt>
         <dd>{b.spaceName}{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{space.buildingName} · Floor {space.floorName} · {space.timeZone}</div>}</dd>
         <dt>Booked by</dt>
-        <dd>{b.ownerName}</dd>
+        <dd>{may ? b.ownerName : 'Someone else'}</dd>
         <dt>Start</dt><dd className="mono">{stampOffset(b.start)}</dd>
         <dt>End</dt><dd className="mono">{stampOffset(b.end)}</dd>
         <dt>Duration</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>

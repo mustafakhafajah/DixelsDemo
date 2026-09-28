@@ -236,7 +236,12 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task<BookingDto> MapAsync(Booking booking) => (await MapListAsync(new List<Booking> { booking }))[0];
 
-    /* ObjectMapper copies the booking; the space and owner names come from one query each for the whole list. */
+    /* Shown instead of the owner's name on other people's bookings to anyone who is not an admin. */
+    public const string HiddenOwnerName = "Booked";
+
+    /* ObjectMapper copies the booking; the space and owner names come from one query each for the whole list.
+     * Only admins (Bookings.ManageAll) see who booked what; everyone else sees their own name and
+     * "Booked" on the rest, so another person's name never leaves the server. */
     private async Task<List<BookingDto>> MapListAsync(List<Booking> list)
     {
         if (list.Count == 0) return new();
@@ -245,11 +250,14 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
         var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, u => u.GetDisplayName());
         var now = Clock.Now;
+        var seesNames = await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll);
         return list.Select(b =>
         {
             var dto = ObjectMapper.Map<Booking, BookingDto>(b);
             dto.SpaceName = spaces.GetValueOrDefault(b.SpaceId, "Unknown space");
-            dto.OwnerName = users.GetValueOrDefault(b.OwnerUserId, "a former user");
+            dto.OwnerName = seesNames || b.OwnerUserId == CurrentUser.Id
+                ? users.GetValueOrDefault(b.OwnerUserId, "a former user")
+                : HiddenOwnerName;
             dto.Lifecycle = b.GetLifecycle(now).ToApiValue();
             return dto;
         }).ToList();

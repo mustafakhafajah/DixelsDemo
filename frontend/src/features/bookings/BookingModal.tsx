@@ -135,7 +135,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         end: o.end,
         flagged: !!hit,
         skip: skipOverrides[t] ?? !!hit,
-        note: hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : `taken by ${hit.ownerName}`) : undefined,
+        note: hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.isAdmin ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
       }
     })
   }, [generated, bookings, spaceId, session.userId, skipOverrides])
@@ -155,7 +155,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const stillBusy = suggested && findOverlap(bookings, space.id, suggested.start, suggested.end)
       setConflict({
         message: clash
-          ? `${space.name} is held by ${clash.ownerName} from ${hm(clash.start)} to ${hm(clash.end)} UTC (${shortId(clash.id)}). Bookings on one space may never overlap.`
+          ? `${space.name} is already booked${session.isAdmin ? ` by ${clash.ownerName}` : ''} from ${hm(clash.start)} to ${hm(clash.end)} UTC. Bookings on one space may never overlap.`
           : message,
         suggested: stillBusy ? null : suggested,
       })
@@ -278,6 +278,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '6px 0 0' }}>
           {space
             ? `${space.typeName} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
+            : spacesQ.isError ? `Couldn't load the spaces: ${errorText(spacesQ.error).message}`
             : spacesQ.isLoading ? 'Loading spaces…'
               : floorId && !options.length ? 'No spaces on this floor are free for this time — try a different window or floor.' : ''}
         </p>

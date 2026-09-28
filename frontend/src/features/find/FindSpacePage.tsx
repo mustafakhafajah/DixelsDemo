@@ -2,7 +2,7 @@ import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react
 import { useBookings, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
-import { Loading, plural } from '../../components/bits'
+import { LoadError, Loading, plural } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
@@ -173,7 +173,9 @@ export function FindSpacePage() {
   let endDrag = (_s: Space) => {}
 
   let body
-  if (!findQ.data) body = <Loading />
+  const failed = [findQ, bookingsQ, maintQ].find((q) => q.isError)
+  if (failed) body = <LoadError what="the rooms" error={failed.error} onRetry={() => { findQ.refetch(); bookingsQ.refetch(); maintQ.refetch() }} />
+  else if (!findQ.data) body = <Loading />
   else if (!candidates.length) {
     body = (
       <div className="sched-empty">

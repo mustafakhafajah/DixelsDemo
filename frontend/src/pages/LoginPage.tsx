@@ -67,6 +67,7 @@ function LoginPage() {
             className="btn btn-primary btn-lg btn-block real-signin-btn"
             onClick={() => auth.signinRedirect()}
           >
+            Sign in with email
             <svg
               width="16"
               height="16"
@@ -83,7 +84,6 @@ function LoginPage() {
                 strokeLinejoin="round"
               />
             </svg>
-            Sign in with email
           </button>
         </div>
       </div>

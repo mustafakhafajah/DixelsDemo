@@ -91,6 +91,15 @@ export interface Booking extends Omit<BookingDto, 'startUtc' | 'endUtc' | 'lifec
   kind: 'booking'
   start: Date
   end: Date
+  /* Someone else's booking as an employee sees it: only when and where. It can't be opened. */
+  busy?: true
+}
+
+/* What the server tells a non-admin about other people's bookings (GET /api/app/booking/busy). */
+export interface BusyWindowDto {
+  spaceId: string
+  startUtc: string
+  endUtc: string
 }
 
 export interface MaintenanceDto {
@@ -148,6 +157,13 @@ export interface Window {
   startUtc: string
   endUtc: string
 }
+
+/* A busy window shaped like a booking, so free-time and overlap checks treat it the same way. */
+export const toBusy = (d: BusyWindowDto): Booking => ({
+  kind: 'booking', busy: true, id: `busy:${d.spaceId}:${d.startUtc}`, spaceId: d.spaceId, spaceName: '',
+  ownerUserId: '', ownerName: 'Busy', status: 'Confirmed', version: 0, seriesId: null,
+  creationTime: d.startUtc, lastModificationTime: null, start: parseUtc(d.startUtc), end: parseUtc(d.endUtc),
+})
 
 export const toBooking = (d: BookingDto): Booking => {
   const { startUtc, endUtc, lifecycle: _lifecycle, ...rest } = d

@@ -37,21 +37,48 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _scopes = scopes;
     }
 
+    /* Admins (Bookings.ManageAll) list anyone's bookings; everyone else only ever gets their own,
+     * whatever owner they ask for. Other people's time comes from GetBusyListAsync instead. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
     {
+        var ownerId = await SeesAllBookingsAsync() ? input.OwnerUserId : CurrentUser.GetId();
         var query = await _bookings.GetQueryableAsync();
         if (!input.IncludeCancelled) query = query.Where(b => b.Status == BookingStatus.Confirmed);
         if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
-        if (input.OwnerUserId.HasValue) query = query.Where(b => b.OwnerUserId == input.OwnerUserId.Value);
+        if (ownerId.HasValue) query = query.Where(b => b.OwnerUserId == ownerId.Value);
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
         var list = await AsyncExecuter.ToListAsync(query.OrderBy(b => b.StartUtc));
         return new ListResultDto<BookingDto>(await MapListAsync(list));
     }
 
+    /* Someone else's booking is "not found" for a non-admin, exactly like a booking that doesn't exist. */
     [Authorize(PortalPermissions.Bookings.Default)]
-    public async Task<BookingDto> GetAsync(Guid id) => await MapAsync(await GetBookingAsync(id));
+    public async Task<BookingDto> GetAsync(Guid id)
+    {
+        var b = await GetBookingAsync(id);
+        if (b.OwnerUserId != CurrentUser.Id && !await SeesAllBookingsAsync())
+            throw new BusinessException(PortalDomainErrorCodes.BookingNotFound, "No booking with that ID.");
+        return await MapAsync(b);
+    }
+
+    /* Only when and where: enough to show a grey "Busy" block and to know a time is taken. */
+    [Authorize(PortalPermissions.Bookings.Default)]
+    public async Task<ListResultDto<BusyWindowDto>> GetBusyListAsync(BusyListFilterDto input)
+    {
+        var me = CurrentUser.Id;
+        var query = (await _bookings.GetQueryableAsync())
+            .Where(b => b.Status == BookingStatus.Confirmed && b.OwnerUserId != me);
+        if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
+        if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
+        if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
+        var windows = await AsyncExecuter.ToListAsync(query.OrderBy(b => b.StartUtc)
+            .Select(b => new BusyWindowDto { SpaceId = b.SpaceId, StartUtc = b.StartUtc, EndUtc = b.EndUtc }));
+        return new ListResultDto<BusyWindowDto>(windows);
+    }
+
+    private Task<bool> SeesAllBookingsAsync() => AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll);
 
     [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
@@ -250,7 +277,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
         var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, u => u.GetDisplayName());
         var now = Clock.Now;
-        var seesNames = await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll);
+        var seesNames = await SeesAllBookingsAsync();
         return list.Select(b =>
         {
             var dto = ObjectMapper.Map<Booking, BookingDto>(b);

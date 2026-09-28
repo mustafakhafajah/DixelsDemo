@@ -23,6 +23,9 @@ public class BookingController : PortalController, IBookingAppService
     [HttpGet]
     public Task<ListResultDto<BookingDto>> GetListAsync([FromQuery] BookingListFilterDto input) => _bookings.GetListAsync(input);
 
+    [HttpGet("busy")]
+    public Task<ListResultDto<BusyWindowDto>> GetBusyListAsync([FromQuery] BusyListFilterDto input) => _bookings.GetBusyListAsync(input);
+
     /* Admin: how many upcoming bookings a space, floor or building has. */
     [HttpGet("upcoming-count")]
     public Task<int> GetUpcomingCountAsync([FromQuery] EstateScopeDto input) => _bookings.GetUpcomingCountAsync(input);

@@ -1,8 +1,11 @@
+import { useMemo } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from './client'
 import {
   toBooking,
+  toBusy,
+  type BusyWindowDto,
   toMaintenance,
   type Booking,
   type BookingDto,
@@ -175,6 +178,38 @@ export function useBookings(filter: RangeFilter, enabled = true) {
     enabled: ok && enabled,
     refetchInterval: 60_000,
   })
+}
+
+/* Other people's bookings as bare busy windows (no id, owner or name). */
+export function useBusy(filter: RangeFilter, enabled = true) {
+  const api = useApi()
+  const ok = useEnabled()
+  return useQuery({
+    queryKey: ['bookings', 'busy', filterKey(filter)],
+    queryFn: async (): Promise<Booking[]> =>
+      (await api<ListResult<BusyWindowDto>>('GET', '/api/app/booking/busy', undefined,
+        { FromUtc: filter.from?.toISOString(), ToUtc: filter.to?.toISOString(), SpaceId: filter.spaceId })).items.map(toBusy),
+    enabled: ok && enabled,
+    refetchInterval: 60_000,
+  })
+}
+
+/* Everything that makes a time taken. Admins get every booking in full; everyone else gets their own
+ * bookings plus grey "Busy" windows for the rest, because the server never sends them anyone else's. */
+export function useAvailability(filter: RangeFilter, who: { isAdmin: boolean; userId: string }, enabled = true) {
+  const all = useBookings(filter, enabled && who.isAdmin)
+  const own = useBookings({ ...filter, ownerUserId: who.userId }, enabled && !who.isAdmin && !!who.userId)
+  const busy = useBusy(filter, enabled && !who.isAdmin)
+  const data = useMemo(() => (own.data && busy.data ? [...own.data, ...busy.data] : undefined), [own.data, busy.data])
+  if (who.isAdmin) return all
+  const failed = own.isError ? own : busy.isError ? busy : null
+  return {
+    data,
+    isError: !!failed,
+    error: failed?.error ?? null,
+    isLoading: own.isLoading || busy.isLoading,
+    refetch: () => Promise.all([own.refetch(), busy.refetch()]),
+  }
 }
 
 export function useMaintenance(filter: RangeFilter, enabled = true) {

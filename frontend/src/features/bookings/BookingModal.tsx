@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ApiError, errorText } from '../../api/client'
-import { useBookings, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
+import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { ErrorLine, RequiredMark, shortId } from '../../components/bits'
@@ -85,7 +85,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const rangeFrom = start ? dayAt(dayKey(start)) : undefined
   const lastOcc = generated?.occurrences.at(-1)?.end ?? end
   const rangeTo = lastOcc ? addDays(dayAt(dayKey(lastOcc)), 1) : undefined
-  const bookingsQ = useBookings({ from: rangeFrom, to: rangeTo }, hasWindow)
+  const bookingsQ = useAvailability({ from: rangeFrom, to: rangeTo }, session, hasWindow)
   const bookings = useMemo(() => bookingsQ.data ?? [], [bookingsQ.data])
 
   const spaces = useMemo(() => spacesQ.data ?? [], [spacesQ.data])

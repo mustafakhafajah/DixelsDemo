@@ -1,5 +1,5 @@
 import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useBookings, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
+import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { LoadError, Loading, plural } from '../../components/bits'
@@ -132,7 +132,8 @@ function FindFilters() {
 
 export function FindSpacePage() {
   const f = useFindStore()
-  const { userId } = useSession()
+  const session = useSession()
+  const { userId } = session
   /* The room criteria are filtered on the server; typing in the search box waits a moment before asking. */
   const name = useDebouncedValue(f.query.trim())
   const findQ = useFindSpaces({
@@ -144,7 +145,7 @@ export function FindSpacePage() {
   })
   const dayFrom = useMemo(() => dayAt(f.date), [f.date])
   const dayTo = useMemo(() => addDays(dayAt(f.date), 1), [f.date])
-  const bookingsQ = useBookings({ from: dayFrom, to: dayTo })
+  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo }, session)
   const maintQ = useMaintenance({ from: dayFrom, to: dayTo })
 
   const items: ScheduleItem[] = useMemo(() => [...(bookingsQ.data ?? []), ...(maintQ.data ?? [])], [bookingsQ.data, maintQ.data])
@@ -281,7 +282,7 @@ export function FindSpacePage() {
                       ))}
                       {segs.map((g) => {
                         const it = g.item
-                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerUserId === userId ? 'You' : it.ownerName
+                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.busy ? 'Busy' : it.ownerUserId === userId ? 'You' : it.ownerName
                         return (
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
                             style={{ left: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}

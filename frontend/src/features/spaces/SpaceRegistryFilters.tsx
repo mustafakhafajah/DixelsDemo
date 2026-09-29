@@ -24,6 +24,10 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
 
   return (
     <div className="filter-bar">
+      <div style={{ flex: 1, minWidth: 180, alignSelf: 'flex-end' }}>
+        <input id="sf-name" className="inp" placeholder="Space name" aria-label="Space name" value={value.name}
+          onChange={(e) => set({ name: e.target.value })} />
+      </div>
       <div style={{ width: 180 }}>
         <label className="lbl" htmlFor="sf-building">Building</label>
         <Dropdown id="sf-building" value={value.buildingId} onChange={(v) => set({ buildingId: v, floorId: '' })}
@@ -34,11 +38,6 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
         <Dropdown id="sf-floor" value={value.floorId} onChange={(v) => set({ floorId: v })}
           disabled={!value.buildingId} placeholder="Building first"
           options={value.buildingId ? [{ value: '', label: 'All floors' }, ...floorOptions.map((f) => ({ value: f.id, label: `Floor ${f.name}` }))] : []} />
-      </div>
-      <div style={{ flex: 1, minWidth: 180 }}>
-        <label className="lbl" htmlFor="sf-name">Space name</label>
-        <input id="sf-name" className="inp" placeholder="Contains…" value={value.name}
-          onChange={(e) => set({ name: e.target.value })} />
       </div>
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="sf-type">Type</label>

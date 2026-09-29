@@ -45,6 +45,15 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         var query = await _maintenance.GetQueryableAsync();
         if (!input.IncludeCancelled) query = query.Where(m => m.Status == MaintenanceStatus.Active);
         if (input.SpaceId.HasValue) query = query.Where(m => m.SpaceId == input.SpaceId.Value);
+        /* The Building / Floor filters: only windows on spaces of that building / floor (a subquery). */
+        if (input.BuildingId.HasValue || input.FloorId.HasValue)
+        {
+            var spaces = await _spaces.GetQueryableAsync();
+            if (input.BuildingId.HasValue) spaces = spaces.Where(s => s.BuildingId == input.BuildingId.Value);
+            if (input.FloorId.HasValue) spaces = spaces.Where(s => s.FloorId == input.FloorId.Value);
+            var spaceIds = spaces.Select(s => s.Id);
+            query = query.Where(m => spaceIds.Contains(m.SpaceId));
+        }
         if (input.FromUtc.HasValue) query = query.Where(m => m.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(m => m.StartUtc < input.ToUtc.Value);
         var list = await AsyncExecuter.ToListAsync(query.OrderBy(m => m.StartUtc));

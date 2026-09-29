@@ -8,6 +8,7 @@ import { dayAt, todayKey } from '../lib/dateUtils'
 import { modals } from '../state/modalStore'
 import { useNavCountStore } from '../state/navCountStore'
 import { Overlays } from './Overlays'
+import { PageActionsSlot } from './pageActions'
 import { ESTATE_PAGES, manageAny, useSession } from './session'
 import { P } from '../auth/permissions'
 import './appShell.css'
@@ -15,11 +16,11 @@ import './appShell.css'
 const PAGE_META: Record<string, [string, string]> = {
   find: ['Find a space', 'See every room at a glance, or search a specific time. No approval step.'],
   bookings: ['Bookings', 'A calendar view of your bookings.'],
-  buildings: ['Buildings', 'The estate every floor and space belongs to.'],
-  floors: ['Floors', 'Every floor across every building, and any time blocked on it.'],
-  spaces: ['Spaces', 'The units people can book, and who may book them.'],
-  'space-types': ['Space types', 'The kinds of space an admin can give a space.'],
-  users: ['User directory', 'Manage portal accounts, their roles and access.'],
+  buildings: ['Buildings', "The estate every floor and space belongs to. A building's time zone applies to every floor and space in it."],
+  floors: ['Floors', "Every floor across every building. A floor uses its building's time zone."],
+  spaces: ['Spaces', "The units people can book. One row is one physical unit; a space uses its building's time zone."],
+  'space-types': ['Space types', 'The kinds of space an admin can give a space. Renaming a type updates every space that uses it.'],
+  users: ['User directory', 'Portal accounts, their roles and access.'],
 }
 
 /* "New booking" only where booking is the task at hand. */
@@ -128,7 +129,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   )
 }
 
-function Topbar({ onMenu }: { onMenu: () => void }) {
+function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivElement | null) => void }) {
   const { pathname } = useLocation()
   const { isAdmin, can } = useSession()
   const view = pathname.split('/')[2] || 'bookings'
@@ -142,6 +143,8 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
+      {/* The page's own main buttons (PageActions) land here, next to New booking. */}
+      <div ref={onSlot} className="page-actions" />
       {BOOKING_VIEWS.has(view) && can(P.Bookings.Create) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}
     </header>
   )
@@ -149,6 +152,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
 
 export function AppLayout() {
   const [navOpen, setNavOpen] = useState(false)
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!navOpen) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false)
@@ -161,9 +165,11 @@ export function AppLayout() {
       <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar onMenu={() => setNavOpen(true)} />
+        <Topbar onMenu={() => setNavOpen(true)} onSlot={setActionsSlot} />
         <main className="main">
-          <Outlet />
+          <PageActionsSlot.Provider value={actionsSlot}>
+            <Outlet />
+          </PageActionsSlot.Provider>
         </main>
       </div>
       <Overlays />

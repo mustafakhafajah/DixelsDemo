@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { errorText } from '../../api/client'
 import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
+import { PageActions } from '../../app/pageActions'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { BookablePill, LoadError, Loading, plural } from '../../components/bits'
@@ -34,16 +35,14 @@ function useBookableMenuItem() {
 /* A row-menu entry only for those allowed to use it. */
 const when = <T,>(allowed: boolean, item: T): T[] => (allowed ? [item] : [])
 
-/* Without onAdd (no permission to create) there is no add button. */
-function RegistryCard({ title, sub, addLabel, onAdd, children }: { title: string; sub: string; addLabel: string; onAdd?: () => void; children: ReactNode }) {
+/* The page's list. Its title is the top bar's; the add button sits there too (PageActions).
+ * Without onAdd (no permission to create) there is no add button. */
+function RegistryCard({ addLabel, onAdd, children }: { addLabel: string; onAdd?: () => void; children: ReactNode }) {
   return (
-    <div className="card" style={{ overflow: 'hidden' }}>
-      <div className="card-head">
-        <div><h2 className="card-title">{title}</h2><p className="card-sub">{sub}</p></div>
-        {onAdd && <button type="button" className="btn btn-accent btn-sm" onClick={onAdd}>{addLabel}</button>}
-      </div>
-      {children}
-    </div>
+    <>
+      {onAdd && <PageActions><button type="button" className="btn btn-primary" onClick={onAdd}>{addLabel}</button></PageActions>}
+      <div className="card" style={{ overflow: 'hidden' }}>{children}</div>
+    </>
   )
 }
 
@@ -62,7 +61,7 @@ export function BuildingsPage() {
   const paging = useClientPaging(q.data ?? [])
   return (
     <section>
-      <RegistryCard title="Building registry" sub="Every building in the estate. Its time zone applies to every floor and space in it." addLabel="Add a building" onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
+      <RegistryCard addLabel="Add a building" onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
         {q.isError ? <LoadError what="the buildings" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet. Add one above.</p> : (
           <>
             <div className="table-scroll">
@@ -116,7 +115,7 @@ export function FloorsPage() {
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
     <section>
-      <RegistryCard title="Floor registry" sub="Every floor across every building. A floor uses its building's time zone." addLabel="Add a floor" onAdd={can(P.Floors.Create) ? () => modals.floor() : undefined}>
+      <RegistryCard addLabel="Add a floor" onAdd={can(P.Floors.Create) ? () => modals.floor() : undefined}>
         <div className="filter-bar">
           <div style={{ width: 220 }}>
             <label className="lbl" htmlFor="ff-building">Building</label>
@@ -212,11 +211,8 @@ export function SpacesPage() {
 
   return (
     <section>
+      {can(P.Spaces.Create) && <PageActions><button type="button" className="btn btn-primary" onClick={() => modals.space()}>Add a space</button></PageActions>}
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="card-head">
-          <div><h2 className="card-title">Space registry</h2><p className="card-sub">One row is one physical unit. Inactive units cannot be booked. A space uses its building's time zone.</p></div>
-          {can(P.Spaces.Create) && <button type="button" className="btn btn-accent btn-sm" onClick={() => modals.space()}>Add a space</button>}
-        </div>
         <SpaceRegistryFilters value={filters} onChange={changeFilters}
           buildings={buildings.data ?? []} floors={floors.data ?? []} types={types.data ?? []} />
         {q.isError ? <LoadError what="the spaces" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
@@ -284,7 +280,7 @@ export function SpaceTypesPage() {
 
   return (
     <section>
-      <RegistryCard title="Space types" sub="The kinds of space an admin can give a space. Renaming a type updates every space that uses it." addLabel="Add a space type" onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
+      <RegistryCard addLabel="Add a space type" onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
         {q.isError ? <LoadError what="the space types" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet. Add one above.</p> : (
           <>
             <div className="table-scroll">

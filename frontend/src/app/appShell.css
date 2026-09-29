@@ -357,3 +357,7 @@
   .app-shell .sched-range { flex-wrap: wrap; }
   .app-shell .sched-row > div > :not(label), .app-shell .sched-range > div > :not(label) { width: 100% !important; }
 }
+
+/* Top bar: the page's own main buttons (PageActions), next to New booking. */
+.app-shell .page-actions { display: flex; gap: 8px; align-items: center; }
+.app-shell .page-actions:empty { display: none; }

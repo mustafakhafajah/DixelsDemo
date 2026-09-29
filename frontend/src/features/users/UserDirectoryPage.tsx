@@ -76,12 +76,6 @@ export function UserDirectoryPage() {
   return (
     <section className="user-dir">
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="card-head">
-          <div>
-            <h2 className="card-title">User directory</h2>
-            <p className="card-sub">Portal accounts, their roles and access.</p>
-          </div>
-        </div>
         <UserDirectoryFilters value={filters} onChange={changeFilters} />
         {q.isError ? <LoadError what="the users" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
           <p className="empty-note">

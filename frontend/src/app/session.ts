@@ -22,7 +22,7 @@ function homePath(can: Can) {
   if (can(P.Spaces.Default)) return '/app/find'
   const estate = ESTATE_PAGES.find((p) => manageAny(p.area).some(can))?.path
   if (estate) return estate
-  return '/app/find'
+  return can(P.Users.Default) ? '/app/users' : '/app/find'
 }
 
 /* The token's role claim decides routing instantly; the server profile confirms it. */

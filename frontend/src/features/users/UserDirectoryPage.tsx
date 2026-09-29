@@ -7,7 +7,7 @@ import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { parseUtc } from '../../lib/dateUtils'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useScheduleStore } from '../../state/scheduleStore'
-import { ADMIN_SITE_URL, roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
+import { roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
 import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
 import './users.css'
 
@@ -79,11 +79,7 @@ export function UserDirectoryPage() {
         <div className="card-head">
           <div>
             <h2 className="card-title">User directory</h2>
-            <p className="card-sub">Portal accounts and their roles. Roles, permissions and accounts are managed in the administration site; changes apply to each person's screen within a minute.</p>
-          </div>
-          <div className="admin-links">
-            <a className="btn btn-sm" href={`${ADMIN_SITE_URL}/Identity/Roles`} target="_blank" rel="noopener noreferrer">Manage roles &amp; permissions ↗</a>
-            <a className="btn btn-sm" href={`${ADMIN_SITE_URL}/Identity/Users`} target="_blank" rel="noopener noreferrer">Manage users ↗</a>
+            <p className="card-sub">Portal accounts, their roles and access.</p>
           </div>
         </div>
         <UserDirectoryFilters value={filters} onChange={changeFilters} />

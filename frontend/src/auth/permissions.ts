@@ -14,8 +14,8 @@ export const P = {
   /* Default = see bookings, Create = book, Edit = reschedule / end early, Delete = cancel,
    * ManageAll = everyone's bookings rather than only your own. */
   Bookings: group('Portal.Bookings', ['Create', 'Edit', 'Delete', 'ManageAll']),
-  /* See the user directory (view only; accounts, roles and permissions are managed in ABP's administration site). */
-  Users: { Default: 'Portal.Users' },
+  /* The user directory uses ABP's own "view users" permission (Identity management > Users). */
+  Users: { Default: 'AbpIdentity.Users' },
 }
 
 /* Every employee holds these; used until the server's real grants have loaded, so nothing flickers. */

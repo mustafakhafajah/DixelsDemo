@@ -2,9 +2,6 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from '../../api/client'
 
-/* The ABP server, which also hosts the administration site (Identity users and roles); same default as api/client.ts. */
-export const ADMIN_SITE_URL = import.meta.env.VITE_API_URL ?? 'https://localhost:44393'
-
 /* ─── Shapes (camelCase, as the server sends them) ─── */
 
 /* A role's name, e.g. 'admin' or 'employee'; any role the server has. */

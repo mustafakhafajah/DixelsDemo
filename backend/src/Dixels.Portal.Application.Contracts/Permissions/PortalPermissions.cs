@@ -55,10 +55,4 @@ public static class PortalPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
     }
-
-    /* The admin user directory, view only. Accounts, roles and permissions are changed in ABP's Identity pages. */
-    public static class Users
-    {
-        public const string Default = GroupName + ".Users";
-    }
 }

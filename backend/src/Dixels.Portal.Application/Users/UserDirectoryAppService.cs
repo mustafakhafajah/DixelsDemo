@@ -32,8 +32,9 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
         _grants = grants;
     }
 
-    /* Filtered in memory: the directory is small, and it keeps the filter case-insensitive on every database. */
-    [Authorize(PortalPermissions.Users.Default)]
+    /* Uses ABP's own "view users" permission (Identity management > Users), so there is no extra permission to manage.
+     * Filtered in memory: the directory is small, and it keeps the filter case-insensitive on every database. */
+    [Authorize(IdentityPermissions.Users.Default)]
     public async Task<PagedResultDto<UserDirectoryItemDto>> GetListAsync(UserDirectoryListInput input)
     {
         var role = string.IsNullOrWhiteSpace(input.Role) ? null : await ResolveRoleAsync(input.Role);
@@ -69,7 +70,7 @@ public class UserDirectoryAppService : PortalAppService, IUserDirectoryAppServic
 
     /* Every role, admin first then by name. A role counts as an admin role when it is ABP's "admin" or it can
      * manage everyone's bookings. */
-    [Authorize(PortalPermissions.Users.Default)]
+    [Authorize(IdentityPermissions.Users.Default)]
     public async Task<ListResultDto<UserDirectoryRoleDto>> GetRolesAsync()
     {
         var items = new List<UserDirectoryRoleDto>();

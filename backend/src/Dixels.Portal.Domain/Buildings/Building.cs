@@ -15,7 +15,10 @@ public class Building : FullAuditedAggregateRoot<Guid>
     public int CloseHour { get; set; } = BuildingConsts.DefaultCloseHour;
     public int MinBookingMinutes { get; set; } = BuildingConsts.DefaultMinBookingMinutes;
     public int MaxBookingHours { get; set; } = BuildingConsts.DefaultMaxBookingHours;
+    /* One-off closed dates, in the building's own time zone. */
     public List<DateOnly> Holidays { get; set; } = new();
+    /* Closed every week on these days (0 = Sunday … 6 = Saturday), in the building's own time zone. */
+    public List<int> ClosedWeekdays { get; set; } = new();
 
     protected Building() { }
 

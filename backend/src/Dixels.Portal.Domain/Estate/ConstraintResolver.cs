@@ -14,7 +14,9 @@ public static class ConstraintResolver
             Pick(space.CloseHourOverride, floor?.CloseHourOverride, building.CloseHour) * 60,
             Pick(space.MinBookingMinutesOverride, floor?.MinBookingMinutesOverride, building.MinBookingMinutes),
             Pick(space.MaxBookingHoursOverride, floor?.MaxBookingHoursOverride, building.MaxBookingHours),
-            building.Holidays);
+            building.Holidays,
+            building.ClosedWeekdays,
+            building.TimeZone);
     }
 
     public static ResolvedBounds ResolveBounds(Building building, Floor? floor)

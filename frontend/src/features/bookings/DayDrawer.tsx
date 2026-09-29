@@ -3,6 +3,7 @@ import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
+import { isClosedDay } from '../../lib/closedDays'
 import { dayAt, dayKey, dayName, durationLabel, hm, minLabel, monthName } from '../../lib/dateUtils'
 import { computeFree, resourceDayBounds } from '../../lib/laneLayout'
 import { modals, type ScheduleId } from '../../state/modalStore'
@@ -17,10 +18,10 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
   const { multiSpace, single } = data
   const d = dayAt(key)
   const items = data.items.filter((i) => dayKey(i.start) === key)
-
   const canBook = session.can(P.Bookings.Create)
   const canEdit = session.can(P.Bookings.Edit)
   const canDelete = session.can(P.Bookings.Delete)
+
   const row = (i: ScheduleItem) => {
     const state = lifecycleOf(i)
     const isMaint = i.kind === 'maintenance'
@@ -69,7 +70,9 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
               onClick={() => modals.booking({ spaceId: single.id, start: dayAt(key, 0, w.start), end: dayAt(key, 0, Math.min(w.end, w.start + 240)) })}>
               {minLabel(w.start)}–{minLabel(w.end)} <span style={{ color: 'var(--slate)' }}>{durationLabel(w.end - w.start)}</span>
             </button>
-          )) : <span style={{ fontSize: 12, color: 'var(--slate)' }}>Fully booked between {minLabel(bounds.start)} and {minLabel(bounds.end)}.</span>}
+          )) : <span style={{ fontSize: 12, color: 'var(--slate)' }}>{isClosedDay(single.constraints, key)
+            ? 'The building is closed this day.'
+            : `Fully booked between ${minLabel(bounds.start)} and ${minLabel(bounds.end)}.`}</span>}
         </div>
       </>
     )

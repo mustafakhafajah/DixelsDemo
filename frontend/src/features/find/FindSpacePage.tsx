@@ -3,7 +3,7 @@ import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
-import { LoadError, Loading, plural } from '../../components/bits'
+import { ErrorLine, LoadError, Loading, plural } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
@@ -72,6 +72,9 @@ function FindFilters() {
             <label className="lbl" htmlFor="fv-end">End</label>
             <TimePicker id="fv-end" aria-label="End time" value={minLabel(endMin)}
               onChange={(v) => { const [h, m] = v.split(':').map(Number); f.patch({ customEnd: h * 60 + m }) }} />
+            {/* Until it is fixed, the search uses the shortest booking length from the start. */}
+            <ErrorLine id="fv-end-error" error={endMin <= f.time
+              ? { code: 'validation.end_before_start', message: `The end must be after the start (${minLabel(f.time)}).` } : undefined} />
           </div>
         )}
       </div>

@@ -37,7 +37,6 @@ function BookingDetail({ b }: { b: Booking }) {
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <StatusPill item={b} />
-        <span className="tag mono">v{b.version}</span>
         {b.seriesId && <span className="tag">Repeating</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>

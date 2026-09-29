@@ -53,7 +53,7 @@ public class BookingManager : DomainService
     public async Task<SpaceContext> GetSpaceContextAsync(Guid spaceId)
     {
         var space = await _spaces.FindAsync(spaceId)
-            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "No space with that ID.");
+            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "No space with that ID.").ForField("spaceId");
         var building = await _buildings.GetAsync(space.BuildingId);
         var floor = await _floors.FindAsync(space.FloorId);
         return new SpaceContext(space, floor, building);
@@ -62,32 +62,32 @@ public class BookingManager : DomainService
     public void ValidateWindow(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
     {
         if (startUtc == default || endUtc == default)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.").ForField("start");
         if (endUtc <= startUtc)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.").ForField("end");
         if (!allowPast && startUtc < Clock.Now)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: "Start must not be in the past.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: "Start must not be in the past.").ForField("start");
 
         var c = ctx.Constraints;
-        var day = DateOnly.FromDateTime(startUtc);
-        if (c.Holidays.Contains(day))
+        var closed = BuildingCalendar.ClosedReason(c, startUtc, endUtc);
+        if (closed != null)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message:
-                $"{ctx.Space.Name}'s building is closed for a holiday on {day:yyyy-MM-dd}.");
+                $"{ctx.Space.Name}'s building is closed {closed}.").ForField("date");
 
         var sMin = startUtc.Hour * 60 + startUtc.Minute;
         var eMin = endUtc.Hour * 60 + endUtc.Minute;
         if (eMin == 0) eMin = 1440;
         if (sMin < c.OpenMinute || eMin > c.CloseMinute || endUtc.Date > startUtc.Date && eMin != 1440)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
-                $"{ctx.Space.Name} can only be booked between {c.OpenMinute / 60:00}:00 and {c.CloseMinute / 60:00}:00.");
+                $"{ctx.Space.Name} can only be booked between {c.OpenMinute / 60:00}:00 and {c.CloseMinute / 60:00}:00.").ForField("window");
 
         var mins = (endUtc - startUtc).TotalMinutes;
         if (mins < c.MinBookingMinutes)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
-                $"Minimum booking length here is {c.MinBookingMinutes} minutes.");
+                $"Minimum booking length here is {c.MinBookingMinutes} minutes.").ForField("window");
         if (mins > c.MaxBookingHours * 60)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
-                $"Maximum booking length here is {c.MaxBookingHours} hours.");
+                $"Maximum booking length here is {c.MaxBookingHours} hours.").ForField("window");
     }
 
     public void EnsureBookable(SpaceContext ctx)
@@ -107,13 +107,13 @@ public class BookingManager : DomainService
     {
         if (!ctx.Building.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.BuildingNotBookable, message:
-                $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.");
+                $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.").ForField("spaceId");
         if (ctx.Floor != null && !ctx.Floor.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.FloorNotBookable, message:
-                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.");
+                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.").ForField("spaceId");
         if (!ctx.Space.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotBookable, message:
-                $"{ctx.Space.Name} is not bookable.");
+                $"{ctx.Space.Name} is not bookable.").ForField("spaceId");
         return null;
     }
 
@@ -125,7 +125,8 @@ public class BookingManager : DomainService
             throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceUnderMaintenance, message:
                     $"{ctx.Space.Name} is blocked ({m.Note ?? "blocked time"}) from {Stamp(m.StartUtc, m.EndUtc)} and can't be booked then.")
                 .WithData("maintenanceId", m.Id)
-                .WithData("scope", m.ScopeType.ToString());
+                .WithData("scope", m.ScopeType.ToString())
+                .WithData(ErrorFieldExtensions.FieldKey, "window");
     }
 
     public async Task EnsureNoConflictAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? excludeId)
@@ -137,7 +138,8 @@ public class BookingManager : DomainService
                     "The space is already booked for part of that window.")
                 .WithData("conflictingBookingId", c.Id)
                 .WithData("conflictStart", c.StartUtc.ToString("o"))
-                .WithData("conflictEnd", c.EndUtc.ToString("o"));
+                .WithData("conflictEnd", c.EndUtc.ToString("o"))
+                .WithData(ErrorFieldExtensions.FieldKey, "window");
     }
 
     /* One person can't hold two different spaces at once. */
@@ -151,7 +153,8 @@ public class BookingManager : DomainService
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingSelfOverlap, message:
                     $"You already have {other?.Name ?? "another space"} booked from {Hm(so.StartUtc)} to {Hm(so.EndUtc)}.")
                 .WithData("conflictingBookingId", so.Id)
-                .WithData("conflictingSpace", so.SpaceId);
+                .WithData("conflictingSpace", so.SpaceId)
+                .WithData(ErrorFieldExtensions.FieldKey, "window");
         }
     }
 

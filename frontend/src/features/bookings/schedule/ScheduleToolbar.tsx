@@ -1,4 +1,4 @@
-import { useUsers } from '../../../api/hooks'
+import { useBuildings, useFloors, useUsers } from '../../../api/hooks'
 import type { Space } from '../../../api/types'
 import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
@@ -22,6 +22,35 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const cfg = store.configs[id]
   const session = useSession()
   const users = useUsers(session.isAdmin)
+  const buildings = useBuildings().data ?? []
+  const allFloors = useFloors().data ?? []
+  /* Floor stays locked until a building is picked, then lists only that building's floors. */
+  const floors = allFloors.filter((f) => f.buildingId === cfg.buildingId)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+  const inScope = (s: Space, buildingId: string, floorId: string) =>
+    (!buildingId || s.buildingId === buildingId) && (!floorId || s.floorId === floorId)
+  /* Only spaces in the chosen building and floor; a chosen space elsewhere goes back to "All my spaces". */
+  const shownSpaces = spaces.filter((s) => inScope(s, cfg.buildingId, cfg.floorId))
+  const keepSpace = (buildingId: string, floorId: string) =>
+    cfg.spaceId === 'all' || spaces.some((s) => s.id === cfg.spaceId && inScope(s, buildingId, floorId)) ? cfg.spaceId : 'all'
+  /* Space stays locked until a floor is picked, so clearing the building or floor also clears the space. */
+  const pickBuilding = (buildingId: string) => store.patch(id, { buildingId, floorId: '', spaceId: 'all' })
+  const pickFloor = (floorId: string) => store.patch(id, { floorId, spaceId: floorId ? keepSpace(cfg.buildingId, floorId) : 'all' })
+
+  const building = (
+    <div style={{ minWidth: 200 }}>
+      <label className="lbl" htmlFor={`${id}-building`}>Building</label>
+      <Dropdown id={`${id}-building`} value={cfg.buildingId} onChange={pickBuilding}
+        options={[{ value: '', label: 'All buildings' }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
+    </div>
+  )
+  const floor = (
+    <div style={{ minWidth: 170 }}>
+      <label className="lbl" htmlFor={`${id}-floor`}>Floor</label>
+      <Dropdown id={`${id}-floor`} value={cfg.floorId} onChange={pickFloor} disabled={!cfg.buildingId} placeholder="Choose a building first"
+        options={cfg.buildingId ? [{ value: '', label: 'All floors' }, ...floors.map((f) => ({ value: f.id, label: `Floor ${f.name}` }))] : []} />
+    </div>
+  )
 
   const views = (
     <div className="seg" role="group" aria-label="Schedule view">
@@ -41,23 +70,27 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
     </div>
   )
 
-  /* Employees: one row, Month / Week / Day on the left and the period on the far right. */
+  /* Employees: the building and floor on top; Month / Week / Day on the left and the period on the far right under it. */
   if (!session.isAdmin) {
     return (
       <div className="sched-toolbar">
+        <div className="sched-row sched-row-left">{building}{floor}</div>
         <div className="sched-row">{views}{period}</div>
       </div>
     )
   }
 
-  /* Admins: Space, User and the period on top; Month / Week / Day under them, the From / To range on the far right. */
+  /* Admins: Building, Floor, Space and User on top; under them Month / Week / Day on the left, the period in the middle and the From / To range on the far right. */
   return (
     <div className="sched-toolbar">
       <div className="sched-row sched-row-top">
+        {building}
+        {floor}
         <div style={{ minWidth: 230 }}>
           <label className="lbl" htmlFor="my-space">Space</label>
-          <Dropdown id="my-space" value={cfg.spaceId} onChange={(v) => store.patch(id, { spaceId: v })}
-            options={[{ value: 'all', label: 'All my spaces' }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
+          <Dropdown id="my-space" value={cfg.floorId ? cfg.spaceId : ''} onChange={(v) => store.patch(id, { spaceId: v })}
+            disabled={!cfg.floorId} placeholder="Choose a floor first"
+            options={cfg.floorId ? [{ value: 'all', label: 'All spaces on this floor' }, ...shownSpaces.map((s) => ({ value: s.id, label: s.name }))] : []} />
         </div>
         <div>
           <label className="lbl" htmlFor="my-user">User</label>
@@ -67,10 +100,10 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
               ? users.data.map((u) => ({ value: u.id, label: `${u.id === session.userId ? 'You' : u.name}${u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}` }))
               : [{ value: session.userId, label: 'You' }]} />
         </div>
-        {period}
       </div>
-      <div className="sched-row">
+      <div className="sched-row sched-row-spread">
         {views}
+        {period}
         <div className="sched-range">
           <div>
             <label className="lbl" htmlFor={`${id}-from`}>From</label>

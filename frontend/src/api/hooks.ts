@@ -392,6 +392,7 @@ export interface BuildingInput {
   minBookingMinutes: number
   maxBookingHours: number
   holidays: string[]
+  closedWeekdays: number[]
 }
 
 export interface FloorInput {

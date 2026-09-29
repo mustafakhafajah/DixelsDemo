@@ -34,12 +34,15 @@ export function useSession() {
   const roleAdmin = extractRoles(auth.user?.profile.role).includes('admin')
   const claims = auth.user?.profile
   const isAdmin = profile.data?.isAdmin ?? roleAdmin
+  /* The roles stored for this user; the token's role claim until the profile arrives. */
+  const roles = profile.data?.roles ?? extractRoles(auth.user?.profile.role)
   /* Until the server's grants arrive, admins are assumed to hold everything and others the employee set. */
   const can: Can = (name) => (granted ? !!granted[name] : isAdmin || DEFAULT_EMPLOYEE_POLICIES.has(name))
   return {
     userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
     name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? 'You',
     isAdmin,
+    roles,
     can,
     /* A failed load counts as loaded, so the guards fall back to the defaults above instead of waiting forever. */
     permissionsLoaded: !!granted || policies.isError,

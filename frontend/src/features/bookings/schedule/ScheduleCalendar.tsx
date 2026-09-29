@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { P } from '../../../auth/permissions'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { lifecycleOf, type ScheduleItem } from '../../../api/types'
 import { useSession } from '../../../app/session'
+import { P } from '../../../auth/permissions'
+import { isClosedAt, isClosedDay } from '../../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, PX_PER_HOUR, SLOT_MIN } from '../../../lib/constants'
 import { addDays, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, pad, todayKey } from '../../../lib/dateUtils'
 import { computeFree, daySegment, gridBounds, layoutLanes, type DaySegment } from '../../../lib/laneLayout'
@@ -24,7 +25,7 @@ export const openItem = (i: ScheduleItem) => {
 }
 
 function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
-  const { cfg, items, multiSpace } = data
+  const { cfg, items, multiSpace, closed } = data
   const { userId } = useSession()
   const byDay = useMemo(() => {
     const m: Record<string, ScheduleItem[]> = {}
@@ -60,13 +61,19 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
               {Array.from({ length: daysInMonth }, (_, i) => {
                 const key = `${y}-${pad(mo + 1)}-${pad(i + 1)}`
                 const inRange = key >= cfg.from && key <= cfg.to
+                const shut = inRange && !!closed && isClosedDay(closed, key)
                 const list = byDay[key] ?? []
                 return (
-                  <div key={key} className={`day-cell${inRange ? '' : ' out'}${key === today ? ' today' : ''}`}
-                    onClick={inRange ? () => modals.day(key, id) : undefined}>
+                  /* A closed day (holiday or weekly closed day) does nothing when clicked; bookings made on it
+                   * before it was closed still open their detail. */
+                  <div key={key} className={`day-cell${inRange ? '' : ' out'}${shut ? ' closed' : ''}${key === today ? ' today' : ''}`}
+                    onClick={inRange && !shut ? () => modals.day(key, id) : undefined}
+                    title={shut ? 'The building is closed this day' : undefined}>
                     <span className="day-num">{i + 1}</span>
+                    {shut && <span className="closed-label">Closed</span>}
                     {list.slice(0, 2).map((it) => (
-                      <div key={it.id} className={`chip ${itemClass(it, userId)}`}>{hm(it.start)} {label(it)}</div>
+                      <div key={it.id} className={`chip ${itemClass(it, userId)}`}
+                        onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}>{hm(it.start)} {label(it)}</div>
                     ))}
                     {list.length > 2 && <div className="more-link">+{list.length - 2} more</div>}
                   </div>
@@ -81,12 +88,20 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   )
 }
 
+interface SlotDrag { key: string; a: number; b: number }
+
 function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
-  const { cfg, items, multiSpace, single, shownSpaces, busyOnSpace } = data
+  const { cfg, items, multiSpace, single, shownSpaces, busyOnSpace, closed } = data
   const { userId, can } = useSession()
   const canBook = can(P.Bookings.Create)
   const scroller = useRef<HTMLDivElement>(null)
   const pph = cfg.mode === 'day' ? PX_PER_HOUR.day : PX_PER_HOUR.week
+  /* Mouse drag over empty slots: from the slot pressed (a) to the slot under the pointer (b), in one day. */
+  const [drag, setDrag] = useState<SlotDrag | null>(null)
+  const dragNow = useRef<SlotDrag | null>(null) // the same drag, readable from the window listeners
+  const moveDrag = (d: SlotDrag | null) => { dragNow.current = d; setDrag(d) }
+  const dragCol = useRef<HTMLDivElement | null>(null)
+  const pressedWithMouse = useRef(false)
 
   const days = useMemo(() => {
     const out: string[] = []
@@ -105,7 +120,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const now = new Date()
   const today = todayKey()
   const nowMin = minOfDay(now)
-  /* Without permission to book, every slot is inert: no click-to-book. */
+  /* Without permission to book, every slot is inert: no click-to-book and no drag. */
   const bookable = canBook && (multiSpace || !!single?.canCurrentUserBook)
 
   useEffect(() => {
@@ -125,19 +140,72 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
     modals.booking({ spaceId: single?.id, start: dayAt(key, 0, min), end: dayAt(key, 0, endMin) })
   }
 
+  /* A slot can be booked when the space is bookable, the slot is free, not in the past and the building is open. */
+  const inertAt = (key: string, min: number) =>
+    !bookable || segsBy[key].some((g) => g.s < min + SLOT_MIN && min < g.e) || dayAt(key, 0, min) < now
+    || (!!closed && (isClosedDay(closed, key) || isClosedAt(closed, dayAt(key, 0, min))))
+
+  /* The drag only grows over free slots: it stops before the first booked, past or closed slot. */
+  const reach = (key: string, from: number, to: number) => {
+    const step = to >= from ? SLOT_MIN : -SLOT_MIN
+    let m = from
+    while (m !== to && m + step >= open && m + step < close && !inertAt(key, m + step)) m += step
+    return m
+  }
+
+  const finishDrag = (d: SlotDrag) => {
+    const lo = Math.min(d.a, d.b)
+    const hi = Math.max(d.a, d.b) + SLOT_MIN
+    if (hi - lo === SLOT_MIN) return slotPrefill(d.key, lo) // a plain click keeps the usual one-hour booking
+    const minM = single?.constraints.minBookingMinutes ?? DEFAULT_MIN_MINUTES
+    modals.booking({ spaceId: single?.id, start: dayAt(d.key, 0, lo), end: dayAt(d.key, 0, Math.min(1440, Math.max(hi, lo + minM))) })
+  }
+
+  /* The window listeners are added once per drag, so they read the latest helpers through this ref. */
+  const live = useRef({ reach, finishDrag })
+  useEffect(() => { live.current = { reach, finishDrag } })
+  const dragging = drag !== null
+  useEffect(() => {
+    if (!dragging) return
+    const move = (e: PointerEvent) => {
+      const col = dragCol.current
+      const d = dragNow.current
+      if (!col || !d) return
+      const target = open + Math.floor((e.clientY - col.getBoundingClientRect().top) / (pph / 2)) * SLOT_MIN
+      const b = live.current.reach(d.key, d.a, Math.max(open, Math.min(close - SLOT_MIN, target)))
+      if (b !== d.b) moveDrag({ ...d, b })
+    }
+    const up = () => {
+      const d = dragNow.current
+      moveDrag(null)
+      if (d) live.current.finishDrag(d)
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') moveDrag(null) }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [dragging, open, close, pph])
+
   const axis = Array.from({ length: Math.ceil((close - open) / 60) }, (_, i) => open + i * 60)
   const slotMins = Array.from({ length: Math.ceil((close - open) / SLOT_MIN) }, (_, i) => open + i * SLOT_MIN)
-  const track = cfg.mode === 'day' ? 'minmax(320px,1fr)' : 'minmax(126px,1fr)'
+  const track = cfg.mode === 'day' ? 'minmax(220px,1fr)' : 'minmax(126px,1fr)'
 
   return (
-    <div className="tg-wrap">
+    <div className={`tg-wrap${dragging ? ' dragging' : ''}`}>
       <div className="tg-scroll" ref={scroller}>
         <div className="tg-grid" style={{ gridTemplateColumns: `56px repeat(${days.length},${track})` }}>
           <div className="tg-corner" />
           {days.map((k) => {
             const d = dayAt(k)
+            const shut = !!closed && isClosedDay(closed, k)
             return (
-              <button key={k} type="button" className={`tg-colhead${k === today ? ' today' : ''}`} title="Open the full day"
+              <button key={k} type="button" className={`tg-colhead${k === today ? ' today' : ''}${shut ? ' closed' : ''}`}
+                title={shut ? 'The building is closed this day' : 'Open the full day'} disabled={shut}
                 onClick={() => modals.day(k, id)}>
                 <small>{dayName(d).slice(0, 3).toUpperCase()}</small>{d.getUTCDate()} {monthName(d).slice(0, 3)}
               </button>
@@ -149,19 +217,33 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
           {days.map((k) => {
             const segs = segsBy[k]
             const dow = dayAt(k).getUTCDay()
+            const shut = !!closed && isClosedDay(closed, k)
             const slots = slotMins.map((m) => {
-              const busy = segs.some((g) => g.s < m + SLOT_MIN && m < g.e)
-              const inert = !bookable || busy || dayAt(k, 0, m) < now
+              const inert = inertAt(k, m)
               return (
                 <div key={m} className={`tg-slot${m % 60 === 60 - SLOT_MIN ? ' hard' : ''}${inert ? ' inert' : ''}`}
                   style={{ height: pph / 2 }}
-                  onClick={inert ? undefined : () => slotPrefill(k, m)}
-                  title={inert ? undefined : `Book from ${minLabel(m)}`} />
+                  onPointerDown={inert ? undefined : (e) => {
+                    /* Mouse: press, drag and release to choose the time. Touch keeps tap-to-book so the grid still scrolls. */
+                    pressedWithMouse.current = e.pointerType === 'mouse'
+                    if (!pressedWithMouse.current || e.button !== 0) return
+                    e.preventDefault()
+                    dragCol.current = e.currentTarget.parentElement as HTMLDivElement
+                    moveDrag({ key: k, a: m, b: m })
+                  }}
+                  onClick={inert ? undefined : () => { if (!pressedWithMouse.current) slotPrefill(k, m) }}
+                  title={inert || dragging ? undefined : `Book from ${minLabel(m)}, or drag to choose the time`} />
               )
             })
+            const sel = drag?.key === k ? { lo: Math.min(drag.a, drag.b), hi: Math.max(drag.a, drag.b) + SLOT_MIN } : null
             return (
-              <div key={k} className={`tg-col${dow === 0 || dow === 6 ? ' weekend' : ''}`} style={{ height: bodyH }}>
+              <div key={k} className={`tg-col${dow === 0 || dow === 6 ? ' weekend' : ''}${shut ? ' closed' : ''}`} style={{ height: bodyH }}>
                 {slots}
+                {sel && (
+                  <div className="tg-select" style={{ top: ((sel.lo - open) / 60) * pph, height: ((sel.hi - sel.lo) / 60) * pph }}>
+                    {minLabel(sel.lo)}–{minLabel(sel.hi)}
+                  </div>
+                )}
                 {segs.map((g) => {
                   const it = g.item
                   const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerName
@@ -189,7 +271,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
         </div>
       </div>
       <p className="tg-hint">
-        {bookable ? 'Click an empty slot to book it' : canBook ? 'This space cannot be booked, so slots are inert' : 'You do not have permission to book'} · click a block for its detail · click a date for the whole day. All times UTC.
+        {bookable ? 'Click an empty slot to book it, or drag over empty slots to choose the time' : canBook ? 'This space cannot be booked, so slots are inert' : 'You do not have permission to book'} · click a block for its detail · click a date for the whole day. All times UTC.
       </p>
     </div>
   )

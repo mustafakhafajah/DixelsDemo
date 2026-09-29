@@ -11,10 +11,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-/* Mirrors the mock's go() guard: admin-only views fall back to Find a space. */
+/* Mirrors the mock's go() guard: admin-only views fall back to the schedule. */
 export function RequireAdmin({ children }: { children: ReactNode }) {
   const { isAdmin } = useSession()
-  if (!isAdmin) return <Navigate to="/app/find" replace />
+  if (!isAdmin) return <Navigate to="/app/bookings" replace />
   return <>{children}</>
 }
 

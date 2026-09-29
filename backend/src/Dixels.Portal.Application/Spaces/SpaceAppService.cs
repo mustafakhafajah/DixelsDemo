@@ -177,6 +177,8 @@ public class SpaceAppService
                 MinBookingMinutes = c.MinBookingMinutes,
                 MaxBookingHours = c.MaxBookingHours,
                 Holidays = c.Holidays.ToList(),
+                ClosedWeekdays = c.ClosedWeekdays.ToList(),
+                TimeZone = c.TimeZone,
             };
             dto.CanCurrentUserBook = BookingManager.CanBook(ctx);
             dto.NotBookableReason = BookingManager.FindNotBookableReason(ctx);

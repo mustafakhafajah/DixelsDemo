@@ -17,4 +17,6 @@ public class CreateUpdateBuildingDto
     [Range(5, 1440)] public int MinBookingMinutes { get; set; } = BuildingConsts.DefaultMinBookingMinutes;
     [Range(1, 24)] public int MaxBookingHours { get; set; } = BuildingConsts.DefaultMaxBookingHours;
     public List<DateOnly> Holidays { get; set; } = new();
+    /* 0 = Sunday … 6 = Saturday. */
+    public List<int> ClosedWeekdays { get; set; } = new();
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
@@ -30,10 +30,17 @@ const Icon = {
   bookings: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2" y="3.2" width="12" height="10.6" rx="1.8" /><path d="M2 6.4h12M5.4 1.8v2.6M10.6 1.8v2.6" strokeLinecap="round" /></svg>,
   users: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="6" cy="5.4" r="2.6" /><path d="M1.6 13.6c.6-2.4 2.4-3.8 4.4-3.8s3.8 1.4 4.4 3.8M10.6 3.2a2.4 2.4 0 010 4.6M12.2 9.9c1.2.5 1.9 1.6 2.2 3.1" strokeLinecap="round" /></svg>,
   estate: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="1.8" y="1.8" width="12.4" height="12.4" rx="1.5" /><path d="M1.8 7h12.4M7 1.8v12.4" strokeLinecap="round" /></svg>,
+  menu: <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" strokeLinecap="round" /></svg>,
   signOut: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`
+
+/* A stored role name as a label: "admin" -> "Admin", "space-manager" -> "Space manager". */
+const roleLabel = (role: string) => {
+  const words = role.replace(/[-_]+/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
 
 /* Management menu: a link per area the user can change. Its counts need the estate lists,
  * so they are loaded only when the menu is shown. */
@@ -62,7 +69,7 @@ function SpaceManagementNav({ show }: { show: Record<string, boolean> }) {
   )
 }
 
-function Sidebar() {
+function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const session = useSession()
   const today = useMemo(() => dayAt(todayKey()), [])
   const seesBookings = session.can(P.Bookings.Default)
@@ -72,12 +79,13 @@ function Sidebar() {
   const showEstate = Object.fromEntries(ESTATE_PAGES.map((p) => [p.path, manageAny(p.area).some(session.can)]))
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? ' open' : ''}`} id="app-nav">
       <div className="sidebar-logo">
         <img src={dixelsLogo} alt="Dixels" />
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Picking a page closes the slide-in menu on phones and tablets. */}
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 18 }} onClick={(e) => (e.target as HTMLElement).closest('a') && onNavigate()}>
         {seesBookings && (
           <div>
             <NavLink to="/app/bookings" className={navClass}>
@@ -108,7 +116,7 @@ function Sidebar() {
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
             <div style={{ fontSize: 11, color: 'var(--slate)' }}>
-              {session.isAdmin ? 'Space administrator' : 'Booking user'}
+              {session.roles.length ? session.roles.map(roleLabel).join(', ') : 'No role'}
             </div>
           </div>
         </div>
@@ -120,15 +128,17 @@ function Sidebar() {
   )
 }
 
-function Topbar() {
+function Topbar({ onMenu }: { onMenu: () => void }) {
   const { pathname } = useLocation()
   const { isAdmin, can } = useSession()
-  const view = pathname.split('/')[2] || 'find'
-  const meta = PAGE_META[view] ?? PAGE_META.find
+  const view = pathname.split('/')[2] || 'bookings'
+  const meta = PAGE_META[view] ?? PAGE_META.bookings
   const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule') : meta[0]
   return (
     <header className="topbar">
-      <div>
+      {/* Only shown on phones and tablets, where the sidebar slides in instead of standing beside the page. */}
+      <button type="button" className="iconbtn menu-btn" onClick={onMenu} aria-label="Open menu" aria-controls="app-nav">{Icon.menu}</button>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
@@ -138,11 +148,20 @@ function Topbar() {
 }
 
 export function AppLayout() {
+  const [navOpen, setNavOpen] = useState(false)
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navOpen])
+
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
+      {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Topbar />
+        <Topbar onMenu={() => setNavOpen(true)} />
         <main className="main">
           <Outlet />
         </main>

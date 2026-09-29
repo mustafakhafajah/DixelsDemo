@@ -17,6 +17,8 @@ public static class PortalDomainErrorCodes
     public const string NarrowingViolation = "validation.narrowing_violation";
     public const string InvalidFloor = "validation.invalid_floor";
     public const string InvalidSpaceType = "validation.invalid_space_type";
+    public const string UnknownTimeZone = "validation.time_zone_unknown";
+    public const string InvalidWeekday = "validation.invalid_weekday";
 
     public const string SpaceNotFound = "space.not_found";
     public const string SpaceNotBookable = "space.not_bookable";
@@ -40,6 +42,7 @@ public static class PortalDomainErrorCodes
     public const string BookingNotInProgress = "booking.not_in_progress";
     public const string VersionMismatch = "conflict.version_mismatch";
     public const string MaintenanceNotFound = "maintenance.not_found";
+
     public const string UserInvalidRole = "user.invalid_role";
 
     public static readonly IReadOnlyDictionary<string, HttpStatusCode> StatusCodes = new Dictionary<string, HttpStatusCode>
@@ -55,6 +58,8 @@ public static class PortalDomainErrorCodes
         [NarrowingViolation] = HttpStatusCode.BadRequest,
         [InvalidFloor] = HttpStatusCode.BadRequest,
         [InvalidSpaceType] = HttpStatusCode.BadRequest,
+        [UnknownTimeZone] = HttpStatusCode.BadRequest,
+        [InvalidWeekday] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceNotBookable] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,

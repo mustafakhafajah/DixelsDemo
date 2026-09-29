@@ -45,6 +45,7 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
 
         var ex = await Should.ThrowAsync<BusinessException>(() => BookAsync(roomA, Guid.NewGuid(), 0.5, 1.5));
         ex.Code.ShouldBe(PortalDomainErrorCodes.BookingConflict);
+        ex.Data[ErrorFieldExtensions.FieldKey].ShouldBe("window");
     }
 
     [Fact]
@@ -103,6 +104,24 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         count.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task Refuses_a_booking_on_a_weekly_closed_day()
+    {
+        var (roomA, _) = await CreateTwoSpacesAsync(b => b.ClosedWeekdays = new List<int> { (int)Ten.DayOfWeek });
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => BookAsync(roomA, Guid.NewGuid(), 0, 1));
+        ex.Code.ShouldBe(PortalDomainErrorCodes.HolidayClosed);
+        ex.Data[ErrorFieldExtensions.FieldKey].ShouldBe("date");
+    }
+
+    [Fact]
+    public async Task Allows_a_booking_on_an_open_day_of_a_building_with_closed_days()
+    {
+        var (roomA, _) = await CreateTwoSpacesAsync(b => b.ClosedWeekdays = new List<int> { (int)Ten.AddDays(1).DayOfWeek });
+
+        await Should.NotThrowAsync(() => BookAsync(roomA, Guid.NewGuid(), 0, 1));
+    }
+
     private Task BookAsync(Space space, Guid ownerId, double fromHours, double toHours, bool ownerMayHoldSeveralSpaces = false)
         => WithUnitOfWorkAsync(async () =>
         {
@@ -112,11 +131,13 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         });
 
     /* Each test gets its own building so tests never see each other's bookings. */
-    private Task<(Space, Space)> CreateTwoSpacesAsync()
+    private Task<(Space, Space)> CreateTwoSpacesAsync(Action<Building>? setUp = null)
         => WithUnitOfWorkAsync(async () =>
         {
             var tag = Guid.NewGuid().ToString("N")[..8];
-            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {tag}"), autoSave: true);
+            var newBuilding = new Building(Guid.NewGuid(), $"Test {tag}");
+            setUp?.Invoke(newBuilding);
+            var building = await _buildings.InsertAsync(newBuilding, autoSave: true);
             var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
             var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room A {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
             var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room B {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);

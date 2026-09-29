@@ -77,7 +77,7 @@ function LoginPage() {
               className="real-signin-icon"
             >
               <path
-                d="M6 2h5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6M9 8H2m0 0 3-3M2 8l3 3"
+                d="M10 2h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2M2 8h7m0 0L6 5m3 3-3 3"
                 stroke="currentColor"
                 strokeWidth="1.4"
                 strokeLinecap="round"

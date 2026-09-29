@@ -32,6 +32,7 @@ public class ProfileLookupAppService : PortalAppService, IProfileLookupAppServic
             Name = user.GetDisplayName(),
             Email = user.Email,
             IsAdmin = await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll),
+            Roles = (await _users.GetRoleNamesAsync(user.Id)).OrderBy(r => r).ToList(),
         };
     }
 

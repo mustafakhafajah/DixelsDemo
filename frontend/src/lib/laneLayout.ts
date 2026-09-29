@@ -1,5 +1,6 @@
 import type { Constraints, ScheduleItem } from '../api/types'
 import { DEFAULT_CLOSE_MIN, DEFAULT_OPEN_MIN } from './constants'
+import { closedReason, withoutClosed } from './closedDays'
 import { dayAt, dayKey, minOfDay } from './dateUtils'
 
 export interface DaySegment {
@@ -118,7 +119,6 @@ export function gridBounds(segsBy: Record<string, DaySegment[]>, constraints: Co
 
 /* Free windows for one space on one day inside [open, close] (mock: computeFree). */
 export function computeFree(c: Constraints, spaceId: string, items: ScheduleItem[], key: string, open: number, close: number): MinuteWindow[] {
-  if (c.holidays.includes(key)) return []
   const effOpen = Math.max(open, c.openMinute)
   const effClose = Math.min(close, c.closeMinute)
   if (effClose <= effOpen) return []
@@ -132,7 +132,8 @@ export function computeFree(c: Constraints, spaceId: string, items: ScheduleItem
     cursor = Math.max(cursor, e)
   })
   if (cursor < effClose) out.push({ start: cursor, end: effClose })
-  return out.filter((w) => w.end > w.start)
+  /* Time on a holiday or weekly closed day of the building (its own time zone) is never free. */
+  return withoutClosed(c, key, out.filter((w) => w.end > w.start))
 }
 
 /* Client-side mirror of the server's window validation, for live form feedback only. */
@@ -142,9 +143,8 @@ export function validateWindowLocal(c: Constraints | null, spaceName: string, st
   if (end <= start) return { code: 'validation.end_before_start', message: 'End must be after start.' }
   if (!allowPast && start < new Date()) return { code: 'validation.start_in_past', message: 'Start must not be in the past.' }
   if (!c) return null
-  const key = dayKey(start)
-  if (c.holidays.includes(key))
-    return { code: 'validation.holiday_closed', message: `${spaceName}'s building is closed for a holiday on ${key}.` }
+  const closed = closedReason(c, start, end)
+  if (closed) return { code: 'validation.holiday_closed', message: `${spaceName}'s building is closed ${closed}.` }
   const sMin = minOfDay(start)
   const eMin = endMin(end)
   if (sMin < c.openMinute || eMin > c.closeMinute)

@@ -1,20 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { errorText } from '../../api/client'
 import { useSession } from '../../app/session'
-import { P } from '../../auth/permissions'
 import { initials, LoadError, Loading } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { parseUtc } from '../../lib/dateUtils'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useScheduleStore } from '../../state/scheduleStore'
-import { toast } from '../../state/toastStore'
-import { roleLabel, useLockUser, useSetUserActive, useUnlockUser, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
-import { ChangeRoleModal } from './ChangeRoleModal'
+import { ADMIN_SITE_URL, roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
 import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
-import { UserFormModal } from './UserFormModal'
-import { UserPermissionsModal } from './UserPermissionsModal'
 import './users.css'
 
 const LOCK_LABEL = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })
@@ -42,24 +36,17 @@ function StatusPill({ active }: { active: boolean }) {
     : <span className="pill pill-cancelled"><span className="dot" />Inactive</span>
 }
 
-const rejected = (e: unknown) => { const { code, message } = errorText(e); toast('err', 'Request rejected', message, code) }
-
+/* Roles, permissions and accounts are changed in ABP's administration site; this page only shows them. */
 export function UserDirectoryPage() {
-  const { userId, isAdmin, can } = useSession()
+  const { userId, isAdmin } = useSession()
   const navigate = useNavigate()
   const [filters, setFilters] = useState<UserDirectoryFilterValues>(EMPTY_USER_FILTERS)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
-  const [adding, setAdding] = useState(false)
-  const [permsFor, setPermsFor] = useState<UserDirectoryItem | null>(null)
-  const [roleFor, setRoleFor] = useState<UserDirectoryItem | null>(null)
   /* Only the typed search is debounced; dropdowns apply at once. */
   const search = useDebouncedValue(filters.search.trim())
 
   const roles = useUserRoles().data
-  const lock = useLockUser()
-  const unlock = useUnlockUser()
-  const setActive = useSetUserActive()
 
   const q = useUserDirectory({
     page, pageSize, filter: search || undefined,
@@ -69,7 +56,7 @@ export function UserDirectoryPage() {
   })
   const total = q.data?.totalCount ?? 0
 
-  /* If the result shrinks (a filter, or the last row of the last page was changed), stay on a real page. */
+  /* If the result shrinks (a filter, or accounts removed elsewhere), stay on a real page. */
   useEffect(() => {
     const pageCount = Math.max(1, Math.ceil(total / pageSize))
     if (q.data && page > pageCount) setPage(pageCount)
@@ -79,59 +66,25 @@ export function UserDirectoryPage() {
   const changePageSize = (s: number) => { setPageSize(s); setPage(1) }
   const filtered = Object.values(filters).some((v) => v !== '')
 
-  const canEdit = can(P.Users.Edit)
-  const canAdd = can(P.Users.Create)
-  const canPermissions = can(P.Users.ManagePermissions)
-
-  /* Locks until someone unlocks the account. */
-  const lockUser = (u: UserDirectoryItem) => {
-    if (!window.confirm(`Lock ${u.name}? They won't be able to sign in until you unlock them.`)) return
-    lock.mutateAsync({ id: u.id, until: null }).then(
-      () => toast('ok', 'User locked', `${u.name} stays locked until unlocked.`), rejected)
-  }
-
-  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => {
-    const self = u.id === userId
-    const items: RowMenuItem[] = []
-    if (canEdit && !self) {
-      items.push({ label: 'Change role…', onClick: () => setRoleFor(u) })
-      if (u.isLocked) {
-        items.push({
-          label: 'Unlock',
-          onClick: () => unlock.mutateAsync(u.id).then(() => toast('ok', 'User unlocked', `${u.name} can sign in again.`), rejected),
-        })
-      } else {
-        items.push({ label: 'Lock', onClick: () => lockUser(u) })
-      }
-      items.push(u.isActive
-        ? {
-            label: 'Deactivate',
-            onClick: () => {
-              if (!window.confirm(`Deactivate ${u.name}? They can no longer sign in until the account is activated again.`)) return
-              setActive.mutateAsync({ id: u.id, isActive: false }).then(() => toast('ok', 'User deactivated', `${u.name} can no longer sign in.`), rejected)
-            },
-          }
-        : {
-            label: 'Activate',
-            onClick: () => setActive.mutateAsync({ id: u.id, isActive: true }).then(() => toast('ok', 'User activated', `${u.name} can sign in again.`), rejected),
-          })
-    }
-    if (isAdmin) {
-      items.push({
+  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin
+    ? [{
         label: 'View bookings',
         onClick: () => { useScheduleStore.getState().patch('my', { userId: u.id }); navigate('/app/bookings') },
-      })
-    }
-    if (canPermissions) items.push({ label: 'Permissions…', onClick: () => setPermsFor(u) })
-    return items
-  }
+      }]
+    : []
 
   return (
     <section className="user-dir">
       <div className="card" style={{ overflow: 'hidden' }}>
         <div className="card-head">
-          <div><h2 className="card-title">User directory</h2><p className="card-sub">Manage portal accounts, their roles and access</p></div>
-          {canAdd && <button type="button" className="btn btn-accent btn-sm" onClick={() => setAdding(true)}>Add user</button>}
+          <div>
+            <h2 className="card-title">User directory</h2>
+            <p className="card-sub">Portal accounts and their roles. Roles, permissions and accounts are managed in the administration site; changes apply to each person's screen within a minute.</p>
+          </div>
+          <div className="admin-links">
+            <a className="btn btn-sm" href={`${ADMIN_SITE_URL}/Identity/Roles`} target="_blank" rel="noopener noreferrer">Manage roles &amp; permissions ↗</a>
+            <a className="btn btn-sm" href={`${ADMIN_SITE_URL}/Identity/Users`} target="_blank" rel="noopener noreferrer">Manage users ↗</a>
+          </div>
         </div>
         <UserDirectoryFilters value={filters} onChange={changeFilters} />
         {q.isError ? <LoadError what="the users" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
@@ -143,7 +96,7 @@ export function UserDirectoryPage() {
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
               <thead>
-                <tr><th>User</th><th>Username</th><th>Role</th><th>Status</th><th>Lock</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+                <tr><th>User</th><th>Username</th><th>Role</th><th>Status</th><th>Lock</th>{isAdmin && <th style={{ textAlign: 'right' }}>Actions</th>}</tr>
               </thead>
               <tbody>
                 {q.data.items.map((u) => {
@@ -163,9 +116,11 @@ export function UserDirectoryPage() {
                       <td><RolePill role={u.role} roles={roles} /></td>
                       <td><StatusPill active={u.isActive} /></td>
                       <td><LockCell user={u} /></td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-block' }}>{items.length > 0 && <RowMenu items={items} />}</div>
-                      </td>
+                      {isAdmin && (
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'inline-block' }}>{items.length > 0 && <RowMenu items={items} />}</div>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -177,12 +132,6 @@ export function UserDirectoryPage() {
           <Pagination page={page} pageSize={pageSize} total={total} noun="users" onPage={setPage} onPageSize={changePageSize} />
         )}
       </div>
-      {adding && <UserFormModal onClose={() => setAdding(false)} />}
-      {roleFor && <ChangeRoleModal user={roleFor} onClose={() => setRoleFor(null)} />}
-      {permsFor && (
-        <UserPermissionsModal userId={permsFor.id} userName={permsFor.name || permsFor.userName}
-          readOnly={permsFor.id === userId} onClose={() => setPermsFor(null)} />
-      )}
     </section>
   )
 }

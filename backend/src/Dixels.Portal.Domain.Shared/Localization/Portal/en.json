@@ -16,9 +16,6 @@
     "Permission:Edit": "Edit",
     "Permission:Delete": "Delete",
     "Permission:ManageAll": "Manage everyone's",
-    "Permission:Users": "User directory",
-    "Permission:Users.Create": "Add",
-    "Permission:Users.Edit": "Edit",
-    "Permission:Users.ManagePermissions": "Permissions"
+    "Permission:Users": "User directory"
   }
 }

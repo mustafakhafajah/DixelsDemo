@@ -1,4 +1,4 @@
-/* User directory page and its permissions modal. */
+/* User directory page (view only). */
 .app-shell .user-dir .user-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .app-shell .user-dir .user-cell .avatar { width: 32px; height: 32px; font-size: 12px; }
 .app-shell .user-dir .user-email { font-size: 11.5px; color: var(--slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -6,16 +6,4 @@
 .app-shell .user-dir .pill-active .dot { background: #34a15a; }
 .app-shell .user-dir .lock-on { color: var(--rust); font-size: 12.5px; font-weight: 500; }
 .app-shell .user-dir .lock-off { color: var(--slate); font-size: 12.5px; }
-
-.app-shell .user-dir .perm-section + .perm-section { margin-top: 14px; }
-.app-shell .user-dir .perm-title { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); margin: 0 0 4px; }
-.app-shell .user-dir .perm-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; font-size: 13px; color: var(--ink); cursor: pointer; }
-.app-shell .user-dir .perm-row:hover { background: var(--surface-2); }
-.app-shell .user-dir .perm-row.child { padding-left: 30px; }
-.app-shell .user-dir .perm-row.disabled { cursor: default; color: var(--slate); }
-.app-shell .user-dir .perm-row.disabled:hover { background: none; }
-.app-shell .user-dir .perm-row input { margin: 0; accent-color: var(--accent-dark); }
-.app-shell .user-dir .perm-label { flex: 1; min-width: 0; }
-.app-shell .user-dir .perm-tag { font-size: 10.5px; color: var(--slate-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
-.app-shell .user-dir .perm-tag.blocked { color: var(--rust); border-color: var(--rust-line); background: var(--rust-soft); }
-.app-shell .user-dir .perm-tag.changed { color: var(--accent-dark); border-color: var(--accent); background: var(--accent-soft); }
+.app-shell .user-dir .admin-links { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }

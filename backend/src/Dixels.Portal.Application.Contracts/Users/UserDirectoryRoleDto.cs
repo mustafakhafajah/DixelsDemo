@@ -2,7 +2,7 @@ namespace Dixels.Portal.Users;
 
 public class UserDirectoryRoleDto
 {
-    /* The role's name, as sent back in Role / Roles and accepted by create, set role and the filter. */
+    /* The role's name, as sent back in Role / Roles and accepted by the Role filter. */
     public string Name { get; set; } = null!;
     /* e.g. "Admin", "Employee". */
     public string DisplayName { get; set; } = null!;

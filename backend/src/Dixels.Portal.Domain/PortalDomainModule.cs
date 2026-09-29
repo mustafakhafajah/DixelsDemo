@@ -1,10 +1,8 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Dixels.Portal.Identity;
 using Dixels.Portal.MultiTenancy;
 using Volo.Abp.AuditLogging;
-using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Emailing;
 using Volo.Abp.FeatureManagement;
@@ -13,7 +11,6 @@ using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.OpenIddict;
-using Volo.Abp.PermissionManagement;
 using Volo.Abp.PermissionManagement.Identity;
 using Volo.Abp.PermissionManagement.OpenIddict;
 using Volo.Abp.SettingManagement;
@@ -69,17 +66,6 @@ public class PortalDomainModule : AbpModule
         Configure<AbpClockOptions>(options =>
         {
             options.Kind = DateTimeKind.Utc;
-        });
-
-        /* Per-user blocks ("UB" grants): taking a role permission away from one user.
-         * First in the list, because a multi-permission check keeps the first provider's answer. */
-        Configure<AbpPermissionOptions>(options =>
-        {
-            options.ValueProviders.Insert(0, typeof(UserBlockPermissionValueProvider));
-        });
-        Configure<PermissionManagementOptions>(options =>
-        {
-            options.ManagementProviders.Add<UserBlockPermissionManagementProvider>();
         });
 
 #if DEBUG

@@ -62,7 +62,7 @@ export function BuildingsPage() {
   return (
     <section>
       <RegistryCard addLabel="Add a building" onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
-        {q.isError ? <LoadError what="the buildings" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet. Add one above.</p> : (
+        {q.isError ? <LoadError what="the buildings" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No buildings yet.{can(P.Buildings.Create) && <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 10 }} onClick={() => modals.building()}>Add a building</button>}</p> : (
           <>
             <div className="table-scroll">
               <table className="grid">
@@ -124,10 +124,11 @@ export function FloorsPage() {
           </div>
           <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => setBuildingId('')}>Clear filters</button>
         </div>
-        {q.isError ? <LoadError what="the floors" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet. Add one above.</p> : !shown.length ? (
+        {q.isError ? <LoadError what="the floors" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No floors yet.{can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 10 }} onClick={() => modals.floor()}>Add a floor</button>}</p> : !shown.length ? (
           <p className="empty-note">
             This building has no floors yet.
             <button type="button" className="btn btn-sm" style={{ marginLeft: 10 }} onClick={() => setBuildingId('')}>Clear filters</button>
+            {can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 10 }} onClick={() => modals.floor()}>Add a floor</button>}
           </p>
         ) : (
           <>
@@ -217,8 +218,9 @@ export function SpacesPage() {
           buildings={buildings.data ?? []} floors={floors.data ?? []} types={types.data ?? []} />
         {q.isError ? <LoadError what="the spaces" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
           <p className="empty-note">
-            {filtered ? 'No spaces match these filters.' : 'No spaces yet. Add one above.'}
+            {filtered ? 'No spaces match these filters.' : 'No spaces yet.'}
             {filtered && <button type="button" className="btn btn-sm" style={{ marginLeft: 10 }} onClick={() => changeFilters(EMPTY_SPACE_FILTERS)}>Clear filters</button>}
+            {can(P.Spaces.Create) && <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 10 }} onClick={() => modals.space()}>Add a space</button>}
           </p>
         ) : (
           <div className="table-scroll">
@@ -281,7 +283,7 @@ export function SpaceTypesPage() {
   return (
     <section>
       <RegistryCard addLabel="Add a space type" onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
-        {q.isError ? <LoadError what="the space types" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet. Add one above.</p> : (
+        {q.isError ? <LoadError what="the space types" error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">No space types yet.{can(P.SpaceTypes.Create) && <button type="button" className="btn btn-primary btn-sm" style={{ marginLeft: 10 }} onClick={() => modals.spaceType()}>Add a space type</button>}</p> : (
           <>
             <div className="table-scroll">
               <table className="grid">

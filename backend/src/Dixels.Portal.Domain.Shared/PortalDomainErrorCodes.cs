@@ -43,8 +43,6 @@ public static class PortalDomainErrorCodes
     public const string VersionMismatch = "conflict.version_mismatch";
     public const string MaintenanceNotFound = "maintenance.not_found";
 
-    public const string UserInvalidRole = "user.invalid_role";
-
     public static readonly IReadOnlyDictionary<string, HttpStatusCode> StatusCodes = new Dictionary<string, HttpStatusCode>
     {
         [MissingField] = HttpStatusCode.BadRequest,
@@ -80,6 +78,5 @@ public static class PortalDomainErrorCodes
         [BookingNotInProgress] = HttpStatusCode.Conflict,
         [VersionMismatch] = HttpStatusCode.Conflict,
         [MaintenanceNotFound] = HttpStatusCode.NotFound,
-        [UserInvalidRole] = HttpStatusCode.BadRequest,
     };
 }

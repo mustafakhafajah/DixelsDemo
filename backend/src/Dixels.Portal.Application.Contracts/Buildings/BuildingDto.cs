@@ -15,6 +15,7 @@ public class BuildingDto : EntityDto<Guid>
     public int MinBookingMinutes { get; set; }
     public int MaxBookingHours { get; set; }
     public List<DateOnly> Holidays { get; set; } = new();
+    public List<int> ClosedWeekdays { get; set; } = new();
     public int FloorCount { get; set; }
     public int SpaceCount { get; set; }
 }

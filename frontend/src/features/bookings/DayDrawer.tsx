@@ -1,7 +1,9 @@
 import { lifecycleOf, type ScheduleItem } from '../../api/types'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
+import { isClosedDay } from '../../lib/closedDays'
 import { dayAt, dayKey, dayName, durationLabel, hm, minLabel, monthName } from '../../lib/dateUtils'
 import { computeFree, resourceDayBounds } from '../../lib/laneLayout'
 import { modals, type ScheduleId } from '../../state/modalStore'
@@ -16,6 +18,9 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
   const { multiSpace, single } = data
   const d = dayAt(key)
   const items = data.items.filter((i) => dayKey(i.start) === key)
+  const canBook = session.can(P.Bookings.Create)
+  const canEdit = session.can(P.Bookings.Edit)
+  const canDelete = session.can(P.Bookings.Delete)
 
   const row = (i: ScheduleItem) => {
     const state = lifecycleOf(i)
@@ -36,12 +41,12 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
         </span>
         {isMaint ? <span className="pill pill-inactive"><span className="dot" />Blocked</span> : <StatusPill item={i} />}
         <span onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6 }}>
-          {isMaint && session.isAdmin && i.status === 'Active' && state !== 'ended' && (
+          {isMaint && session.can(P.Maintenance.Delete) && i.status === 'Active' && state !== 'ended' && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(i.id)}>Cancel</button>
           )}
-          {!isMaint && may && state === 'scheduled' && <button type="button" className="btn btn-sm" onClick={() => modals.reschedule(i)}>Reschedule</button>}
-          {!isMaint && may && state === 'in_progress' && <button type="button" className="btn btn-sm" disabled={actions.busy} onClick={() => actions.endEarly(i)}>End now</button>}
-          {!isMaint && may && (state === 'scheduled' || state === 'in_progress') && (
+          {!isMaint && may && canEdit && state === 'scheduled' && <button type="button" className="btn btn-sm" onClick={() => modals.reschedule(i)}>Reschedule</button>}
+          {!isMaint && may && canEdit && state === 'in_progress' && <button type="button" className="btn btn-sm" disabled={actions.busy} onClick={() => actions.endEarly(i)}>End now</button>}
+          {!isMaint && may && canDelete && (state === 'scheduled' || state === 'in_progress') && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy}
               onClick={() => (i.seriesId ? openItem(i) : actions.cancel(i))}>Cancel</button>
           )}
@@ -51,7 +56,8 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
   }
 
   let freeSection = null
-  if (!multiSpace && single) {
+  /* Free windows only lead to a booking, so they are not offered to someone who cannot book. */
+  if (canBook && !multiSpace && single) {
     const bounds = resourceDayBounds(single.constraints, single.id, data.busyOnSpace, key)
     const windows = computeFree(single.constraints, single.id, data.busyOnSpace, key, bounds.start, bounds.end)
       .filter((w) => w.end - w.start >= single.constraints.minBookingMinutes)
@@ -64,11 +70,13 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
               onClick={() => modals.booking({ spaceId: single.id, start: dayAt(key, 0, w.start), end: dayAt(key, 0, Math.min(w.end, w.start + 240)) })}>
               {minLabel(w.start)}–{minLabel(w.end)} <span style={{ color: 'var(--slate)' }}>{durationLabel(w.end - w.start)}</span>
             </button>
-          )) : <span style={{ fontSize: 12, color: 'var(--slate)' }}>Fully booked between {minLabel(bounds.start)} and {minLabel(bounds.end)}.</span>}
+          )) : <span style={{ fontSize: 12, color: 'var(--slate)' }}>{isClosedDay(single.constraints, key)
+            ? 'The building is closed this day.'
+            : `Fully booked between ${minLabel(bounds.start)} and ${minLabel(bounds.end)}.`}</span>}
         </div>
       </>
     )
-  } else if (multiSpace) {
+  } else if (canBook && multiSpace) {
     freeSection = <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '16px 0 0' }}>Pick one specific space to see its free windows here.</p>
   }
 
@@ -79,10 +87,12 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
         {items.length ? items.map(row) : <p style={{ fontSize: 12.5, color: 'var(--slate)', padding: '14px 0', margin: 0 }}>Nothing booked this day.</p>}
       </div>
       {freeSection}
-      <button type="button" className="btn btn-primary" style={{ marginTop: 18, width: '100%' }}
-        onClick={() => modals.booking({ spaceId: single?.id, start: dayAt(key, 9, 0), end: dayAt(key, 10, 0) })}>
-        New booking on this day
-      </button>
+      {canBook && (
+        <button type="button" className="btn btn-primary" style={{ marginTop: 18, width: '100%' }}
+          onClick={() => modals.booking({ spaceId: single?.id, start: dayAt(key, 9, 0), end: dayAt(key, 10, 0) })}>
+          New booking on this day
+        </button>
+      )}
     </Drawer>
   )
 }

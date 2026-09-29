@@ -5,6 +5,10 @@ import type { ScheduleId } from './modalStore'
 export type ScheduleMode = 'month' | 'week' | 'day'
 
 export interface ScheduleConfig {
+  /* '' = every building, otherwise only bookings in that building (and its closed days shown grey). */
+  buildingId: string
+  /* '' = every floor of that building, otherwise one floor id (needs a building). */
+  floorId: string
   /* 'all' = every space the user has booked, otherwise one space id. */
   spaceId: string
   /* Whose schedule 'my' shows; null = the signed-in user. */
@@ -17,7 +21,7 @@ export interface ScheduleConfig {
 
 function initial(spaceId: string): ScheduleConfig {
   const { from, to } = monthBounds(todayKey())
-  return { spaceId, userId: null, from, to, mode: 'month', savedMonth: null }
+  return { buildingId: '', floorId: '', spaceId, userId: null, from, to, mode: 'month', savedMonth: null }
 }
 
 function periodFor(mode: ScheduleMode, anchor: string): { from: string; to: string } {

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
 import { lifecycleOf, type Booking, type Maintenance } from '../../api/types'
 import { useSession } from '../../app/session'
-import { Loading, shortId, StatusPill } from '../../components/bits'
+import { P } from '../../auth/permissions'
+import { Loading, StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
 import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
 import { modals } from '../../state/modalStore'
@@ -28,13 +29,15 @@ function BookingDetail({ b }: { b: Booking }) {
   else if (!mine) note = 'Someone else booked this. You can only change your own bookings.'
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
+  const showReschedule = may && session.can(P.Bookings.Edit) && state === 'scheduled'
+  const showEndNow = may && session.can(P.Bookings.Edit) && state === 'in_progress'
+  const showCancel = may && session.can(P.Bookings.Delete) && (state === 'scheduled' || state === 'in_progress')
 
   return (
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <StatusPill item={b} />
-        <span className="tag mono">v{b.version}</span>
-        {b.seriesId && <span className="tag mono">{shortId(b.seriesId, 'SR')}</span>}
+        {b.seriesId && <span className="tag">Repeating</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>Space</dt>
@@ -49,7 +52,7 @@ function BookingDetail({ b }: { b: Booking }) {
       </dl>
       {note && <p className="muted-box" style={{ margin: '0 0 14px' }}>{note}</p>}
 
-      {askSeries ? (
+      {askSeries && showCancel ? (
         <div className="muted-box" style={{ marginBottom: 18 }}>
           <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>This booking is part of a repeating series. What should be cancelled?</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -60,17 +63,12 @@ function BookingDetail({ b }: { b: Booking }) {
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {may && state === 'scheduled' && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>Reschedule</button>}
-          {may && state === 'in_progress' && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>End now</button>}
-          {may && (state === 'scheduled' || state === 'in_progress') && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>Cancel booking</button>}
-          {(!may || state === 'ended' || state === 'cancelled') && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
+          {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>Reschedule</button>}
+          {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>End now</button>}
+          {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>Cancel booking</button>}
+          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
         </div>
       )}
-
-      <details>
-        <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--slate)' }}>Raw record</summary>
-        <pre className="json" style={{ marginTop: 9 }}>{JSON.stringify({ ...b, start: b.start.toISOString(), end: b.end.toISOString(), lifecycle: state }, null, 2)}</pre>
-      </details>
     </>
   )
 }
@@ -86,7 +84,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
         <span className={`pill ${cls}`}><span className="dot" />{label}</span>
         <span className="tag">{m.scopeType} blocked</span>
-        {m.seriesId && <span className="tag mono">{shortId(m.seriesId, 'MS')}</span>}
+        {m.seriesId && <span className="tag">Repeating</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>Scope</dt><dd>{m.scopeLabel}</dd>
@@ -97,7 +95,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
         <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>
       <div style={{ display: 'flex', gap: 8 }}>
-        {session.isAdmin && m.status === 'Active' && state !== 'ended'
+        {session.can(P.Maintenance.Delete) && m.status === 'Active' && state !== 'ended'
           ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Unblock this time</button>
           : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
       </div>
@@ -110,12 +108,12 @@ export function DetailDrawer({ entity, id }: { entity: 'booking' | 'maintenance'
   const maint = useMaintenanceWindow(entity === 'maintenance' ? id : null)
   const b = booking.data
   const m = maint.data
-  const title = entity === 'booking' ? shortId(id) : shortId(id, 'MT')
+  const title = entity === 'booking' ? 'Booking' : 'Blocked time'
   const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `${m.note || 'Blocked'} · ${m.scopeLabel}` : ''
   const failed = booking.error || maint.error
 
   return (
-    <Drawer title={title} titleClassName="mono" subtitle={subtitle} onClose={modals.close}>
+    <Drawer title={title} subtitle={subtitle} onClose={modals.close}>
       {b ? <BookingDetail b={b} /> : m ? <MaintenanceDetail m={m} /> : failed ? <p className="muted-box">This record could not be loaded.</p> : <Loading />}
     </Drawer>
   )

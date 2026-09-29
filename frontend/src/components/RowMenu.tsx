@@ -18,6 +18,9 @@ export function RowMenu({ items }: { items: RowMenuItem[] }) {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
+  /* Nothing the user may do on this row: no ⋯ button at all. */
+  if (!items.length) return null
+
   return (
     <div className="row-menu" ref={ref}>
       <button type="button" className="iconbtn" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open} title="Actions">

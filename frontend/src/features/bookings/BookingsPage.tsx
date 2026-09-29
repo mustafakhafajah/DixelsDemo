@@ -1,4 +1,4 @@
-import { LoadError } from '../../components/bits'
+import { LoadError, Loading } from '../../components/bits'
 import { ScheduleCalendar } from './schedule/ScheduleCalendar'
 import { ScheduleToolbar } from './schedule/ScheduleToolbar'
 import { useScheduleData } from './schedule/useScheduleData'
@@ -11,13 +11,9 @@ export function BookingsPage() {
         <ScheduleToolbar id="my" spaces={data.spaces} />
       </div>
       <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-        <div className="card-head">
-          <div>
-            <h2 className="card-title">Schedule</h2>
-            <p className="card-sub">{data.loading ? 'Loading bookings…' : 'Click a day to see full detail.'}</p>
-          </div>
-        </div>
-        {data.error ? <LoadError what="your bookings" error={data.error} onRetry={data.retry} /> : <ScheduleCalendar id="my" data={data} />}
+        {data.error ? <LoadError what="your bookings" error={data.error} onRetry={data.retry} />
+          : data.loading ? <Loading label="Loading bookings…" />
+          : <ScheduleCalendar id="my" data={data} />}
       </div>
     </section>
   )

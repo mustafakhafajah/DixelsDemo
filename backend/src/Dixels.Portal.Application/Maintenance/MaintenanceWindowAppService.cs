@@ -78,9 +78,9 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         foreach (var o in input.Occurrences)
         {
             if (o.StartUtc == default || o.EndUtc == default)
-                throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.").ForField("start");
             if (o.EndUtc <= o.StartUtc)
-                throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.").ForField("end");
         }
 
         var note = string.IsNullOrWhiteSpace(input.Note) ? "Blocked" : input.Note.Trim();

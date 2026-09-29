@@ -41,6 +41,26 @@ export function useProfile() {
   })
 }
 
+/* What the signed-in user may do, as ABP grants it right now. Refetched on focus and every minute,
+ * and invalidated (PERMISSION_KEYS) when someone changes grants, so hidden features follow along. */
+export const PERMISSION_KEYS = [['permissions']]
+
+interface ApplicationConfiguration {
+  auth?: { grantedPolicies?: Record<string, boolean> }
+}
+
+export function useGrantedPolicies() {
+  const api = useApi()
+  return useQuery({
+    queryKey: ['permissions'],
+    queryFn: async () => (await api<ApplicationConfiguration>('GET', '/api/abp/application-configuration')).auth?.grantedPolicies ?? {},
+    enabled: useEnabled(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  })
+}
+
 export function useUsers(enabled = true) {
   const api = useApi()
   const ok = useEnabled()
@@ -246,7 +266,7 @@ export function useMaintenanceWindow(id: string | null) {
 
 /* ─── Mutations ─── */
 
-function useInvalidate() {
+export function useInvalidate() {
   const qc = useQueryClient()
   return (keys: string[][]) => Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: k })))
 }
@@ -372,6 +392,7 @@ export interface BuildingInput {
   minBookingMinutes: number
   maxBookingHours: number
   holidays: string[]
+  closedWeekdays: number[]
 }
 
 export interface FloorInput {

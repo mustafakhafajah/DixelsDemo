@@ -104,6 +104,18 @@ public class ConstraintResolverTests
     }
 
     [Fact]
+    public void Weekly_closed_days_and_the_time_zone_come_from_the_building()
+    {
+        var building = HqNorth();
+        building.TimeZone = "Asia/Dubai";
+        building.ClosedWeekdays = new List<int> { 5, 6 };
+
+        var c = ConstraintResolver.Resolve(building, null, SpaceOn(building, FloorOf(building)));
+        c.ClosedWeekdays.ShouldBe(new[] { 5, 6 });
+        c.TimeZone.ShouldBe("Asia/Dubai");
+    }
+
+    [Fact]
     public void ResolveBounds_shows_what_a_new_space_on_that_floor_would_inherit()
     {
         var building = HqNorth();

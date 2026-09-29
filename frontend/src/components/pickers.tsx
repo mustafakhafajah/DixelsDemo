@@ -92,11 +92,10 @@ export function DatePicker({ id, value, onChange, min, max, placeholder = 'Pick 
   )
 }
 
-const HOURS = Array.from({ length: 24 }, (_, h) => pad(h))
-
-/* "HH:MM" as two dropdowns: hour, then minutes in steps (00/15/30/45 by default).
- * min ("HH:MM") leaves every earlier time out of the lists, so it cannot be picked at all.
- * The time already chosen always stays in the list, so it never shows as blank. */
+/* One list of times ("HH:MM") in steps of minuteStep (15 by default): 00:00, 00:15 … 23:45.
+ * min ("HH:MM") leaves every earlier time out of the list, so it cannot be picked at all.
+ * The time already chosen always stays in the list (even an off-step one such as 10:10),
+ * so the field never shows as blank. */
 export function TimePicker({ id, value, onChange, min, minuteStep = 15, disabled, className, 'aria-label': ariaLabel = 'Time' }: {
   id?: string
   value: string
@@ -107,27 +106,15 @@ export function TimePicker({ id, value, onChange, min, minuteStep = 15, disabled
   className?: string
   'aria-label'?: string
 }) {
-  const [h = '', m = ''] = value ? value.split(':') : []
-  const [minH, minM] = min ? min.split(':').map(Number) : [0, 0]
-  const minutes = Array.from({ length: Math.ceil(60 / minuteStep) }, (_, i) => pad(i * minuteStep))
-  /* Keep an off-step minute (e.g. a booking saved at 10:10) visible instead of blanking it. */
-  if (m && !minutes.includes(m)) { minutes.push(m); minutes.sort() }
-  const allowed = (hour: number, minute: number) => hour * 60 + minute >= minH * 60 + minM
-  /* Changing the hour keeps the minutes when they are still allowed, else takes the first allowed ones. */
-  const pickHour = (x: string) => {
-    const hour = Number(x)
-    const keep = m && allowed(hour, Number(m)) ? m : minutes.find((mm) => allowed(hour, Number(mm))) ?? '00'
-    onChange(`${x}:${keep}`)
+  const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+  const floor = min ? toMin(min) : 0
+  const times: string[] = []
+  for (let t = 0; t < 1440; t += minuteStep) {
+    if (t >= floor) times.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`)
   }
+  if (value && !times.includes(value)) { times.push(value); times.sort() }
   return (
-    <div className={cn('tw:flex tw:items-center tw:gap-1.5', className)} role="group" aria-label={ariaLabel}>
-      <Dropdown id={id} value={h} placeholder="HH" disabled={disabled} aria-label={`${ariaLabel} hour`}
-        options={HOURS.filter((x) => x === h || minutes.some((mm) => allowed(Number(x), Number(mm)))).map((x) => ({ value: x, label: x }))}
-        onChange={pickHour} />
-      <span className="tw:text-sm tw:font-semibold tw:text-muted-foreground">:</span>
-      <Dropdown value={m} placeholder="MM" disabled={disabled} aria-label={`${ariaLabel} minutes`}
-        options={minutes.filter((x) => x === m || !h || allowed(Number(h), Number(x))).map((x) => ({ value: x, label: x }))}
-        onChange={(x) => onChange(`${h || pad(minH)}:${x}`)} />
-    </div>
+    <Dropdown id={id} value={value} placeholder="--:--" disabled={disabled} aria-label={ariaLabel} className={className}
+      options={times.map((t) => ({ value: t, label: t }))} onChange={onChange} />
   )
 }

@@ -9,4 +9,6 @@ public record ResolvedConstraints(
     int CloseMinute,
     int MinBookingMinutes,
     int MaxBookingHours,
-    IReadOnlyList<DateOnly> Holidays);
+    IReadOnlyList<DateOnly> Holidays,
+    IReadOnlyList<int> ClosedWeekdays,
+    string TimeZone);

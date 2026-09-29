@@ -21,11 +21,12 @@ export function BookablePill({ bookable, reason }: { bookable: boolean; reason?:
     : <span className="pill pill-inactive" title={reason ?? undefined}><span className="dot" />Not bookable</span>
 }
 
-export function ErrorLine({ error }: { error: { code: string; message: string } | null | undefined }) {
+/* id: lets the field point at its message (aria-describedby). */
+export function ErrorLine({ error, id }: { error: { code: string; message: string } | null | undefined; id?: string }) {
   if (!error) return null
   return (
     /* Only the human sentence is shown; the code stays in the data for logic, not on screen. */
-    <p className="err" data-code={error.code}>
+    <p className="err" data-code={error.code} id={id} role="alert">
       <span className="msg">{error.message}</span>
     </p>
   )
@@ -39,8 +40,6 @@ export function RequiredMark() {
 export function Loading({ label = 'Loading…' }: { label?: string }) {
   return <p style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12.5, color: 'var(--slate)', margin: 0 }}>{label}</p>
 }
-
-export const shortId = (id: string, prefix = 'BK') => `${prefix}-${id.slice(0, 8).toUpperCase()}`
 
 export const plural =(n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 

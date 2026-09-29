@@ -20,7 +20,9 @@ export interface Building {
   closeHour: number
   minBookingMinutes: number
   maxBookingHours: number
+  /* Closed dates and weekly closed days (0 = Sunday), both in the building's own time zone. */
   holidays: string[]
+  closedWeekdays: number[]
   floorCount: number
   spaceCount: number
 }
@@ -44,6 +46,9 @@ export interface Constraints {
   minBookingMinutes: number
   maxBookingHours: number
   holidays: string[]
+  closedWeekdays: number[]
+  /* The building's time zone: holidays and closed weekdays are days there. */
+  timeZone: string
 }
 
 export interface Space {
@@ -132,6 +137,8 @@ export interface Profile {
   name: string
   email: string | null
   isAdmin: boolean
+  /* Role names from the identity database, e.g. ["admin"]. */
+  roles: string[]
 }
 
 export interface UserLookup {

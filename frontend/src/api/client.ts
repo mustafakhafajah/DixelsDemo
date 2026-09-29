@@ -3,17 +3,30 @@ import { useAuth } from 'react-oidc-context'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'https://localhost:44393'
 
+/* One message the server tied to a request field, e.g. { field: 'name', message: 'Give the space a name.' }. */
+export interface ServerFieldError { field: string; code: string; message: string }
+
 export class ApiError extends Error {
   status: number
   code: string
   data: Record<string, unknown>
+  /* Messages the server tied to a field: its rule errors say which field in data.field, and ABP's own
+   * checks ([Required], [Range]…) list the members they are about. Empty when no field is known. */
+  fieldErrors: ServerFieldError[]
 
-  constructor(status: number, code: string, message: string, data: Record<string, unknown> = {}) {
+  constructor(status: number, code: string, message: string, data: Record<string, unknown> = {}, fieldErrors: ServerFieldError[] = []) {
     super(message)
     this.status = status
     this.code = code
     this.data = data
+    this.fieldErrors = fieldErrors
   }
+}
+
+/* 'Name' / '$.name' / 'input.OpenHour' -> 'name' / 'openHour', matching the request's camelCase keys. */
+const fieldKey = (member: string) => {
+  const last = member.replace(/^\$\./, '').split('.').pop() ?? member
+  return last.charAt(0).toLowerCase() + last.slice(1)
 }
 
 type QueryValue = string | number | boolean | null | undefined
@@ -34,7 +47,7 @@ interface AbpErrorBody {
     code?: string | null
     message?: string
     data?: Record<string, unknown>
-    validationErrors?: { message: string }[] | null
+    validationErrors?: { message: string; members?: string[] | null }[] | null
   }
 }
 
@@ -55,7 +68,12 @@ export async function apiRequest<T>(token: string | undefined, method: string, p
     const validation = e?.validationErrors?.map((v) => v.message).join(' ')
     const code = e?.code || (res.status === 400 ? 'validation.invalid_request' : res.status === 401 ? 'auth.unauthorized'
       : res.status === 403 ? 'access.forbidden' : `http.${res.status}`)
-    throw new ApiError(res.status, code, validation || e?.message || res.statusText, e?.data ?? {})
+    const message = validation || e?.message || res.statusText
+    const data = e?.data ?? {}
+    const fieldErrors: ServerFieldError[] = typeof data.field === 'string'
+      ? [{ field: data.field, code, message }]
+      : (e?.validationErrors ?? []).filter((v) => v.members?.length).map((v) => ({ field: fieldKey(v.members![0]), code, message: v.message }))
+    throw new ApiError(res.status, code, message, data, fieldErrors)
   }
 
   if (res.status === 204) return undefined as T
@@ -73,8 +91,8 @@ export function useApi() {
   )
 }
 
-export function errorText(e: unknown): { code: string; message: string } {
-  if (e instanceof ApiError) return { code: e.code, message: e.message }
+export function errorText(e: unknown): { code: string; message: string; field?: string } {
+  if (e instanceof ApiError) return { code: e.code, message: e.message, field: e.fieldErrors[0]?.field }
   if (e instanceof Error) return { code: 'network.error', message: e.message }
   return { code: 'unknown', message: 'Something went wrong.' }
 }

@@ -8,6 +8,7 @@ using Dixels.Portal.Localization;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -98,12 +99,19 @@ public class BuildingAppService
 
     private static void CopyFields(Building b, CreateUpdateBuildingDto input)
     {
-        b.TimeZone = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
+        var tz = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
+        if (!BuildingCalendar.IsKnownZone(tz))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.UnknownTimeZone,
+                message: $"\"{tz}\" is not a known time zone. Use a name like Europe/Warsaw or Asia/Dubai.").ForField("timeZone");
+        if (input.ClosedWeekdays.Any(d => d is < 0 or > 6))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidWeekday, message: "Closed days must be weekdays 0 (Sunday) to 6 (Saturday).").ForField("closedWeekdays");
+        b.TimeZone = tz;
         b.IsBookable = input.IsBookable;
         b.OpenHour = input.OpenHour;
         b.CloseHour = input.CloseHour;
         b.MinBookingMinutes = input.MinBookingMinutes;
         b.MaxBookingHours = input.MaxBookingHours;
         b.Holidays = input.Holidays.Distinct().OrderBy(d => d).ToList();
+        b.ClosedWeekdays = input.ClosedWeekdays.Distinct().OrderBy(d => d).ToList();
     }
 }

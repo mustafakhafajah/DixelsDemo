@@ -14,6 +14,7 @@ public class BuildingConfiguration : IEntityTypeConfiguration<Building>
         b.Property(x => x.Name).IsRequired().HasMaxLength(BuildingConsts.MaxNameLength);
         b.Property(x => x.TimeZone).IsRequired().HasMaxLength(BuildingConsts.MaxTimeZoneLength);
         b.Property(x => x.Holidays).HasColumnType("date[]");
+        b.Property(x => x.ClosedWeekdays).HasColumnType("integer[]");
         b.HasIndex(x => x.Name).IsUnique();
     }
 }

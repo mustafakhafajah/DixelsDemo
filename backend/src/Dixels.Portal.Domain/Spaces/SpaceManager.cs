@@ -50,17 +50,17 @@ public class SpaceManager : DomainService
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the space a name.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the space a name.").ForField("name");
         var building = await _buildings.FindAsync(buildingId)
-            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Pick a building. Add one first if the list is empty.");
+            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Pick a building. Add one first if the list is empty.").ForField("buildingId");
         var floor = await _floors.FindAsync(floorId);
         if (floor == null || floor.BuildingId != building.Id)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidFloor, message: $"Pick a floor that belongs to {building.Name}.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidFloor, message: $"Pick a floor that belongs to {building.Name}.").ForField("floorId");
         var lower = trimmed.ToLower();
         if (await _spaces.AnyAsync(s => s.Name.ToLower() == lower && s.Id != excludeId))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceDuplicateName, message: "Another space already uses that name.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceDuplicateName, message: "Another space already uses that name.").ForField("name");
         if (!await _types.AnyAsync(t => t.Id == typeId))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidSpaceType, message: "Pick a space type. Add one on the Space types page if none fits.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidSpaceType, message: "Pick a space type. Add one on the Space types page if none fits.").ForField("typeId");
 
         EstateOverrideRules.EnsureOnlyNarrows("Space", "its floor", "its floor's",
             ConstraintResolver.ResolveBounds(building, floor),

@@ -40,10 +40,10 @@ public class SpaceTypeManager : DomainService
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the space type a name.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the space type a name.").ForField("name");
         var lower = trimmed.ToLower();
         if (await _types.AnyAsync(t => t.Name.ToLower() == lower && t.Id != excludeId))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceTypeDuplicate, message: $"There is already a space type called \"{trimmed}\".");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceTypeDuplicate, message: $"There is already a space type called \"{trimmed}\".").ForField("name");
         return trimmed;
     }
 }

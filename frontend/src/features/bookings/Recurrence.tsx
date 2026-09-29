@@ -1,8 +1,11 @@
 import { useState, type ReactNode } from 'react'
+import { ErrorLine } from '../../components/bits'
 import { DatePicker, Dropdown } from '../../components/pickers'
+import { WEEKDAYS } from '../../lib/closedDays'
 import { RECURRENCE_SAFETY_CAP } from '../../lib/constants'
 import { addDays, dayAt, dayKey, dayName, hm } from '../../lib/dateUtils'
 import type { RecurrenceRule, RepeatFreq } from '../../lib/recurrence'
+import type { FieldErrors } from '../../lib/useFieldErrors'
 
 export interface RecurrenceState {
   repeat: RepeatFreq
@@ -36,9 +39,31 @@ export function toRule(r: RecurrenceState, start: Date): RecurrenceRule | null {
   }
 }
 
-const DAYS: [number, string][] = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']]
+const DAYS = WEEKDAYS
+const bad = (message: string) => ({ code: 'validation.invalid_request', message })
 
-export function RecurrenceFields({ value, onChange, idPrefix }: { value: RecurrenceState; onChange: (v: RecurrenceState) => void; idPrefix: string }) {
+/* What is wrong with the repeat settings, keyed by field id (<prefix>-interval, -days, -count, -until). */
+export function recurrenceErrors(r: RecurrenceState, start: Date | null, idPrefix: string): FieldErrors {
+  if (r.repeat === 'none') return {}
+  const out: FieldErrors = {}
+  if (!Number.isInteger(r.interval) || r.interval < 1 || r.interval > 52) out[`${idPrefix}-interval`] = bad('Repeat every 1 to 52.')
+  if (r.repeat === 'weekly' && !r.byDay.length) out[`${idPrefix}-days`] = bad('Pick at least one day.')
+  if (r.endMode === 'count' && (!Number.isInteger(r.count) || r.count < 1 || r.count > RECURRENCE_SAFETY_CAP))
+    out[`${idPrefix}-count`] = bad(`Choose 1 to ${RECURRENCE_SAFETY_CAP} occurrences.`)
+  if (r.endMode === 'until') {
+    if (!r.until) out[`${idPrefix}-until`] = bad('Pick the last date.')
+    else if (start && r.until < dayKey(start)) out[`${idPrefix}-until`] = bad('The last date must be on or after the first one.')
+  }
+  return out
+}
+
+export function RecurrenceFields({ value, onChange, idPrefix, errors = {} }: {
+  value: RecurrenceState
+  onChange: (v: RecurrenceState) => void
+  idPrefix: string
+  /* From recurrenceErrors: each message shows under its own field. */
+  errors?: FieldErrors
+}) {
   const set = (p: Partial<RecurrenceState>) => onChange({ ...value, ...p })
   const unit = value.repeat === 'daily' ? 'day(s)' : value.repeat === 'monthly' ? 'month(s)' : 'week(s)'
   const toggleDay = (d: number) => set({ byDay: value.byDay.includes(d) ? value.byDay.filter((x) => x !== d) : [...value.byDay, d] })
@@ -64,6 +89,7 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
                 style={{ width: 64 }} onChange={(e) => set({ interval: Number(e.target.value) })} />
               <span className="mono" style={{ fontSize: 12, color: 'var(--slate)', whiteSpace: 'nowrap' }}>{unit}</span>
             </div>
+            <ErrorLine id={`${idPrefix}-interval-error`} error={errors[`${idPrefix}-interval`]} />
           </div>
         )}
       </div>
@@ -77,6 +103,7 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
             ))}
             <button type="button" className="btn btn-sm" style={{ marginLeft: 6 }} onClick={() => set({ byDay: [1, 2, 3, 4, 5] })}>Weekdays</button>
           </div>
+          <ErrorLine id={`${idPrefix}-days-error`} error={errors[`${idPrefix}-days`]} />
         </div>
       )}
 
@@ -90,16 +117,18 @@ export function RecurrenceFields({ value, onChange, idPrefix }: { value: Recurre
             </div>
             {value.endMode === 'count' ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="number" className="inp mono" min={1} max={200} value={value.count} style={{ width: 70 }}
+                <input type="number" id={`${idPrefix}-count`} className="inp mono" min={1} max={RECURRENCE_SAFETY_CAP} value={value.count} style={{ width: 70 }}
                   onChange={(e) => set({ count: Number(e.target.value) })} aria-label="Occurrences" />
                 <span className="mono" style={{ fontSize: 12, color: 'var(--slate)' }}>occurrences</span>
               </div>
             ) : (
               <div style={{ width: 190 }}>
-                <DatePicker value={value.until} onChange={(v) => set({ until: v })} aria-label="Until" />
+                <DatePicker id={`${idPrefix}-until`} value={value.until} onChange={(v) => set({ until: v })} aria-label="Until" />
               </div>
             )}
           </div>
+          <ErrorLine id={`${idPrefix}-count-error`} error={errors[`${idPrefix}-count`]} />
+          <ErrorLine id={`${idPrefix}-until-error`} error={errors[`${idPrefix}-until`]} />
         </div>
       )}
     </>

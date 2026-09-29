@@ -46,6 +46,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var query = await _bookings.GetQueryableAsync();
         if (!input.IncludeCancelled) query = query.Where(b => b.Status == BookingStatus.Confirmed);
         if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
+        query = await OnSpacesOfAsync(query, input.BuildingId, input.FloorId);
         if (ownerId.HasValue) query = query.Where(b => b.OwnerUserId == ownerId.Value);
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
@@ -71,11 +72,23 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var query = (await _bookings.GetQueryableAsync())
             .Where(b => b.Status == BookingStatus.Confirmed && b.OwnerUserId != me);
         if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
+        query = await OnSpacesOfAsync(query, input.BuildingId, input.FloorId);
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
         var windows = await AsyncExecuter.ToListAsync(query.OrderBy(b => b.StartUtc)
             .Select(b => new BusyWindowDto { SpaceId = b.SpaceId, StartUtc = b.StartUtc, EndUtc = b.EndUtc }));
         return new ListResultDto<BusyWindowDto>(windows);
+    }
+
+    /* The Building / Floor filters: only bookings on spaces of that building / floor (a subquery, one round trip). */
+    private async Task<IQueryable<Booking>> OnSpacesOfAsync(IQueryable<Booking> query, Guid? buildingId, Guid? floorId)
+    {
+        if (!buildingId.HasValue && !floorId.HasValue) return query;
+        var spaces = await _spaces.GetQueryableAsync();
+        if (buildingId.HasValue) spaces = spaces.Where(s => s.BuildingId == buildingId.Value);
+        if (floorId.HasValue) spaces = spaces.Where(s => s.FloorId == floorId.Value);
+        var spaceIds = spaces.Select(s => s.Id);
+        return query.Where(b => spaceIds.Contains(b.SpaceId));
     }
 
     private Task<bool> SeesAllBookingsAsync() => AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll);

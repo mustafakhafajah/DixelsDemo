@@ -169,6 +169,8 @@ export interface RangeFilter {
   from?: Date
   to?: Date
   spaceId?: string
+  buildingId?: string
+  floorId?: string
   ownerUserId?: string
   includeCancelled?: boolean
 }
@@ -178,13 +180,16 @@ function rangeQuery(f: RangeFilter) {
     FromUtc: f.from?.toISOString(),
     ToUtc: f.to?.toISOString(),
     SpaceId: f.spaceId,
+    BuildingId: f.buildingId,
+    FloorId: f.floorId,
     OwnerUserId: f.ownerUserId,
     IncludeCancelled: f.includeCancelled || undefined,
   }
 }
 
 const filterKey = (f: RangeFilter) => ({
-  from: f.from?.getTime(), to: f.to?.getTime(), spaceId: f.spaceId, ownerUserId: f.ownerUserId,
+  from: f.from?.getTime(), to: f.to?.getTime(), spaceId: f.spaceId, buildingId: f.buildingId, floorId: f.floorId,
+  ownerUserId: f.ownerUserId,
   includeCancelled: !!f.includeCancelled,
 })
 
@@ -208,7 +213,10 @@ export function useBusy(filter: RangeFilter, enabled = true) {
     queryKey: ['bookings', 'busy', filterKey(filter)],
     queryFn: async (): Promise<Booking[]> =>
       (await api<ListResult<BusyWindowDto>>('GET', '/api/app/booking/busy', undefined,
-        { FromUtc: filter.from?.toISOString(), ToUtc: filter.to?.toISOString(), SpaceId: filter.spaceId })).items.map(toBusy),
+        {
+          FromUtc: filter.from?.toISOString(), ToUtc: filter.to?.toISOString(), SpaceId: filter.spaceId,
+          BuildingId: filter.buildingId, FloorId: filter.floorId,
+        })).items.map(toBusy),
     enabled: ok && enabled,
     refetchInterval: 60_000,
   })

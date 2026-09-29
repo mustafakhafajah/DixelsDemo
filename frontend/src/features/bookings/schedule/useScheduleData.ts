@@ -21,20 +21,17 @@ export function useScheduleData(id: ScheduleId) {
   const ownerId = cfg.userId || session.userId
 
   const ready = !!session.userId
-  const scoped = useBookings({ from, to, ownerUserId: ownerId, spaceId: singleSpaceId || undefined }, ready)
+  /* A chosen building / floor is sent to the server, so each pick is a new request. */
+  const buildingId = cfg.buildingId || undefined
+  const floorId = cfg.floorId || undefined
+  const scoped = useBookings({ from, to, ownerUserId: ownerId, spaceId: singleSpaceId || undefined, buildingId, floorId }, ready)
   /* Everyone's bookings on the single space, so free windows and slot prefill see the whole picture. */
   const spaceAll = useBookings({ from, to, spaceId: singleSpaceId }, ready && !!singleSpaceId)
-  const maint = useMaintenance({ from, to }, ready)
+  const maint = useMaintenance({ from, to, buildingId, floorId }, ready)
 
   return useMemo(() => {
     const spaces = spacesQ.data ?? []
-    const spaceById = new Map(spaces.map((s) => [s.id, s]))
-    /* A chosen building (and floor) keeps only what happens there. */
-    const inScope = (spaceId: string) => {
-      const s = spaceById.get(spaceId)
-      return (!cfg.buildingId || s?.buildingId === cfg.buildingId) && (!cfg.floorId || s?.floorId === cfg.floorId)
-    }
-    const mine = (scoped.data ?? []).filter((b) => inScope(b.spaceId))
+    const mine = scoped.data ?? []
     const spaceIds = multiSpace ? [...new Set(mine.map((b) => b.spaceId))] : [cfg.spaceId]
     const cleaning = (maint.data ?? []).filter((m) => spaceIds.includes(m.spaceId))
     const items: ScheduleItem[] = [...mine, ...cleaning].sort((a, b) => a.start.getTime() - b.start.getTime())

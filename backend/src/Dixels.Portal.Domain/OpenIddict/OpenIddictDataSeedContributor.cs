@@ -83,7 +83,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         var webClientId = configurationSection["Portal_Web:ClientId"];
         if (!webClientId.IsNullOrWhiteSpace())
         {
-            var webClientRootUrl = configurationSection["Portal_Web:RootUrl"]!.EnsureEndsWith('/');
+            var webClientRootUrls = RootUrls(configurationSection["Portal_Web:RootUrl"]).Select(u => u.EnsureEndsWith('/')).ToList();
 
             /* Portal_Web client is only needed if you created a tiered
              * solution. Otherwise, you can delete this client. */
@@ -98,9 +98,9 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.Implicit
                 },
                 scopes: commonScopes,
-                redirectUri: $"{webClientRootUrl}signin-oidc",
-                clientUri: webClientRootUrl,
-                postLogoutRedirectUri: $"{webClientRootUrl}signout-callback-oidc"
+                redirectUris: webClientRootUrls.Select(u => $"{u}signin-oidc").ToList(),
+                clientUri: webClientRootUrls.First(),
+                postLogoutRedirectUris: webClientRootUrls.Select(u => $"{u}signout-callback-oidc").ToList()
             );
         }
 
@@ -108,7 +108,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         var appClientId = configurationSection["Portal_App:ClientId"];
         if (!appClientId.IsNullOrWhiteSpace())
         {
-            var appRootUrl = configurationSection["Portal_App:RootUrl"]!.EnsureEndsWith('/');
+            var appRootUrls = RootUrls(configurationSection["Portal_App:RootUrl"]).Select(u => u.EnsureEndsWith('/')).ToList();
 
             /* Public SPA client using Authorization Code + PKCE only (no client secret,
              * no Implicit flow) — this is the client the React app authenticates through. */
@@ -120,9 +120,9 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 secret: null,
                 grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode },
                 scopes: commonScopes,
-                redirectUri: $"{appRootUrl}callback",
-                clientUri: appRootUrl,
-                postLogoutRedirectUri: appRootUrl,
+                redirectUris: appRootUrls.Select(u => $"{u}callback").ToList(),
+                clientUri: appRootUrls.First(),
+                postLogoutRedirectUris: appRootUrls,
                 requirePkce: true
             );
         }
@@ -132,7 +132,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         var swaggerClientId = configurationSection["Portal_Swagger:ClientId"];
         if (!swaggerClientId.IsNullOrWhiteSpace())
         {
-            var swaggerRootUrl = configurationSection["Portal_Swagger:RootUrl"]?.TrimEnd('/');
+            var swaggerRootUrls = RootUrls(configurationSection["Portal_Swagger:RootUrl"]).Select(u => u.TrimEnd('/')).ToList();
 
             await CreateApplicationAsync(
                 name: swaggerClientId!,
@@ -142,11 +142,16 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 secret: null,
                 grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode, },
                 scopes: commonScopes,
-                redirectUri: $"{swaggerRootUrl}/swagger/oauth2-redirect.html",
-                clientUri: swaggerRootUrl
+                redirectUris: swaggerRootUrls.Select(u => $"{u}/swagger/oauth2-redirect.html").ToList(),
+                clientUri: swaggerRootUrls.FirstOrDefault()
             );
         }
     }
+
+    /* A RootUrl may list several addresses, comma-separated (e.g. the shared server and localhost),
+     * so one database accepts sign-ins from every place the app runs. */
+    private static List<string> RootUrls(string? value) =>
+        (value ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     private async Task CreateApplicationAsync(
         [NotNull] string name,
@@ -157,8 +162,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         List<string> grantTypes,
         List<string> scopes,
         string? clientUri = null,
-        string? redirectUri = null,
-        string? postLogoutRedirectUri = null,
+        List<string>? redirectUris = null,
+        List<string>? postLogoutRedirectUris = null,
         List<string>? permissions = null,
         bool requirePkce = false)
     {
@@ -200,7 +205,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        if (!redirectUri.IsNullOrWhiteSpace() || !postLogoutRedirectUri.IsNullOrWhiteSpace())
+        if (redirectUris?.Count > 0 || postLogoutRedirectUris?.Count > 0)
         {
             application.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
         }
@@ -301,7 +306,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        if (redirectUri != null)
+        foreach (var redirectUri in redirectUris ?? [])
         {
             if (!redirectUri.IsNullOrEmpty())
             {
@@ -317,7 +322,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        if (postLogoutRedirectUri != null)
+        foreach (var postLogoutRedirectUri in postLogoutRedirectUris ?? [])
         {
             if (!postLogoutRedirectUri.IsNullOrEmpty())
             {

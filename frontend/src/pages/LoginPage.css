@@ -21,6 +21,14 @@
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  /* The login page is a branded light page in both themes: its own --lp-* colours, light form controls. */
+  color-scheme: light;
+}
+
+/* The page scrollbar and canvas stay light too (beats the theme's inline color-scheme on <html>). */
+:root:has(.login-page) {
+  color-scheme: light !important;
+  background: #ffffff;
 }
 
 .login-page * {
@@ -66,6 +74,7 @@
   letter-spacing: -0.02em;
   color: #fff;
   margin: 0 0 14px;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 .login-page .promo-copy p {
@@ -116,8 +125,10 @@
 }
 
 .login-page .signin-card h2 {
-  /* Explicit, so the global (dark-mode) heading colour from index.css can't wash it out. */
+  /* Both headings keep the system font they had from the old global h1 / h2 styles. */
   color: var(--lp-ink);
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 118%;
   font-size: 21px;
   font-weight: 700;
   margin: 0 0 5px;

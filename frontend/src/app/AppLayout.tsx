@@ -7,6 +7,7 @@ import { Toasts } from '../components/Toasts'
 import { dayAt, todayKey } from '../lib/dateUtils'
 import { modals } from '../state/modalStore'
 import { useNavCountStore } from '../state/navCountStore'
+import { useThemeStore } from '../state/themeStore'
 import { Overlays } from './Overlays'
 import { PageActionsSlot } from './pageActions'
 import { ESTATE_PAGES, manageAny, useSession } from './session'
@@ -33,6 +34,8 @@ const Icon = {
   estate: <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="1.8" y="1.8" width="12.4" height="12.4" rx="1.5" /><path d="M1.8 7h12.4M7 1.8v12.4" strokeLinecap="round" /></svg>,
   menu: <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" strokeLinecap="round" /></svg>,
   signOut: <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  sun: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="8" cy="8" r="3" /><path d="M8 1.4v1.4M8 13.2v1.4M1.4 8h1.4M13.2 8h1.4M3.3 3.3l1 1M11.7 11.7l1 1M3.3 12.7l1-1M11.7 4.3l1-1" strokeLinecap="round" /></svg>,
+  moon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M13.6 9.9A5.8 5.8 0 016.1 2.4a5.8 5.8 0 107.5 7.5z" strokeLinejoin="round" /></svg>,
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`
@@ -81,8 +84,13 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
 
   return (
     <aside className={`sidebar${open ? ' open' : ''}`} id="app-nav">
+      {/* Light: the purple wordmark. Dark: the black tile with the white mark (appShell.css shows one). */}
       <div className="sidebar-logo">
-        <img src={dixelsLogo} alt="Dixels" />
+        <img className="logo-light" src={dixelsLogo} alt="Dixels" />
+        <span className="logo-dark" role="img" aria-label="Dixels">
+          <span className="logo-tile"><span className="logo-mark"><img src={dixelsLogo} alt="" /></span></span>
+          <span className="logo-word" aria-hidden="true">DIXELS</span>
+        </span>
       </div>
 
       {/* Picking a page closes the slide-in menu on phones and tablets. */}
@@ -135,6 +143,9 @@ function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivEl
   const view = pathname.split('/')[2] || 'bookings'
   const meta = PAGE_META[view] ?? PAGE_META.bookings
   const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule') : meta[0]
+  const { theme, toggle } = useThemeStore()
+  const dark = theme === 'dark'
+  const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme'
   return (
     <header className="topbar">
       {/* Only shown on phones and tablets, where the sidebar slides in instead of standing beside the page. */}
@@ -143,6 +154,8 @@ function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivEl
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{meta[1]}</p>
       </div>
+      {/* Moon in light, sun in dark: the icon shows what a click switches to. */}
+      <button type="button" className="iconbtn theme-toggle" aria-pressed={dark} aria-label={themeLabel} title={themeLabel} onClick={toggle}>{dark ? Icon.sun : Icon.moon}</button>
       {/* The page's own main buttons (PageActions) land here, next to New booking. */}
       <div ref={onSlot} className="page-actions" />
       {BOOKING_VIEWS.has(view) && can(P.Bookings.Create) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>New booking</button>}

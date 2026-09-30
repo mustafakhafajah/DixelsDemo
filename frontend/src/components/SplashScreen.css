@@ -1,4 +1,4 @@
-/* Full-page "please wait" while signing in: the Dixels hexagon beating like a heart. */
+/* Full-page "please wait" while signing in: the Dixels hexagon beating like a heart. Follows the theme. */
 .splash {
   position: fixed;
   inset: 0;
@@ -7,8 +7,8 @@
   align-items: center;
   justify-content: center;
   gap: 22px;
-  background: #ffffff;
-  color: #71717a;
+  background: var(--paper);
+  color: var(--slate);
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   text-align: center;
 }
@@ -19,7 +19,7 @@
   height: 96px;
   overflow: hidden;
   animation: splash-beat 1.2s ease-in-out infinite;
-  filter: drop-shadow(0 6px 18px rgba(110, 58, 122, 0.35));
+  filter: drop-shadow(0 6px 18px var(--glow));
 }
 .splash-icon img { height: 96px; width: auto; display: block; }
 
@@ -30,7 +30,7 @@
   45% { transform: scale(1.08); }
 }
 
-.splash-title { margin: 0; font-size: 16px; font-weight: 600; color: #18181b; }
+.splash-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
 .splash-detail { margin: 4px 0 0; font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,22 +4,22 @@
 @import 'tailwindcss/theme.css' layer(theme) prefix(tw);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-/* shadcn colour names mapped to the app's purple theme (same values as .app-shell in appShell.css).
-   Fixed hex values, because dropdowns and calendars open in a portal outside .app-shell. */
+/* shadcn colour names mapped to the app's theme tokens (appShell.css). The tokens sit on :root, so
+   dropdowns and calendars that open in a portal outside .app-shell follow light and dark too. */
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #18181b;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #18181b;
-  --color-primary: #6e3a7a;
-  --color-primary-foreground: #ffffff;
-  --color-accent: #f4ecf5;
-  --color-accent-foreground: #6e3a7a;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #9c6ca4;
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--btn-purple);
+  --color-primary-foreground: var(--on-accent);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-dark);
+  --color-muted: var(--surface-3);
+  --color-muted-foreground: var(--slate);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--accent);
   /* The page root is 18px; pin sizes in px so pickers match the app's 14px fields. */
   --spacing: 4px;
   --text-xs: 12px;

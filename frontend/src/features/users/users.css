@@ -2,7 +2,7 @@
 .app-shell .user-dir .user-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .app-shell .user-dir .user-cell .avatar { width: 32px; height: 32px; font-size: 12px; }
 .app-shell .user-dir .user-email { font-size: 11.5px; color: var(--slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-shell .user-dir .pill-active { background: #e6f4ea; color: #2c7a45; }
-.app-shell .user-dir .pill-active .dot { background: #34a15a; }
+.app-shell .user-dir .pill-active { background: var(--ok-soft); color: var(--ok); }
+.app-shell .user-dir .pill-active .dot { background: var(--ok-dot); }
 .app-shell .user-dir .lock-on { color: var(--rust); font-size: 12.5px; font-weight: 500; }
 .app-shell .user-dir .lock-off { color: var(--slate); font-size: 12.5px; }

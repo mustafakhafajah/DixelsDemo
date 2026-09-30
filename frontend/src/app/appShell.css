@@ -1,15 +1,60 @@
-/* Ported from mock/css/app.css, scoped under .app-shell (index.css owns :root). */
-.app-shell {
+/* Ported from mock/css/app.css, scoped under .app-shell. The colour tokens live on :root so dropdowns,
+ * calendars and toasts that open in a portal outside .app-shell see them too. */
+:root {
   /* Light, neutral theme: white surfaces, soft grey borders, purple only for what is active. */
-  --ink: #18181b; --paper: #ffffff; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5;
+  --scheme: light;
+  --ink: #18181b; --ink-2: #3f3f46; --paper: #ffffff; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5;
   --line: #e4e4e7; --line-strong: #d4d4d8;
   --accent: #9c6ca4; --accent-dark: #6e3a7a; --accent-soft: #f4ecf5;
   /* One solid purple for every main-action button and the login button (same as the avatar). */
   --btn-purple: #6e3a7a; --btn-purple-hover: #5a2e64;
-  --copper: #a97425; --copper-soft: #faf1e3;
+  /* Text on solid purple, and the solid purple of my bookings, today and the sidebar avatar. */
+  --on-accent: #ffffff; --mine: #6e3a7a; --mine-edge: #4a2352;
+  --avatar: #875690; --avatar-admin: #18181b;
+  --copper: #8a5a14; --copper-soft: #faf1e3;
   --rust: #a5402f; --rust-soft: #faeae7; --rust-line: #e6bdb3;
-  --slate: #71717a; --slate-2: #a1a1aa;
-  color-scheme: light;
+  --ok: #2c7a45; --ok-soft: #e6f4ea; --ok-dot: #34a15a;
+  /* Slate is secondary text, slate-2 the faintest; both stay readable (4.5:1) on every surface. */
+  --slate: #66666e; --slate-2: #6b6b74;
+  --neutral-soft: rgba(140,146,152,.16); --inert: rgba(140,146,152,.07);
+  --band: rgba(156,108,164,.14);
+  --drag: #7c3aed; --drag-soft: rgba(124,58,237,.18); --drag-ink: #5b21b6; --drag-label: rgba(255,255,255,.85);
+  --code-bg: #0d0d10; --code-ink: #c9d3ce;
+  --overlay: rgba(12,15,19,.52);
+  --shadow-1: 0 1px 2px rgba(24,24,27,.04); --shadow-2: 0 1px 3px rgba(24,24,27,.12);
+  --shadow-hover: 0 3px 10px rgba(0,0,0,.18); --shadow-menu: 0 8px 24px rgba(0,0,0,.15);
+  --shadow-toast: 0 12px 34px rgba(0,0,0,.16); --shadow-modal: 0 30px 70px rgba(0,0,0,.3);
+  --shadow-side: rgba(0,0,0,.25);
+  --glow: rgba(110,58,122,.35);
+}
+/* Dark: near-black neutral greys, the same Dixels purple lifted so it reads on dark surfaces. */
+:root[data-theme="dark"] {
+  --scheme: dark;
+  --ink: #ececef; --ink-2: #d4d4d8; --paper: #0f0f12; --surface: #17171b; --surface-2: #1d1d22; --surface-3: #26262c;
+  --line: #2e2e35; --line-strong: #3a3a42;
+  --accent: #c9a2d1; --accent-dark: #b98ac3; --accent-soft: #2a1f2e;
+  --btn-purple: #8a4c98; --btn-purple-hover: #9d5dab;
+  --on-accent: #ffffff; --mine: #7d4489; --mine-edge: #c9a2d1;
+  --avatar: #8a4c98; --avatar-admin: #3f3f46;
+  --copper: #e0a95a; --copper-soft: #2e2414;
+  --rust: #f08a78; --rust-soft: #3a1c18; --rust-line: #6b3228;
+  --ok: #6fcf8f; --ok-soft: #15291c; --ok-dot: #3fb86a;
+  --slate: #a1a1aa; --slate-2: #94949c;
+  --neutral-soft: rgba(161,161,170,.16); --inert: rgba(161,161,170,.05);
+  --band: rgba(201,162,209,.12);
+  --drag: #a78bfa; --drag-soft: rgba(167,139,250,.2); --drag-ink: #ddd6fe; --drag-label: rgba(15,15,18,.85);
+  --code-bg: #0b0b0e; --code-ink: #c9d3ce;
+  --overlay: rgba(0,0,0,.65);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.3); --shadow-2: 0 1px 3px rgba(0,0,0,.5);
+  --shadow-hover: 0 3px 10px rgba(0,0,0,.5); --shadow-menu: 0 8px 24px rgba(0,0,0,.5);
+  --shadow-toast: 0 12px 34px rgba(0,0,0,.5); --shadow-modal: 0 30px 70px rgba(0,0,0,.6);
+  --shadow-side: rgba(0,0,0,.6);
+  --glow: rgba(201,162,209,.25);
+  /* The black tile behind the white Dixels mark (sidebar logo). */
+  --logo-tile: #000000;
+}
+.app-shell {
+  color-scheme: var(--scheme);
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
@@ -34,7 +79,7 @@
   background: var(--surface); color: var(--ink); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--slate); padding: 0 10px; margin: 0 0 6px; }
-.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #3f3f46; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
+.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
 .app-shell .nav-link:hover { background: var(--surface-3); color: var(--ink); }
 .app-shell .nav-link.active { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; color: var(--slate); }
@@ -42,19 +87,28 @@
 .app-shell .nav-count { margin-left: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
 /* flex-shrink: 0 keeps the logo from being squeezed to nothing on short screens. */
 .app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; flex-shrink: 0; padding: 2px 6px; }
-.app-shell .sidebar-logo img { height: 40px; width: auto; display: block; }
+.app-shell .sidebar-logo .logo-light { height: 40px; width: auto; display: block; }
+/* Dark theme: the Dixels black tile with the white mark, then the name. The mark is the logo file's
+ * hexagon only (the left ~30%, as on the splash screen), turned white. Both are rendered; CSS picks one. */
+.app-shell .sidebar-logo .logo-dark { display: none; align-items: center; gap: 10px; }
+:root[data-theme="dark"] .app-shell .sidebar-logo .logo-light { display: none; }
+:root[data-theme="dark"] .app-shell .sidebar-logo .logo-dark { display: flex; }
+.app-shell .logo-tile { width: 40px; height: 40px; border-radius: 10px; background: var(--logo-tile); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.app-shell .logo-mark { width: 17px; height: 22px; overflow: hidden; }
+.app-shell .logo-mark img { height: 22px; width: auto; display: block; filter: brightness(0) invert(1); }
+.app-shell .logo-word { font-size: 16px; font-weight: 400; letter-spacing: .16em; color: var(--ink); }
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
-.app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
-.app-shell .avatar.admin { background: var(--ink); }
-.app-shell .sidebar .avatar, .app-shell .sidebar .avatar.admin { background: var(--accent-dark); color: #fff; }
+.app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--avatar); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
+.app-shell .avatar.admin { background: var(--avatar-admin); }
+.app-shell .sidebar .avatar, .app-shell .sidebar .avatar.admin { background: var(--mine); color: var(--on-accent); }
 
 .app-shell .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 26px; background: var(--surface); border-bottom: 1px solid var(--line); }
-.app-shell .btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); line-height: normal; box-shadow: 0 1px 2px rgba(24,24,27,.04); }
+.app-shell .btn { font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); line-height: normal; box-shadow: var(--shadow-1); }
 .app-shell .btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .app-shell .btn:disabled { opacity: .45; cursor: not-allowed; }
 /* Main-action buttons are solid purple, the same as the login button. Secondary buttons stay white
  * so "Save" and "Discard" never look alike. */
-.app-shell .btn-primary, .app-shell .btn-accent { background: var(--btn-purple); border-color: var(--btn-purple); color: #fff; }
+.app-shell .btn-primary, .app-shell .btn-accent { background: var(--btn-purple); border-color: var(--btn-purple); color: var(--on-accent); }
 .app-shell .btn-primary:hover, .app-shell .btn-accent:hover { background: var(--btn-purple-hover); border-color: var(--btn-purple-hover); }
 .app-shell .btn-danger { color: var(--rust); border-color: var(--rust-line); }
 .app-shell .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
@@ -66,7 +120,7 @@
 .app-shell .card-sub { font-size: 12px; color: var(--slate); margin: 2px 0 0; }
 
 .app-shell label.lbl, .app-shell .lbl { display: block; font-size: 13px; font-weight: 500; color: var(--slate); margin-bottom: 6px; }
-.app-shell .inp { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(24,24,27,.04); }
+.app-shell .inp { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; box-shadow: var(--shadow-1); }
 .app-shell .inp.mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
 .app-shell .inp:focus { outline: 3px solid var(--accent-soft); outline-offset: 0; border-color: var(--accent); }
 .app-shell .inp[disabled] { opacity: .5; }
@@ -85,16 +139,16 @@
 .app-shell .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 .app-shell .pill .dot { width: 6px; height: 6px; border-radius: 999px; }
 .app-shell .pill-confirmed { background: var(--accent-soft); color: var(--accent-dark); } .app-shell .pill-confirmed .dot { background: var(--accent); }
-.app-shell .pill-cancelled { background: rgba(140,146,152,.16); color: var(--slate); } .app-shell .pill-cancelled .dot { background: var(--slate-2); }
+.app-shell .pill-cancelled { background: var(--neutral-soft); color: var(--slate); } .app-shell .pill-cancelled .dot { background: var(--slate-2); }
 .app-shell .pill-inprog { background: var(--copper-soft); color: var(--copper); } .app-shell .pill-inprog .dot { background: var(--copper); }
-.app-shell .pill-ended { background: rgba(140,146,152,.16); color: var(--slate); } .app-shell .pill-ended .dot { background: var(--slate-2); }
+.app-shell .pill-ended { background: var(--neutral-soft); color: var(--slate); } .app-shell .pill-ended .dot { background: var(--slate-2); }
 .app-shell .pill-inactive { background: var(--rust-soft); color: var(--rust); } .app-shell .pill-inactive .dot { background: var(--rust); }
 .app-shell .tag { display: inline-block; font-size: 11px; font-weight: 500; color: var(--slate); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
 .app-shell .reqtag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: var(--slate-2); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; }
 
-.app-shell .overlay { position: fixed; inset: 0; background: rgba(12,15,19,.52); z-index: 50; }
-.app-shell .modal { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); width: 560px; max-height: 92vh; overflow-y: auto; background: var(--surface); border-radius: 12px; box-shadow: 0 30px 70px rgba(0,0,0,.3); }
-.app-shell .drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 460px; background: var(--surface); overflow-y: auto; box-shadow: -20px 0 60px rgba(0,0,0,.25); border-left: 1px solid var(--line); }
+.app-shell .overlay { position: fixed; inset: 0; background: var(--overlay); z-index: 50; }
+.app-shell .modal { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); width: 560px; max-height: 92vh; overflow-y: auto; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-modal); }
+.app-shell .drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 460px; background: var(--surface); overflow-y: auto; box-shadow: -20px 0 60px var(--shadow-side); border-left: 1px solid var(--line); }
 .app-shell .sheet-head { position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); padding: 15px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; z-index: 2; }
 .app-shell .sheet-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
 .app-shell .sheet-foot { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 18px; display: flex; gap: 10px; justify-content: flex-end; }
@@ -102,21 +156,21 @@
 .app-shell .iconbtn:hover { background: var(--surface-2); color: var(--ink); }
 
 .app-shell .row-menu { position: relative; }
-.app-shell .row-menu-list { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); z-index: 10; min-width: 150px; overflow: hidden; }
+.app-shell .row-menu-list { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-menu); z-index: 10; min-width: 150px; overflow: hidden; }
 .app-shell .row-menu-item { display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 12.5px; font-family: inherit; background: none; border: none; cursor: pointer; color: var(--ink); }
 .app-shell .row-menu-item:hover { background: var(--surface-2); }
 
-.app-shell pre.json { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.55; background: #0d0d10; color: #c9d3ce; padding: 11px 13px; border-radius: 7px; overflow-x: auto; margin: 0; white-space: pre; }
+.app-shell pre.json { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.55; background: var(--code-bg); color: var(--code-ink); padding: 11px 13px; border-radius: 7px; overflow-x: auto; margin: 0; white-space: pre; }
 
 .app-shell .toasts { position: fixed; top: 16px; right: 16px; z-index: 70; display: flex; flex-direction: column; gap: 9px; width: 390px; }
-.app-shell .toast { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: 9px; padding: 11px 13px; box-shadow: 0 12px 34px rgba(0,0,0,.16); }
+.app-shell .toast { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: 9px; padding: 11px 13px; box-shadow: var(--shadow-toast); }
 .app-shell .toast.ok { border-left-color: var(--accent); } .app-shell .toast.err { border-left-color: var(--rust); } .app-shell .toast.warn { border-left-color: var(--copper); }
 
 .app-shell .kv { display: grid; grid-template-columns: 104px 1fr; gap: 7px 12px; font-size: 12.5px; margin: 0; }
 .app-shell .kv dt { color: var(--slate); } .app-shell .kv dd { margin: 0; font-weight: 500; }
 .app-shell .seg { display: flex; gap: 2px; padding: 3px; background: var(--surface-3); border-radius: 10px; }
 .app-shell .seg button { border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--slate); padding: 7px 14px; cursor: pointer; border-radius: 8px; }
-.app-shell .seg button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(24,24,27,.12); }
+.app-shell .seg button.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
 .app-shell a:focus-visible, .app-shell button:focus-visible, .app-shell input:focus-visible, .app-shell select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .app-shell ::-webkit-scrollbar { width: 10px; height: 10px; }
 .app-shell ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
@@ -155,10 +209,10 @@
 .app-shell .day-cell:nth-child(7n) { border-right: none; }
 .app-shell .day-cell:hover { background: var(--surface-2); }
 .app-shell .day-cell.out { background: var(--surface-2); cursor: default; opacity: .45; }
-.app-shell .day-cell.today .day-num { background: var(--accent-dark); color: #fff; }
+.app-shell .day-cell.today .day-num { background: var(--mine); color: var(--on-accent); }
 .app-shell .day-num { font-size: 11.5px; font-weight: 600; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 5px; }
 .app-shell .chip { font-size: 10.5px; font-weight: 600; padding: 2px 5px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 2px solid transparent; }
-.app-shell .chip.mine { background: var(--accent-dark); color: #fff; }
+.app-shell .chip.mine { background: var(--mine); color: var(--on-accent); }
 .app-shell .chip.other { background: var(--accent-soft); color: var(--accent-dark); border-left-color: var(--accent); }
 .app-shell .chip.inprog { background: var(--copper-soft); color: var(--copper); border-left-color: var(--copper); }
 .app-shell .chip.ended { background: var(--surface-2); color: var(--slate); border-left-color: var(--slate-2); }
@@ -186,7 +240,7 @@
 .app-shell .tg-slot { border-bottom: 1px dashed var(--line); cursor: pointer; }
 .app-shell .tg-slot.hard { border-bottom-style: solid; }
 .app-shell .tg-slot:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-.app-shell .tg-slot.inert, .app-shell .tg-slot.inert:hover { cursor: default; background: rgba(140,146,152,.07); box-shadow: none; }
+.app-shell .tg-slot.inert, .app-shell .tg-slot.inert:hover { cursor: default; background: var(--inert); box-shadow: none; }
 /* The time being chosen while dragging with the mouse. */
 .app-shell .tg-select { position: absolute; left: 2px; right: 2px; z-index: 2; pointer-events: none; border-radius: 5px; background: var(--accent-soft); border: 1px solid var(--accent); padding: 2px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: var(--accent-dark); }
 .app-shell .tg-wrap.dragging, .app-shell .tg-wrap.dragging .tg-slot { cursor: ns-resize; user-select: none; }
@@ -194,10 +248,10 @@
 .app-shell .tg-block { position: absolute; border-radius: 5px; padding: 2px 6px; overflow: hidden; cursor: pointer; z-index: 1; font-size: 10.5px; line-height: 1.3; border-left: 2px solid transparent; }
 .app-shell .tg-block b { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .app-shell .tg-block span { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-shell .tg-block:hover { box-shadow: 0 3px 10px rgba(0,0,0,.18); }
+.app-shell .tg-block:hover { box-shadow: var(--shadow-hover); }
 .app-shell .tg-block.compact { display: flex; gap: 5px; align-items: baseline; padding-top: 0; }
 .app-shell .tg-block.compact b { display: inline; }
-.app-shell .tg-block.mine { background: var(--accent-dark); color: #fff; border-left-color: #4a2352; }
+.app-shell .tg-block.mine { background: var(--mine); color: var(--on-accent); border-left-color: var(--mine-edge); }
 .app-shell .tg-block.other { background: var(--accent-soft); color: var(--accent-dark); border-left-color: var(--accent); }
 .app-shell .tg-block.inprog { background: var(--copper-soft); color: var(--copper); border-left-color: var(--copper); }
 .app-shell .tg-block.ended { background: var(--surface-2); color: var(--slate); border-left-color: var(--slate-2); }
@@ -233,12 +287,12 @@
 .app-shell .rt-roomname { font-size: 12.5px; font-weight: 600; }
 .app-shell .rt-roommeta { font-size: 11px; color: var(--slate); margin-top: 2px; }
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
-.app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: rgba(156,108,164,.14); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
+.app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: var(--band); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
 .app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
 .app-shell .rt-track { cursor: crosshair; user-select: none; }
 /* The window being dragged on a room's row, with its times. */
-.app-shell .rt-drag { position: absolute; top: 4px; bottom: 4px; z-index: 3; pointer-events: none; border-radius: 6px; background: rgba(124,58,237,.18); border: 1.5px solid #7c3aed; display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
-.app-shell .rt-drag span { margin-top: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: #5b21b6; background: rgba(255,255,255,.85); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+.app-shell .rt-drag { position: absolute; top: 4px; bottom: 4px; z-index: 3; pointer-events: none; border-radius: 6px; background: var(--drag-soft); border: 1.5px solid var(--drag); display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
+.app-shell .rt-drag span { margin-top: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: var(--drag-ink); background: var(--drag-label); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
 .app-shell .rt-free { position: absolute; top: 5px; bottom: 5px; cursor: pointer; border-radius: 5px; z-index: 1; }
 .app-shell .rt-free:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .app-shell .rt-block { top: 6px; bottom: 6px; z-index: 2; }
@@ -291,8 +345,8 @@
 @media (max-width: 1023.98px) {
   .app-shell { grid-template-columns: minmax(0, 1fr); }
   .app-shell .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; max-width: 85vw; height: auto; z-index: 60; transform: translateX(-100%); transition: transform .2s ease; box-shadow: none; }
-  .app-shell .sidebar.open { transform: none; box-shadow: 20px 0 60px rgba(0,0,0,.25); }
-  .app-shell .nav-backdrop { position: fixed; inset: 0; background: rgba(12,15,19,.52); z-index: 55; }
+  .app-shell .sidebar.open { transform: none; box-shadow: 20px 0 60px var(--shadow-side); }
+  .app-shell .nav-backdrop { position: fixed; inset: 0; background: var(--overlay); z-index: 55; }
   .app-shell .menu-btn { display: inline-flex; align-items: center; margin-left: -6px; padding: 6px; color: var(--ink); }
   .app-shell .topbar { position: sticky; top: 0; z-index: 20; padding: 12px 18px; }
   .app-shell .main { padding: 16px 18px 36px; }
@@ -361,3 +415,5 @@
 /* Top bar: the page's own main buttons (PageActions), next to New booking. */
 .app-shell .page-actions { display: flex; gap: 8px; align-items: center; }
 .app-shell .page-actions:empty { display: none; }
+/* Top bar: the sun / moon button that switches light and dark. */
+.app-shell .theme-toggle { display: inline-flex; align-items: center; padding: 6px; flex-shrink: 0; }

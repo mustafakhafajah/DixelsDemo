@@ -182,7 +182,10 @@
     "pitch": "Reserve shared spaces across the company. If the space is free and your window fits the rules, it is yours straight away. No approval, no waiting.",
     "title": "Sign in",
     "lead": "Use your email and password. Your role comes from your account.",
-    "button": "Sign in with email"
+    "button": "Sign in with email",
+    "signingIn": "Signing you in",
+    "failed": "Sign-in failed",
+    "back": "Back to sign in"
   },
   "splash": {
     "wait": "Please wait…"

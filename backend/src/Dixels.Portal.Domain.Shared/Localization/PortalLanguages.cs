@@ -5,8 +5,9 @@ using System.Linq;
 
 namespace Dixels.Portal.Localization;
 
-/* The languages the portal speaks. To add one: add it here, add Localization/Portal/{code}.json,
- * and add the same code to the SPA's src/i18n/languages.ts with its src/locales/{code}.json.
+/* The languages the portal speaks (ABP's own pages, such as sign-in, keep ABP's language list). To add one:
+ * add it here, add Localization/Portal/{code}.json, and add the same code to the SPA's src/i18n/languages.ts
+ * with its src/locales/{code}.json.
  * Names typed in any language are stored per language, so no database change is needed. */
 public static class PortalLanguages
 {

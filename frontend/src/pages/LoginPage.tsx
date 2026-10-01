@@ -29,14 +29,8 @@ function buildPromoGrid(): PromoSegment[][] {
  * decides the admin or user interface. */
 function LoginPage() {
   const auth = useAuth()
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const promoGrid = useMemo(buildPromoGrid, [])
-  /* The sign-in pages open in the language picked here (ABP reads ui_locales, culture or ui-culture). */
-  const signIn = () => {
-    const lang = i18n.language
-    auth.signinRedirect({ extraQueryParams: { ui_locales: lang, culture: lang, 'ui-culture': lang } })
-  }
-
   return (
     <div className="login-page">
       <div className="promo">
@@ -71,7 +65,7 @@ function LoginPage() {
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block real-signin-btn"
-            onClick={signIn}
+            onClick={() => auth.signinRedirect()}
           >
             {t('login.button')}
             <svg

@@ -62,7 +62,7 @@
   background: var(--paper);
   color: var(--ink);
   /* Inter has no Arabic letters; the next fonts supply them. */
-  font-family: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+  font-family: 'Inter', 'Cairo Variable', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
   font-size: 14px;
   line-height: normal;
   letter-spacing: normal;
@@ -72,7 +72,7 @@
 .app-shell *, .app-shell *::before, .app-shell *::after { box-sizing: border-box; }
 .app-shell h1, .app-shell h2, .app-shell h3 { font-family: inherit; color: inherit; letter-spacing: normal; margin: 0; font-weight: 700; line-height: normal; }
 .app-shell p { margin: 0; }
-.app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; font-variant-ligatures: none; }
+.app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, 'Cairo Variable', 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; font-variant-ligatures: none; }
 
 /* ── SHELL ── Sides are logical (inline-start / inline-end), so the layout mirrors in right-to-left languages. */
 /* Light sidebar (reference design): white panel, grey items, the selected item is a soft purple pill. */
@@ -126,7 +126,7 @@
 
 .app-shell label.lbl, .app-shell .lbl { display: block; font-size: 13px; font-weight: 500; color: var(--slate); margin-bottom: 6px; }
 .app-shell .inp { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; box-shadow: var(--shadow-1); }
-.app-shell .inp.mono { font-family: 'IBM Plex Mono', ui-monospace, 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; }
+.app-shell .inp.mono { font-family: 'IBM Plex Mono', ui-monospace, 'Cairo Variable', 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; }
 .app-shell .inp:focus { outline: 3px solid var(--accent-soft); outline-offset: 0; border-color: var(--accent); }
 .app-shell .inp[disabled] { opacity: .5; }
 .app-shell select.inp { appearance: none; background-image: linear-gradient(45deg,transparent 50%,var(--slate) 50%),linear-gradient(135deg,var(--slate) 50%,transparent 50%); background-position: calc(100% - 15px) 53%,calc(100% - 10px) 53%; background-size: 5px 5px,5px 5px; background-repeat: no-repeat; padding-inline-end: 28px; }

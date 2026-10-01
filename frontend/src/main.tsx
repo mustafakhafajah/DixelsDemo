@@ -2,6 +2,8 @@ import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { DirectionProvider } from '@radix-ui/react-direction'
 import { useTranslation } from 'react-i18next'
+/* Arabic text in Cairo, shipped with the app so it also works without internet access. */
+import '@fontsource-variable/cairo'
 import './index.css'
 import './shadcn.css'
 import { i18nReady } from './i18n'

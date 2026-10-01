@@ -18,7 +18,7 @@
   min-width: 0;
   background: var(--lp-paper);
   color: var(--lp-ink);
-  font-family: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+  font-family: 'Inter', 'Cairo Variable', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   /* The login page is a branded light page in both themes: its own --lp-* colours, light form controls. */
@@ -248,4 +248,10 @@
     width: 100%;
     max-width: 378px;
   }
+}
+
+/* Those two headings use the system font, which has its own Arabic letters; in Arabic they use Cairo like the rest. */
+:root:lang(ar) .login-page .promo-copy h1,
+:root:lang(ar) .login-page .signin-card h2 {
+  font-family: 'Cairo Variable', system-ui, 'Segoe UI', Tahoma, sans-serif;
 }

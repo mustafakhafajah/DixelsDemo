@@ -396,6 +396,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       <Field id="sp-name" label={t('forms.nameEnglish')} required error={errors['sp-name']}>
         <input id="sp-name" className="inp" lang="en" dir="ltr" placeholder={t('forms.space.namePlaceholder')} value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('sp-name') }} />
       </Field>
+      <TranslationFields prefix="sp" drafts={drafts} onChange={setDrafts} errors={errors} clear={fields.clear} withNote />
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
         <Field id="sp-type" label={t('common.type')} required error={errors['sp-type']}>
           <Dropdown id="sp-type" value={effTypeId} onChange={(v) => { setTypeId(v); fields.clear('sp-type') }} disabled={!types.length}
@@ -427,7 +428,6 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       <Field id="sp-note" label={t('forms.descriptionEnglish')} error={errors['sp-note']}>
         <input id="sp-note" className="inp" lang="en" dir="ltr" placeholder={t('forms.space.notePlaceholder')} value={note} maxLength={500} onChange={(e) => { setNote(e.target.value); fields.clear('sp-note') }} />
       </Field>
-      <TranslationFields prefix="sp" drafts={drafts} onChange={setDrafts} errors={errors} clear={fields.clear} withNote />
       <BookableField idPrefix="sp" kind="space" value={isBookable} onChange={setIsBookable}
         existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
       {/* The space's own tick can be on while its floor or building is off: say so. */}

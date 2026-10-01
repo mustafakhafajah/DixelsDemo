@@ -125,7 +125,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
           <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="auto">{session.name}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
             <div style={{ fontSize: 11, color: 'var(--slate)' }}>
               {session.roles.length ? session.roles.map((r) => roleLabel(r)).join(t('common.listSeparator')) : t('nav.noRole')}
             </div>

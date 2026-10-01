@@ -52,7 +52,7 @@ public class EstateDataSeedContributor : IDataSeedContributor, ITransientDepende
             var type = await _spaceTypes.FindAsync(id);
             if (type == null)
             {
-                type = new SpaceType(id, PortalLanguages.Default, names[PortalLanguages.Default]);
+                type = new SpaceType(id, names[PortalLanguages.Default]);
                 foreach (var (language, name) in names) type.SetName(language, name);
                 await _spaceTypes.InsertAsync(type, autoSave: true);
                 continue;
@@ -64,21 +64,21 @@ public class EstateDataSeedContributor : IDataSeedContributor, ITransientDepende
         }
     }
 
-    /* Sample data is in English only; admins add other languages by editing it in that language. */
+    /* Sample data is in English only; admins add other languages in the edit forms. */
     private async Task SeedEstateAsync()
     {
         const string en = PortalLanguages.Default;
-        var hq = await _buildings.InsertAsync(new Building(_guids.Create(), en, "HQ North") { TimeZone = "UTC" }, autoSave: true);
-        var annex = await _buildings.InsertAsync(new Building(_guids.Create(), en, "Annex") { TimeZone = "Europe/Warsaw" }, autoSave: true);
+        var hq = await _buildings.InsertAsync(new Building(_guids.Create(), "HQ North") { TimeZone = "UTC" }, autoSave: true);
+        var annex = await _buildings.InsertAsync(new Building(_guids.Create(), "Annex") { TimeZone = "Europe/Warsaw" }, autoSave: true);
 
         var floors = new Dictionary<string, Floor>();
         foreach (var (b, name) in new[] { (hq, "2"), (hq, "3"), (hq, "4"), (annex, "1"), (annex, "2") })
-            floors[$"{b.GetName(en)}|{name}"] = await _floors.InsertAsync(new Floor(_guids.Create(), b.Id, en, name), autoSave: true);
+            floors[$"{b.GetName(en)}|{name}"] = await _floors.InsertAsync(new Floor(_guids.Create(), b.Id, name), autoSave: true);
 
         async Task AddSpace(string name, Guid typeId, Building b, string floor, int capacity, string note,
             bool isBookable = true)
         {
-            await _spaces.InsertAsync(new Space(_guids.Create(), en, name, b.Id, floors[$"{b.GetName(en)}|{floor}"].Id, typeId, note)
+            await _spaces.InsertAsync(new Space(_guids.Create(), name, b.Id, floors[$"{b.GetName(en)}|{floor}"].Id, typeId, note)
             {
                 IsBookable = isBookable,
                 Capacity = capacity,

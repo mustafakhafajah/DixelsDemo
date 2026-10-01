@@ -267,7 +267,18 @@
     }
   },
   "forms": {
-    "fallbackHint": "Shown in the fallback language — type the {{language}} name to add it.",
+    "nameEnglish": "Name (English)",
+    "descriptionEnglish": "Description (English)",
+    "translations": {
+      "title": "Other languages",
+      "hint": "Optional. People who use the portal in that language see this name; everyone else sees the English one.",
+      "add": "Add a language",
+      "remove": "Remove",
+      "removeLanguage": "Remove {{language}}",
+      "name": "Name ({{language}})",
+      "note": "Description ({{language}})",
+      "nameMissing": "Type the {{language}} name, or remove that language."
+    },
     "closeAfterOpen": "Close hour must be after open hour.",
     "number": {
       "enter": {
@@ -335,6 +346,7 @@
     },
     "floor": {
       "addTitle": "Add a floor",
+      "nameEnglish": "Floor (English)",
       "editTitle": "Edit floor",
       "subtitle": "Inherits its building's hours and duration unless overridden below.",
       "save": "Save floor",

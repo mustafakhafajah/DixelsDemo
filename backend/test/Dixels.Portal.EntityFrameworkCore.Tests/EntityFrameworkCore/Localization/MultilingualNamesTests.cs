@@ -1,22 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Languages;
+using Dixels.Portal.Localization;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Localization;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Dixels.Portal.EntityFrameworkCore.Localization;
 
-/* One Name field in the form, saved in the language the admin is using; readers get their language,
- * else English, else whichever language has a name. */
+/* Every record has a required English name; other languages are optional extras. A reader sees their
+ * language when the record has it, otherwise English, and never a third language. */
 [Collection(PortalTestConsts.CollectionDefinitionName)]
 public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
 {
@@ -38,100 +41,116 @@ public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task A_name_saved_in_each_language_is_read_back_in_that_language()
+    public async Task Each_reader_gets_their_language_and_english_readers_only_ever_see_english()
     {
         var tag = Tag();
-        SpaceTypeDto created;
-        using (CultureHelper.Use("en")) created = await _types.CreateAsync(new() { Name = $"Lounge {tag}" });
-        using (CultureHelper.Use("ar")) await _types.UpdateAsync(created.Id, new() { Name = $"استراحة {tag}" });
+        var created = await _types.CreateAsync(Type($"Lounge {tag}", ("ar", $"استراحة {tag}")));
 
         using (CultureHelper.Use("en")) (await _types.GetAsync(created.Id)).Name.ShouldBe($"Lounge {tag}");
-        using (CultureHelper.Use("ar"))
-        {
-            var ar = await _types.GetAsync(created.Id);
-            ar.Name.ShouldBe($"استراحة {tag}");
-            ar.IsTranslated.ShouldBeTrue();
-        }
-        /* A regional culture uses its language's name. */
+        using (CultureHelper.Use("ar")) (await _types.GetAsync(created.Id)).Name.ShouldBe($"استراحة {tag}");
         using (CultureHelper.Use("ar-SA")) (await _types.GetAsync(created.Id)).Name.ShouldBe($"استراحة {tag}");
+        /* A language the portal doesn't speak reads as English. */
+        using (CultureHelper.Use("fr")) (await _types.GetAsync(created.Id)).Name.ShouldBe($"Lounge {tag}");
 
-        var rows = await WithUnitOfWorkAsync(async () => (await _typeRepository.GetAsync(created.Id)).Translations.Select(t => t.Language).OrderBy(l => l).ToList());
-        rows.ShouldBe(new[] { "ar", "en" });
+        /* The edit form gets every language, English first. */
+        created.Translations.Select(t => t.Language).ShouldBe(new[] { "en", "ar" });
     }
 
     [Fact]
-    public async Task A_name_missing_in_the_readers_language_falls_back_to_english_then_to_any()
+    public async Task A_record_without_the_readers_language_shows_its_english_name()
+    {
+        var created = await _types.CreateAsync(Type($"Pod {Tag()}"));
+
+        using (CultureHelper.Use("ar")) (await _types.GetAsync(created.Id)).Name.ShouldBe(created.Name);
+    }
+
+    [Fact]
+    public async Task The_screen_language_does_not_decide_which_name_is_saved()
     {
         var tag = Tag();
-        SpaceTypeDto english, arabicOnly;
-        using (CultureHelper.Use("en")) english = await _types.CreateAsync(new() { Name = $"Pod {tag}" });
-        using (CultureHelper.Use("ar")) arabicOnly = await _types.CreateAsync(new() { Name = $"كبسولة {tag}" });
-
-        using (CultureHelper.Use("ar"))
-        {
-            var fallback = await _types.GetAsync(english.Id);
-            fallback.Name.ShouldBe($"Pod {tag}");
-            fallback.IsTranslated.ShouldBeFalse();
-        }
-        using (CultureHelper.Use("en")) (await _types.GetAsync(arabicOnly.Id)).Name.ShouldBe($"كبسولة {tag}");
-        /* A language the portal doesn't speak reads as the default language. */
-        using (CultureHelper.Use("fr")) (await _types.GetAsync(english.Id)).Name.ShouldBe($"Pod {tag}");
-    }
-
-    [Fact]
-    public async Task Saving_the_fallback_name_unchanged_adds_no_translation()
-    {
         SpaceTypeDto created;
-        using (CultureHelper.Use("en")) created = await _types.CreateAsync(new() { Name = $"Booth {Tag()}" });
+        using (CultureHelper.Use("ar")) created = await _types.CreateAsync(Type($"Booth {tag}", ("ar", $"كشك {tag}")));
 
-        using (CultureHelper.Use("ar"))
-        {
-            var saved = await _types.UpdateAsync(created.Id, new() { Name = created.Name });
-            saved.IsTranslated.ShouldBeFalse();
-        }
-        var languages = await WithUnitOfWorkAsync(async () => (await _typeRepository.GetAsync(created.Id)).Translations.Select(t => t.Language).ToList());
-        languages.ShouldBe(new[] { "en" });
+        var rows = await TranslationsOfAsync(created.Id);
+        rows["en"].ShouldBe($"Booth {tag}");
+        rows["ar"].ShouldBe($"كشك {tag}");
     }
 
     [Fact]
-    public async Task Names_are_unique_within_a_language_only()
+    public async Task An_update_sends_the_full_set_so_a_language_left_out_is_removed()
     {
-        var name = $"Hall {Tag()}";
-        using (CultureHelper.Use("en")) await _types.CreateAsync(new() { Name = name });
+        var tag = Tag();
+        var created = await _types.CreateAsync(Type($"Studio B {tag}", ("ar", $"استوديو ب {tag}")));
 
-        /* The same text as another type's Arabic name is fine... */
-        using (CultureHelper.Use("ar")) await _types.CreateAsync(new() { Name = name });
-        /* ...but not twice in one language, and the message is in that language. */
+        await _types.UpdateAsync(created.Id, Type($"Studio B2 {tag}", ("ar", $"استوديو ب2 {tag}")));
+        (await TranslationsOfAsync(created.Id))["ar"].ShouldBe($"استوديو ب2 {tag}");
+
+        await _types.UpdateAsync(created.Id, Type($"Studio B2 {tag}"));
+        (await TranslationsOfAsync(created.Id)).Keys.ShouldBe(new[] { "en" });
+    }
+
+    [Theory]
+    [InlineData("en", "Extra", "validation.unsupported_language")]   // English has its own field
+    [InlineData("xx", "Extra", "validation.unsupported_language")]   // not one of the portal's languages
+    [InlineData("ar", "  ", "validation.missing_field")]             // added but left empty
+    public async Task An_extra_language_must_be_a_supported_other_language_with_a_name(string language, string name, string code)
+    {
+        var ex = await Should.ThrowAsync<BusinessException>(() => _types.CreateAsync(Type($"Nook {Tag()}", (language, name))));
+        ex.Code.ShouldBe(code);
+    }
+
+    [Fact]
+    public async Task The_english_name_is_required()
+    {
+        /* Rejected by the request's own validation, before the rules run. */
+        var ex = await Should.ThrowAsync<AbpValidationException>(() => _types.CreateAsync(Type(" ", ("ar", "ركن"))));
+        ex.ValidationErrors.ShouldContain(e => e.MemberNames.Contains("Name"));
+    }
+
+    [Fact]
+    public async Task Names_are_unique_within_a_language_and_the_error_points_at_that_language()
+    {
+        var tag = Tag();
+        await _types.CreateAsync(Type($"Hall {tag}", ("ar", $"قاعة {tag}")));
+
+        /* The same text in another language is fine. */
+        await _types.CreateAsync(Type($"Annex hall {tag}", ("ar", $"Hall {tag}")));
+
         using (CultureHelper.Use("ar"))
         {
-            var ex = await Should.ThrowAsync<BusinessException>(() => _types.CreateAsync(new() { Name = name.ToUpperInvariant() }));
+            var ex = await Should.ThrowAsync<BusinessException>(() => _types.CreateAsync(Type($"Big hall {tag}", ("ar", $"قاعة {tag}"))));
             ex.Code.ShouldBe(PortalDomainErrorCodes.SpaceTypeDuplicate);
+            ex.Data[ErrorFieldExtensions.FieldKey].ShouldBe("translations.ar");
             ex.Message.ShouldContain("يوجد بالفعل");
         }
     }
 
     [Fact]
-    public async Task A_space_is_found_by_its_name_in_any_language_and_keeps_its_note_per_language()
+    public async Task A_space_is_found_by_its_name_in_either_language_and_shown_in_the_readers()
     {
         var tag = Tag();
         var (building, floor) = await CreateBuildingAsync(tag);
-        SpaceDto space;
-        using (CultureHelper.Use("en"))
-            space = await _spaces.CreateAsync(NewSpace(building, floor, $"Board room {tag}", "Seats 10"));
-        using (CultureHelper.Use("ar"))
-            await _spaces.UpdateAsync(space.Id, NewSpace(building, floor, $"قاعة الاجتماعات {tag}", "يتسع لعشرة"));
+        await _spaces.CreateAsync(new CreateUpdateSpaceDto
+        {
+            Name = $"Conference room 4 {tag}",
+            Note = "Seats 10",
+            Translations = [new() { Language = "ar", Name = $"غرفة الاجتماعات 4 {tag}", Note = "يتسع لعشرة" }],
+            TypeId = DefaultSpaceTypes.MeetingRoom,
+            BuildingId = building.Id,
+            FloorId = floor.Id,
+        });
 
         using (CultureHelper.Use("en"))
         {
-            var found = await _spaces.GetBookableListAsync(new FindSpacesInput { Name = $"الاجتماعات {tag}" });
-            found.Items.ShouldHaveSingleItem().Name.ShouldBe($"Board room {tag}");
-            found.Items[0].Note.ShouldBe("Seats 10");
+            var found = (await _spaces.GetBookableListAsync(new FindSpacesInput { Name = $"conference room 4 {tag}" })).Items.ShouldHaveSingleItem();
+            found.Name.ShouldBe($"Conference room 4 {tag}");
+            found.Note.ShouldBe("Seats 10");
         }
         using (CultureHelper.Use("ar"))
         {
-            var page = await _spaces.GetPagedListAsync(new GetSpacesInput { Name = $"board room {tag}", MaxResultCount = 10 });
-            page.Items.ShouldHaveSingleItem().Name.ShouldBe($"قاعة الاجتماعات {tag}");
-            page.Items[0].Note.ShouldBe("يتسع لعشرة");
+            var found = (await _spaces.GetPagedListAsync(new GetSpacesInput { Name = $"غرفة الاجتماعات 4 {tag}", MaxResultCount = 10 })).Items.ShouldHaveSingleItem();
+            found.Name.ShouldBe($"غرفة الاجتماعات 4 {tag}");
+            found.Note.ShouldBe("يتسع لعشرة");
         }
     }
 
@@ -150,20 +169,20 @@ public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
 
     private static string Tag() => Guid.NewGuid().ToString("N")[..8];
 
-    private static CreateUpdateSpaceDto NewSpace(Building building, Floor floor, string name, string note) => new()
+    private static CreateUpdateSpaceTypeDto Type(string english, params (string Language, string Name)[] extras) => new()
     {
-        Name = name,
-        Note = note,
-        TypeId = DefaultSpaceTypes.MeetingRoom,
-        BuildingId = building.Id,
-        FloorId = floor.Id,
+        Name = english,
+        Translations = extras.Select(e => new TranslationDto { Language = e.Language, Name = e.Name }).ToList(),
     };
+
+    private Task<Dictionary<string, string>> TranslationsOfAsync(Guid typeId)
+        => WithUnitOfWorkAsync(async () => (await _typeRepository.GetAsync(typeId)).Translations.ToDictionary(t => t.Language, t => t.Name));
 
     private Task<(Building, Floor)> CreateBuildingAsync(string tag)
         => WithUnitOfWorkAsync(async () =>
         {
-            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Lingo {tag}"), autoSave: true);
-            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
+            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Lingo {tag}"), autoSave: true);
+            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
             return (building, floor);
         });
 }

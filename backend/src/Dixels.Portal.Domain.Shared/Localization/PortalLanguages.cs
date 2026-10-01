@@ -22,9 +22,12 @@ public static class PortalLanguages
         ("ar", "العربية"),
     };
 
+    /* "ar" → "العربية"; the code itself for an unknown one. */
+    public static string DisplayName(string code) => All.FirstOrDefault(l => l.Code == code).DisplayName ?? code;
+
     public static bool IsSupported(string? code) => All.Any(l => string.Equals(l.Code, code, StringComparison.OrdinalIgnoreCase));
 
-    /* The language of the current request (ABP sets the culture from Accept-Language, the user's setting, ...). */
+    /* The language of the current request (ABP sets the culture from the SPA's Accept-Language header). */
     public static string Current => Normalize(CultureInfo.CurrentUICulture.Name);
 
     /* "ar-SA" → "ar", "EN" → "en"; anything unsupported → the default. */

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
@@ -9,7 +10,8 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Floors;
 
-/* Floor rules: a name unique within its building (per language), and overrides that only narrow the building's rules. */
+/* Floor rules: an English name, optional names in other languages, each unique within its building and
+ * language; and overrides that only narrow the building's rules. */
 public class FloorManager : PortalDomainService
 {
     private readonly IRepository<Building, Guid> _buildings;
@@ -21,27 +23,25 @@ public class FloorManager : PortalDomainService
         _floors = floors;
     }
 
-    /* The name is saved in the language the admin is using. */
-    public async Task<Floor> CreateAsync(Guid buildingId, string name, ConstraintOverrides overrides)
+    public async Task<Floor> CreateAsync(Guid buildingId, string name, IEnumerable<NameTranslation>? translations, ConstraintOverrides overrides)
     {
-        var language = PortalLanguages.Current;
         var building = await GetBuildingAsync(buildingId);
-        var trimmed = await CheckAsync(building, name, language, overrides, null);
-        var floor = new Floor(GuidGenerator.Create(), building.Id, language, trimmed);
+        var (english, extras) = await CheckAsync(building, name, translations, overrides, null);
+        var floor = new Floor(GuidGenerator.Create(), building.Id, english);
+        foreach (var t in extras) floor.SetName(t.Language, t.Name);
         ApplyOverrides(floor, overrides);
         return floor;
     }
 
-    /* A floor stays in its building: editing can change its name and rules, not move it.
-     * Renames it in the admin's language only; saving the fallback name unchanged adds no translation. */
-    public async Task UpdateAsync(Floor floor, string name, ConstraintOverrides overrides)
+    /* A floor stays in its building: editing can change its names and rules, not move it.
+     * translations is the full set of extra languages: one left out is removed. */
+    public async Task UpdateAsync(Floor floor, string name, IEnumerable<NameTranslation>? translations, ConstraintOverrides overrides)
     {
-        var language = PortalLanguages.Current;
         var building = await GetBuildingAsync(floor.BuildingId);
-        var trimmed = name?.Trim() ?? "";
-        var keepsFallback = floor.FindTranslation(language) == null && trimmed == floor.GetName(language);
-        trimmed = await CheckAsync(building, trimmed, language, overrides, floor.Id, checkName: !keepsFallback);
-        if (!keepsFallback) floor.SetName(language, trimmed);
+        var (english, extras) = await CheckAsync(building, name, translations, overrides, floor.Id);
+        floor.SetName(PortalLanguages.Default, english);
+        foreach (var t in extras) floor.SetName(t.Language, t.Name);
+        floor.RemoveTranslationsExcept(extras.Select(t => t.Language));
         ApplyOverrides(floor, overrides);
     }
 
@@ -49,19 +49,27 @@ public class FloorManager : PortalDomainService
         => await _buildings.FindAsync(id)
            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:FloorBuildingMissing"]).ForField("buildingId");
 
-    private async Task<string> CheckAsync(Building building, string? name, string language, ConstraintOverrides o, Guid? excludeId,
-        bool checkName = true)
+    private async Task<(string English, List<NameTranslation> Extras)> CheckAsync(Building building, string? name,
+        IEnumerable<NameTranslation>? translations, ConstraintOverrides o, Guid? excludeId)
     {
-        var trimmed = name?.Trim() ?? "";
-        if (trimmed.Length == 0)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:FloorNameMissing"]).ForField("name");
-        if (checkName && await _floors.AnyAsync(f => f.BuildingId == building.Id && f.Id != excludeId
-                && f.Translations.Any(t => t.Language == language && t.Name == trimmed)))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.FloorDuplicate, message:
-                L["Error:FloorDuplicate", building.GetName(), trimmed]).ForField("name");
+        var english = await CheckNameAsync(building, PortalLanguages.Default, name, excludeId, "name");
+        var extras = TranslationRules.Clean(L, translations, FloorConsts.MaxNameLength);
+        foreach (var t in extras) await CheckNameAsync(building, t.Language, t.Name, excludeId, $"translations.{t.Language}");
         EstateOverrideRules.EnsureOnlyNarrows(L, EstateOverrideRules.FloorLevel,
             ConstraintResolver.ResolveBounds(building, null),
             o.OpenHour, o.CloseHour, o.MinBookingMinutes, o.MaxBookingHours);
+        return (english, extras);
+    }
+
+    private async Task<string> CheckNameAsync(Building building, string language, string? name, Guid? excludeId, string field)
+    {
+        var trimmed = name?.Trim() ?? "";
+        if (trimmed.Length == 0)
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:FloorNameMissing"]).ForField(field);
+        if (await _floors.AnyAsync(f => f.BuildingId == building.Id && f.Id != excludeId
+                && f.Translations.Any(t => t.Language == language && t.Name == trimmed)))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.FloorDuplicate, message:
+                L["Error:FloorDuplicate", building.GetName(), trimmed]).ForField(field);
         return trimmed;
     }
 

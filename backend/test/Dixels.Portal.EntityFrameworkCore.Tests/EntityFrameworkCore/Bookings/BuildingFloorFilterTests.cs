@@ -121,14 +121,14 @@ public class BuildingFloorFilterTests : PortalEntityFrameworkCoreTestBase
             var spaces = GetRequiredService<IRepository<Space, Guid>>();
             var tag = Guid.NewGuid().ToString("N")[..8];
 
-            var a = await buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Filter A {tag}"), autoSave: true);
-            var b = await buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Filter B {tag}"), autoSave: true);
-            var a1 = await floors.InsertAsync(new Floor(Guid.NewGuid(), a.Id, "en", "1"), autoSave: true);
-            var a2 = await floors.InsertAsync(new Floor(Guid.NewGuid(), a.Id, "en", "2"), autoSave: true);
-            var b1 = await floors.InsertAsync(new Floor(Guid.NewGuid(), b.Id, "en", "1"), autoSave: true);
+            var a = await buildings.InsertAsync(new Building(Guid.NewGuid(), $"Filter A {tag}"), autoSave: true);
+            var b = await buildings.InsertAsync(new Building(Guid.NewGuid(), $"Filter B {tag}"), autoSave: true);
+            var a1 = await floors.InsertAsync(new Floor(Guid.NewGuid(), a.Id, "1"), autoSave: true);
+            var a2 = await floors.InsertAsync(new Floor(Guid.NewGuid(), a.Id, "2"), autoSave: true);
+            var b1 = await floors.InsertAsync(new Floor(Guid.NewGuid(), b.Id, "1"), autoSave: true);
 
             Task<Space> Room(string name, Guid buildingId, Guid floorId) => spaces.InsertAsync(
-                new Space(Guid.NewGuid(), "en", $"{name} {tag}", buildingId, floorId, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+                new Space(Guid.NewGuid(), $"{name} {tag}", buildingId, floorId, DefaultSpaceTypes.MeetingRoom), autoSave: true);
 
             return new TestEstate(a.Id, a1.Id, a2.Id, b.Id,
                 await Room("A1", a.Id, a1.Id), await Room("A2", a.Id, a2.Id), await Room("B1", b.Id, b1.Id));

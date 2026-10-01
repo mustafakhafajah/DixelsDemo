@@ -38,6 +38,10 @@
     "BuildingFloorLabel": "{0} · Floor {1}",
 
     "Error:UnsupportedLanguage": "Pick one of the portal's languages.",
+    "Error:TranslationTwice": "{0} is listed twice. Keep one.",
+    "Error:TranslationNameMissing": "Type the {0} name, or remove that language.",
+    "Error:NameTooLong": "Keep the name to {0} characters.",
+    "Error:NoteTooLong": "Keep the description to {0} characters.",
     "Error:CloseBeforeOpen": "Close hour must be after open hour.",
     "Error:BuildingNameMissing": "Give the building a name.",
     "Error:BuildingDuplicate": "{0} is already in the estate.",

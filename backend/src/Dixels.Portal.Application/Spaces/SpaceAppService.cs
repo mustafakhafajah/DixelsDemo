@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Localization;
@@ -56,7 +57,7 @@ public class SpaceAppService
     [Authorize(PortalPermissions.Spaces.Create)]
     public override async Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input)
     {
-        var space = await _spaceManager.CreateAsync(input.Name, input.Note, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
+        var space = await _spaceManager.CreateAsync(input.Name, input.Note, input.Translations.ToNameTranslations(), input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
         await Repository.InsertAsync(space, autoSave: true);
         return await MapToGetOutputDtoAsync(space);
@@ -66,7 +67,7 @@ public class SpaceAppService
     public override async Task<SpaceDto> UpdateAsync(Guid id, CreateUpdateSpaceDto input)
     {
         var space = await GetEntityByIdAsync(id);
-        await _spaceManager.UpdateAsync(space, input.Name, input.Note, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
+        await _spaceManager.UpdateAsync(space, input.Name, input.Note, input.Translations.ToNameTranslations(), input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
         await Repository.UpdateAsync(space, autoSave: true);
         return await MapToGetOutputDtoAsync(space);
@@ -147,10 +148,10 @@ public class SpaceAppService
         => from s in spaces
            join b in buildings on s.BuildingId equals b.Id
            let buildingName = b.Translations
-               .OrderBy(t => t.Language == language ? 0 : t.Language == PortalLanguages.Default ? 1 : 2).ThenBy(t => t.Language)
+               .Where(t => t.Language == language || t.Language == PortalLanguages.Default).OrderBy(t => t.Language == language ? 0 : 1)
                .Select(t => t.Name).FirstOrDefault()
            let spaceName = s.Translations
-               .OrderBy(t => t.Language == language ? 0 : t.Language == PortalLanguages.Default ? 1 : 2).ThenBy(t => t.Language)
+               .Where(t => t.Language == language || t.Language == PortalLanguages.Default).OrderBy(t => t.Language == language ? 0 : 1)
                .Select(t => t.Name).FirstOrDefault()
            orderby buildingName, spaceName, s.Id
            select s;
@@ -182,7 +183,7 @@ public class SpaceAppService
             var dto = ObjectMapper.Map<Space, SpaceDto>(s);
             dto.Name = s.GetName();
             dto.Note = s.GetNote();
-            dto.IsTranslated = s.IsTranslated();
+            dto.Translations = TranslationDtos.Of(s.Translations, t => new TranslationDto { Language = t.Language, Name = t.Name, Note = t.Note });
             dto.TypeName = typeNames.GetValueOrDefault(s.TypeId) ?? L["UnknownType"];
             dto.BuildingName = building.GetName();
             dto.FloorName = floor?.GetName() ?? "";

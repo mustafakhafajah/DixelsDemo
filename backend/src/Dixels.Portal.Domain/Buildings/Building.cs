@@ -24,12 +24,13 @@ public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<Buil
 
     protected Building() { }
 
-    public Building(Guid id, string language, string name) : base(id)
+    /* name is the English name; other languages are added with SetName. */
+    public Building(Guid id, string name) : base(id)
     {
-        SetName(language, name);
+        SetName(PortalLanguages.Default, name);
     }
 
-    /* In the reader's language, or the fallback when it has none. */
+    /* In the reader's language, or English when it has none. */
     public string GetName(string? language = null) => this.GetTranslation(language)?.Name ?? "";
 
     public void SetName(string language, string name)

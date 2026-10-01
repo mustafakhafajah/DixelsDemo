@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Localization;
 using Dixels.Portal.Permissions;
@@ -55,7 +56,7 @@ public class FloorAppService
     [Authorize(PortalPermissions.Floors.Create)]
     public override async Task<FloorDto> CreateAsync(CreateUpdateFloorDto input)
     {
-        var floor = await _floorManager.CreateAsync(input.BuildingId, input.Name, Overrides(input));
+        var floor = await _floorManager.CreateAsync(input.BuildingId, input.Name, input.Translations.ToNameTranslations(), Overrides(input));
         floor.IsBookable = input.IsBookable;
         await Repository.InsertAsync(floor, autoSave: true);
         return await MapToGetOutputDtoAsync(floor);
@@ -65,7 +66,7 @@ public class FloorAppService
     public override async Task<FloorDto> UpdateAsync(Guid id, CreateUpdateFloorDto input)
     {
         var floor = await GetEntityByIdAsync(id);
-        await _floorManager.UpdateAsync(floor, input.Name, Overrides(input));
+        await _floorManager.UpdateAsync(floor, input.Name, input.Translations.ToNameTranslations(), Overrides(input));
         floor.IsBookable = input.IsBookable;
         await Repository.UpdateAsync(floor, autoSave: true);
         return await MapToGetOutputDtoAsync(floor);
@@ -101,7 +102,7 @@ public class FloorAppService
         {
             var dto = ObjectMapper.Map<Floor, FloorDto>(f);
             dto.Name = f.GetName();
-            dto.IsTranslated = f.IsTranslated();
+            dto.Translations = TranslationDtos.Of(f.Translations, t => new TranslationDto { Language = t.Language, Name = t.Name });
             dto.BuildingName = buildingNames.GetValueOrDefault(f.BuildingId, "");
             dto.SpaceCount = spaceCounts.GetValueOrDefault(f.Id);
             return dto;

@@ -40,7 +40,7 @@ public class SpaceTypeAppService
     [Authorize(PortalPermissions.SpaceTypes.Create)]
     public override async Task<SpaceTypeDto> CreateAsync(CreateUpdateSpaceTypeDto input)
     {
-        var type = await _spaceTypeManager.CreateAsync(input.Name);
+        var type = await _spaceTypeManager.CreateAsync(input.Name, input.Translations.ToNameTranslations());
         await Repository.InsertAsync(type, autoSave: true);
         return await MapToGetOutputDtoAsync(type);
     }
@@ -49,7 +49,7 @@ public class SpaceTypeAppService
     public override async Task<SpaceTypeDto> UpdateAsync(Guid id, CreateUpdateSpaceTypeDto input)
     {
         var type = await GetEntityByIdAsync(id);
-        await _spaceTypeManager.ChangeNameAsync(type, input.Name);
+        await _spaceTypeManager.ChangeNamesAsync(type, input.Name, input.Translations.ToNameTranslations());
         await Repository.UpdateAsync(type, autoSave: true);
         return await MapToGetOutputDtoAsync(type);
     }
@@ -80,7 +80,7 @@ public class SpaceTypeAppService
         {
             var dto = ObjectMapper.Map<SpaceType, SpaceTypeDto>(t);
             dto.Name = t.GetName();
-            dto.IsTranslated = t.IsTranslated();
+            dto.Translations = TranslationDtos.Of(t.Translations, x => new TranslationDto { Language = x.Language, Name = x.Name });
             dto.SpaceCount = counts.GetValueOrDefault(t.Id);
             return dto;
         }).ToList();

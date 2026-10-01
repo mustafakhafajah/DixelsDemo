@@ -17,13 +17,13 @@ namespace Dixels.Portal;
 public partial class BuildingToBuildingDtoMapper : MapperBase<Building, BuildingDto>
 {
     [MapperIgnoreTarget(nameof(BuildingDto.Name))]
-    [MapperIgnoreTarget(nameof(BuildingDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Translations))]
     [MapperIgnoreTarget(nameof(BuildingDto.FloorCount))]
     [MapperIgnoreTarget(nameof(BuildingDto.SpaceCount))]
     public override partial BuildingDto Map(Building source);
 
     [MapperIgnoreTarget(nameof(BuildingDto.Name))]
-    [MapperIgnoreTarget(nameof(BuildingDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Translations))]
     [MapperIgnoreTarget(nameof(BuildingDto.FloorCount))]
     [MapperIgnoreTarget(nameof(BuildingDto.SpaceCount))]
     public override partial void Map(Building source, BuildingDto destination);
@@ -33,13 +33,13 @@ public partial class BuildingToBuildingDtoMapper : MapperBase<Building, Building
 public partial class FloorToFloorDtoMapper : MapperBase<Floor, FloorDto>
 {
     [MapperIgnoreTarget(nameof(FloorDto.Name))]
-    [MapperIgnoreTarget(nameof(FloorDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(FloorDto.Translations))]
     [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
     [MapperIgnoreTarget(nameof(FloorDto.SpaceCount))]
     public override partial FloorDto Map(Floor source);
 
     [MapperIgnoreTarget(nameof(FloorDto.Name))]
-    [MapperIgnoreTarget(nameof(FloorDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(FloorDto.Translations))]
     [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
     [MapperIgnoreTarget(nameof(FloorDto.SpaceCount))]
     public override partial void Map(Floor source, FloorDto destination);
@@ -50,7 +50,7 @@ public partial class SpaceToSpaceDtoMapper : MapperBase<Space, SpaceDto>
 {
     [MapperIgnoreTarget(nameof(SpaceDto.Name))]
     [MapperIgnoreTarget(nameof(SpaceDto.Note))]
-    [MapperIgnoreTarget(nameof(SpaceDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Translations))]
     [MapperIgnoreTarget(nameof(SpaceDto.TypeName))]
     [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
     [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
@@ -62,7 +62,7 @@ public partial class SpaceToSpaceDtoMapper : MapperBase<Space, SpaceDto>
 
     [MapperIgnoreTarget(nameof(SpaceDto.Name))]
     [MapperIgnoreTarget(nameof(SpaceDto.Note))]
-    [MapperIgnoreTarget(nameof(SpaceDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Translations))]
     [MapperIgnoreTarget(nameof(SpaceDto.TypeName))]
     [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
     [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
@@ -77,12 +77,12 @@ public partial class SpaceToSpaceDtoMapper : MapperBase<Space, SpaceDto>
 public partial class SpaceTypeToSpaceTypeDtoMapper : MapperBase<SpaceType, SpaceTypeDto>
 {
     [MapperIgnoreTarget(nameof(SpaceTypeDto.Name))]
-    [MapperIgnoreTarget(nameof(SpaceTypeDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Translations))]
     [MapperIgnoreTarget(nameof(SpaceTypeDto.SpaceCount))]
     public override partial SpaceTypeDto Map(SpaceType source);
 
     [MapperIgnoreTarget(nameof(SpaceTypeDto.Name))]
-    [MapperIgnoreTarget(nameof(SpaceTypeDto.IsTranslated))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Translations))]
     [MapperIgnoreTarget(nameof(SpaceTypeDto.SpaceCount))]
     public override partial void Map(SpaceType source, SpaceTypeDto destination);
 }

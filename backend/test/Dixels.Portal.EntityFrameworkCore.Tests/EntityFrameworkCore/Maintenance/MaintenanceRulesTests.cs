@@ -91,11 +91,11 @@ public class MaintenanceRulesTests : PortalEntityFrameworkCoreTestBase
         => WithUnitOfWorkAsync(async () =>
         {
             var tag = Guid.NewGuid().ToString("N")[..8];
-            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Test {tag}"), autoSave: true);
-            var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
-            var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "2"), autoSave: true);
-            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), "en", $"Room 1 {tag}", building.Id, floor1.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
-            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), "en", $"Room 2 {tag}", building.Id, floor2.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {tag}"), autoSave: true);
+            var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
+            var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2"), autoSave: true);
+            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 1 {tag}", building.Id, floor1.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room 2 {tag}", building.Id, floor2.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
             return new Estate(building, floor1, a, b);
         });
 }

@@ -20,13 +20,14 @@ public class Floor : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<FloorTr
 
     protected Floor() { }
 
-    public Floor(Guid id, Guid buildingId, string language, string name) : base(id)
+    /* name is the English name; other languages are added with SetName. */
+    public Floor(Guid id, Guid buildingId, string name) : base(id)
     {
         BuildingId = buildingId;
-        SetName(language, name);
+        SetName(PortalLanguages.Default, name);
     }
 
-    /* In the reader's language, or the fallback when it has none. */
+    /* In the reader's language, or English when it has none. */
     public string GetName(string? language = null) => this.GetTranslation(language)?.Name ?? "";
 
     public void SetName(string language, string name)

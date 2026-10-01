@@ -120,8 +120,8 @@ public class SpaceTypeTests : PortalEntityFrameworkCoreTestBase
     private Task<(Building, Floor)> CreateBuildingAsync(string timeZone)
         => WithUnitOfWorkAsync(async () =>
         {
-            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Test {Tag()}") { TimeZone = timeZone }, autoSave: true);
-            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
+            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {Tag()}") { TimeZone = timeZone }, autoSave: true);
+            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
             return (building, floor);
         });
 }

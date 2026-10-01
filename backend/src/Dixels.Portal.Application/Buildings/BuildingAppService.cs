@@ -47,7 +47,7 @@ public class BuildingAppService
     [Authorize(PortalPermissions.Buildings.Create)]
     public override async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
     {
-        var building = await _buildingManager.CreateAsync(input.Name, input.OpenHour, input.CloseHour);
+        var building = await _buildingManager.CreateAsync(input.Name, input.Translations.ToNameTranslations(), input.OpenHour, input.CloseHour);
         CopyFields(building, input);
         await Repository.InsertAsync(building, autoSave: true);
         return await MapToGetOutputDtoAsync(building);
@@ -57,7 +57,7 @@ public class BuildingAppService
     public override async Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input)
     {
         var building = await GetEntityByIdAsync(id);
-        await _buildingManager.ChangeNameAsync(building, input.Name);
+        await _buildingManager.ChangeNamesAsync(building, input.Name, input.Translations.ToNameTranslations());
         _buildingManager.EnsureValidHours(input.OpenHour, input.CloseHour);
         CopyFields(building, input);
         await Repository.UpdateAsync(building, autoSave: true);
@@ -94,7 +94,7 @@ public class BuildingAppService
         {
             var dto = ObjectMapper.Map<Building, BuildingDto>(b);
             dto.Name = b.GetName();
-            dto.IsTranslated = b.IsTranslated();
+            dto.Translations = TranslationDtos.Of(b.Translations, t => new TranslationDto { Language = t.Language, Name = t.Name });
             dto.FloorCount = floorCounts.GetValueOrDefault(b.Id);
             dto.SpaceCount = spaceCounts.GetValueOrDefault(b.Id);
             return dto;

@@ -24,15 +24,16 @@ public class Space : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTr
 
     protected Space() { }
 
-    public Space(Guid id, string language, string name, Guid buildingId, Guid floorId, Guid typeId, string? note = null) : base(id)
+    /* name and note are the English ones; other languages are added with SetText. */
+    public Space(Guid id, string name, Guid buildingId, Guid floorId, Guid typeId, string? note = null) : base(id)
     {
-        SetText(language, name, note);
+        SetText(PortalLanguages.Default, name, note);
         BuildingId = buildingId;
         FloorId = floorId;
         TypeId = typeId;
     }
 
-    /* In the reader's language, or the fallback when it has none. */
+    /* In the reader's language, or English when it has none. */
     public string GetName(string? language = null) => this.GetTranslation(language)?.Name ?? "";
 
     public string? GetNote(string? language = null) => this.GetTranslation(language)?.Note;

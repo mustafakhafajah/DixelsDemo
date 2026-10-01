@@ -158,15 +158,15 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
         => WithUnitOfWorkAsync(async () =>
         {
             var tag = Guid.NewGuid().ToString("N")[..8];
-            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Test {tag}"), autoSave: true);
-            var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
-            var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "2"), autoSave: true);
+            var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {tag}"), autoSave: true);
+            var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
+            var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2"), autoSave: true);
             async Task<List<Space>> Add(Floor f, int n)
             {
                 var list = new List<Space>();
                 for (var i = 0; i < n; i++)
                     list.Add(await _spaces.InsertAsync(
-                        new Space(Guid.NewGuid(), "en", $"Room {f.GetName()}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
+                        new Space(Guid.NewGuid(), $"Room {f.GetName()}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
                         autoSave: true));
                 return list;
             }

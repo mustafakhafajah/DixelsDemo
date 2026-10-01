@@ -135,12 +135,12 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         => WithUnitOfWorkAsync(async () =>
         {
             var tag = Guid.NewGuid().ToString("N")[..8];
-            var newBuilding = new Building(Guid.NewGuid(), "en", $"Test {tag}");
+            var newBuilding = new Building(Guid.NewGuid(), $"Test {tag}");
             setUp?.Invoke(newBuilding);
             var building = await _buildings.InsertAsync(newBuilding, autoSave: true);
-            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
-            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), "en", $"Room A {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
-            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), "en", $"Room B {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+            var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
+            var a = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room A {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+            var b = await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room B {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
             return (a, b);
         });
 }

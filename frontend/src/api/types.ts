@@ -4,19 +4,27 @@ import { parseUtc } from '../lib/dateUtils'
 export type MaintenanceScopeType = 'Space' | 'Floor' | 'Building'
 export type Lifecycle = 'scheduled' | 'in_progress' | 'ended' | 'cancelled'
 
+/* A record's words in one language. English ("en") is always there; the others are optional extras.
+ * note is only used by spaces. */
+export interface Translation {
+  language: string
+  name: string
+  note?: string | null
+}
+
 /* An admin-managed kind of space ("Meeting room", "Desk", ...). */
 export interface SpaceType {
   id: string
   name: string
-  /* False: no name in the current language yet, so name is the fallback language's. */
-  isTranslated: boolean
+  /* name is in the reader's language, or English. translations has every language, English first, for the edit form. */
+  translations: Translation[]
   spaceCount: number
 }
 
 export interface Building {
   id: string
   name: string
-  isTranslated: boolean
+  translations: Translation[]
   timeZone: string
   /* Ticked = bookable. Unticking blocks every floor and space in it. */
   isBookable: boolean
@@ -36,7 +44,7 @@ export interface Floor {
   buildingId: string
   buildingName: string
   name: string
-  isTranslated: boolean
+  translations: Translation[]
   isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
@@ -59,7 +67,7 @@ export interface Constraints {
 export interface Space {
   id: string
   name: string
-  isTranslated: boolean
+  translations: Translation[]
   typeId: string
   typeName: string
   /* Its own tick; it can still be blocked by its floor or building (see notBookableReason). */

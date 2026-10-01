@@ -4,7 +4,8 @@ using System.Linq;
 namespace Dixels.Portal.Localization;
 
 /* ABP's "multi-lingual entities" pattern (its Volo.Abp.MultiLingualObjects package is not published on NuGet,
- * so the small part we need lives here): an entity keeps its words in one row per language. */
+ * so the small part we need lives here): an entity keeps its words in one row per language. The English row
+ * (PortalLanguages.Default) is required; the other languages are optional extras. */
 public interface IMultiLingualObject<TTranslation>
     where TTranslation : class, IObjectTranslation
 {
@@ -22,15 +23,21 @@ public static class MultiLingualObjectExtensions
         where TTranslation : class, IObjectTranslation
         => obj.Translations.FirstOrDefault(t => t.Language == language);
 
-    /* The reader's language, else the default language, else whichever exists, so a name is never blank. */
+    /* The reader's language, else English. Never another language: an English reader only ever sees English. */
     public static TTranslation? GetTranslation<TTranslation>(this IMultiLingualObject<TTranslation> obj, string? language = null)
         where TTranslation : class, IObjectTranslation
         => obj.FindTranslation(PortalLanguages.Normalize(language ?? PortalLanguages.Current))
-           ?? obj.FindTranslation(PortalLanguages.Default)
-           ?? obj.Translations.OrderBy(t => t.Language).FirstOrDefault();
+           ?? obj.FindTranslation(PortalLanguages.Default);
 
-    /* False when what the reader sees is a fallback from another language. */
-    public static bool IsTranslated<TTranslation>(this IMultiLingualObject<TTranslation> obj, string? language = null)
+    /* Drops the extra languages that are not in keep; the English row always stays. */
+    public static void RemoveTranslationsExcept<TTranslation>(this IMultiLingualObject<TTranslation> obj, IEnumerable<string> keep)
         where TTranslation : class, IObjectTranslation
-        => obj.FindTranslation(PortalLanguages.Normalize(language ?? PortalLanguages.Current)) != null;
+    {
+        var kept = keep.ToHashSet();
+        foreach (var t in obj.Translations.Where(t => t.Language != PortalLanguages.Default && !kept.Contains(t.Language)).ToList())
+            obj.Translations.Remove(t);
+    }
 }
+
+/* One language's words as the admin typed them, before the rules check them. Note is only used by spaces. */
+public record NameTranslation(string Language, string Name, string? Note = null);

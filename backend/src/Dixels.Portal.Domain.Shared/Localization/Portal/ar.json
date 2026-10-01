@@ -38,6 +38,10 @@
     "BuildingFloorLabel": "{0} · الطابق {1}",
 
     "Error:UnsupportedLanguage": "اختر إحدى لغات البوابة.",
+    "Error:TranslationTwice": "اللغة {0} مُضافة مرتين. أبقِ واحدة فقط.",
+    "Error:TranslationNameMissing": "أدخل الاسم باللغة {0}، أو احذف هذه اللغة.",
+    "Error:NameTooLong": "يجب ألا يتجاوز الاسم {0} حرفاً.",
+    "Error:NoteTooLong": "يجب ألا يتجاوز الوصف {0} حرفاً.",
     "Error:CloseBeforeOpen": "يجب أن تكون ساعة الإغلاق بعد ساعة الفتح.",
     "Error:BuildingNameMissing": "أدخل اسماً للمبنى.",
     "Error:BuildingDuplicate": "{0} موجود بالفعل ضمن المباني.",

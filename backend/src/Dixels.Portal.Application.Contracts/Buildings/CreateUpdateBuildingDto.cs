@@ -2,13 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Dixels.Portal.Estate;
+using Dixels.Portal.Localization;
 
 namespace Dixels.Portal.Buildings;
 
 public class CreateUpdateBuildingDto
 {
+    /* The English name: every record must have one. */
     [Required, StringLength(BuildingConsts.MaxNameLength)]
     public string Name { get; set; } = null!;
+    /* Optional names in the portal's other languages (never "en"); the full set, so a language left out is removed. */
+    public List<TranslationDto> Translations { get; set; } = new();
     [Required, StringLength(BuildingConsts.MaxTimeZoneLength)]
     public string TimeZone { get; set; } = "UTC";
     public bool IsBookable { get; set; } = true;

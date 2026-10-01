@@ -7,6 +7,8 @@ namespace Dixels.Portal.Spaces;
 public class SpaceDto : EntityDto<Guid>
 {
     public string Name { get; set; } = null!;
+    /* False when Name (and Note) is shown in a fallback language because none was typed in the reader's. */
+    public bool IsTranslated { get; set; }
     public Guid TypeId { get; set; }
     public string TypeName { get; set; } = null!;
     public bool IsBookable { get; set; } = true;

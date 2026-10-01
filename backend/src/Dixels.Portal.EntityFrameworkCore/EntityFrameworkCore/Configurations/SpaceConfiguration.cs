@@ -14,9 +14,9 @@ public class SpaceConfiguration : IEntityTypeConfiguration<Space>
     {
         b.ToTable(PortalConsts.DbTablePrefix + "Spaces", PortalConsts.DbSchema);
         b.ConfigureByConvention();
-        b.Property(x => x.Name).IsRequired().HasMaxLength(SpaceConsts.MaxNameLength);
-        b.Property(x => x.Note).HasMaxLength(SpaceConsts.MaxNoteLength);
-        b.HasIndex(x => x.Name).IsUnique();
+        b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceId).OnDelete(DeleteBehavior.Cascade);
+        /* Every query that loads a space loads its names and notes, so GetName() can pick the reader's language. */
+        b.Navigation(x => x.Translations).AutoInclude();
         b.HasIndex(x => new { x.BuildingId, x.FloorId });
         b.HasOne<Building>().WithMany().HasForeignKey(x => x.BuildingId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Floor>().WithMany().HasForeignKey(x => x.FloorId).OnDelete(DeleteBehavior.Restrict);

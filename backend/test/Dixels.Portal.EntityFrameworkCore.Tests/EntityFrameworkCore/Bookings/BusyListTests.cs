@@ -69,9 +69,9 @@ public class BusyListTests : PortalEntityFrameworkCoreTestBase
         => WithUnitOfWorkAsync(async () =>
         {
             var tag = Guid.NewGuid().ToString("N")[..8];
-            var building = await GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(Guid.NewGuid(), $"Busy {tag}"), autoSave: true);
-            var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
+            var building = await GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(Guid.NewGuid(), "en", $"Busy {tag}"), autoSave: true);
+            var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
             return await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(
-                new Space(Guid.NewGuid(), $"Room {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+                new Space(Guid.NewGuid(), "en", $"Room {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
         });
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import i18n from 'i18next'
 import { ApiError, errorText } from '../api/client'
 import { toast } from '../state/toastStore'
 
@@ -24,7 +25,7 @@ export function useFieldErrors() {
   }
 
   /* serverFields maps the server's field names (e.g. "name", "closeHourOverride") to this form's field ids. */
-  const fromServer = (e: unknown, serverFields: Record<string, string>, toastTitle = 'Request rejected') => {
+  const fromServer = (e: unknown, serverFields: Record<string, string>, toastTitle = i18n.t('common.requestRejected')) => {
     const placed: FieldErrors = {}
     if (e instanceof ApiError) {
       e.fieldErrors.forEach((f) => {

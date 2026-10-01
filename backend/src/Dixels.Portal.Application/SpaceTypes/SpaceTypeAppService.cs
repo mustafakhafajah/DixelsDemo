@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Localization;
 using Dixels.Portal.Permissions;
@@ -61,7 +62,8 @@ public class SpaceTypeAppService
         await Repository.DeleteAsync(type, autoSave: true);
     }
 
-    protected override IQueryable<SpaceType> ApplyDefaultSorting(IQueryable<SpaceType> query) => query.OrderBy(t => t.Name);
+    protected override IQueryable<SpaceType> ApplyDefaultSorting(IQueryable<SpaceType> query)
+        => query.OrderBy(LocalizedNameQuery.SpaceTypeName(PortalLanguages.Current));
 
     protected override async Task<SpaceTypeDto> MapToGetOutputDtoAsync(SpaceType entity)
         => (await MapToGetListOutputDtosAsync(new List<SpaceType> { entity }))[0];
@@ -77,6 +79,8 @@ public class SpaceTypeAppService
         return entities.Select(t =>
         {
             var dto = ObjectMapper.Map<SpaceType, SpaceTypeDto>(t);
+            dto.Name = t.GetName();
+            dto.IsTranslated = t.IsTranslated();
             dto.SpaceCount = counts.GetValueOrDefault(t.Id);
             return dto;
         }).ToList();

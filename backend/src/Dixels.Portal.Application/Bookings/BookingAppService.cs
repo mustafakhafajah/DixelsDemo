@@ -60,7 +60,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     {
         var b = await GetBookingAsync(id);
         if (b.OwnerUserId != CurrentUser.Id && !await SeesAllBookingsAsync())
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: "No booking with that ID.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: L["Error:BookingNotFound"]);
         return await MapAsync(b);
     }
 
@@ -145,17 +145,17 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input)
     {
         var b = await GetBookingAsync(id);
-        await EnsureCanActAsync(b, "You can only change your own bookings.");
+        await EnsureCanActAsync(b, L["Error:OnlyOwnChange"]);
         var state = b.GetLifecycle(Clock.Now);
         if (state is TimeWindowState.Ended or TimeWindowState.Cancelled)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: $"A {state.ToApiValue()} booking cannot be changed.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L[$"Error:BookingLocked:{state.ToApiValue()}"]);
         if (state == TimeWindowState.InProgress)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingInProgress, message:
-                "A booking that has started can only be cancelled or ended early.");
+                L["Error:BookingInProgress"]);
         /* Optimistic concurrency: refuse if someone changed the booking after the client loaded it. */
         if (input.ExpectedVersion.HasValue && input.ExpectedVersion.Value != b.Version)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.VersionMismatch, message:
-                    "This booking changed since you loaded it. Reload and try again.")
+                    L["Error:VersionMismatch"])
                 .WithData("expected", input.ExpectedVersion.Value)
                 .WithData("current", b.Version);
 
@@ -189,7 +189,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id)
     {
         var anchor = await GetBookingAsync(id);
-        await EnsureCanActAsync(anchor, "You can only cancel your own bookings.");
+        await EnsureCanActAsync(anchor, L["Error:OnlyOwnCancel"]);
         if (!anchor.SeriesId.HasValue)
         {
             await CancelOneAsync(anchor);
@@ -214,10 +214,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<BookingDto> EndEarlyAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
-        await EnsureCanActAsync(b, "You can only end your own bookings.");
+        await EnsureCanActAsync(b, L["Error:OnlyOwnEnd"]);
         if (b.GetLifecycle(Clock.Now) != TimeWindowState.InProgress)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotInProgress, message:
-                "Only a booking that has already started can be ended early.");
+                L["Error:BookingNotInProgress"]);
         b.EndUtc = Clock.Now;
         b.Version++;
         await BookingOverlap.Translate(() => _bookings.UpdateAsync(b, autoSave: true));
@@ -240,7 +240,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task<Booking> GetBookingAsync(Guid id)
         => await _bookings.FindAsync(id)
-           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: "No booking with that ID.");
+           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: L["Error:BookingNotFound"]);
 
     /* Owners act on their own bookings; admins (Bookings.ManageAll) on anyone's. */
     private async Task EnsureCanActAsync(Booking b, string message)
@@ -261,10 +261,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task CancelOneAsync(Booking b)
     {
-        await EnsureCanActAsync(b, "You can only cancel your own bookings.");
+        await EnsureCanActAsync(b, L["Error:OnlyOwnCancel"]);
         var state = b.GetLifecycle(Clock.Now);
         if (state == TimeWindowState.Ended)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: "An ended booking cannot be cancelled.");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L["Error:EndedCannotCancel"]);
         if (state == TimeWindowState.Cancelled) return;
         b.Cancel();
         await _bookings.UpdateAsync(b, autoSave: true);
@@ -281,17 +281,14 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task<BookingDto> MapAsync(Booking booking) => (await MapListAsync(new List<Booking> { booking }))[0];
 
-    /* Shown instead of the owner's name on other people's bookings to anyone who is not an admin. */
-    public const string HiddenOwnerName = "Booked";
-
     /* ObjectMapper copies the booking; the space and owner names come from one query each for the whole list.
      * Only admins (Bookings.ManageAll) see who booked what; everyone else sees their own name and
-     * "Booked" on the rest, so another person's name never leaves the server. */
+     * "Booked" (HiddenOwnerName, in their language) on the rest, so another person's name never leaves the server. */
     private async Task<List<BookingDto>> MapListAsync(List<Booking> list)
     {
         if (list.Count == 0) return new();
         var spaceIds = list.Select(b => b.SpaceId).Distinct().ToList();
-        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.Name);
+        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.GetName());
         var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
         var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, u => u.GetDisplayName());
         var now = Clock.Now;
@@ -299,10 +296,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return list.Select(b =>
         {
             var dto = ObjectMapper.Map<Booking, BookingDto>(b);
-            dto.SpaceName = spaces.GetValueOrDefault(b.SpaceId, "Unknown space");
+            dto.SpaceName = spaces.GetValueOrDefault(b.SpaceId) ?? L["UnknownSpace"];
             dto.OwnerName = seesNames || b.OwnerUserId == CurrentUser.Id
-                ? users.GetValueOrDefault(b.OwnerUserId, "a former user")
-                : HiddenOwnerName;
+                ? users.GetValueOrDefault(b.OwnerUserId) ?? L["FormerUser"]
+                : L["HiddenOwnerName"];
             dto.Lifecycle = b.GetLifecycle(now).ToApiValue();
             return dto;
         }).ToList();

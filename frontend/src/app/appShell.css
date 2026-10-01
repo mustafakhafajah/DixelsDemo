@@ -61,30 +61,31 @@
   min-width: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Inter has no Arabic letters; the next fonts supply them. */
+  font-family: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
   font-size: 14px;
   line-height: normal;
   letter-spacing: normal;
-  text-align: left;
+  text-align: start;
   -webkit-font-smoothing: antialiased;
 }
 .app-shell *, .app-shell *::before, .app-shell *::after { box-sizing: border-box; }
 .app-shell h1, .app-shell h2, .app-shell h3 { font-family: inherit; color: inherit; letter-spacing: normal; margin: 0; font-weight: 700; line-height: normal; }
 .app-shell p { margin: 0; }
-.app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-ligatures: none; }
+.app-shell .mono { font-family: 'IBM Plex Mono', ui-monospace, 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; font-variant-ligatures: none; }
 
-/* ── SHELL ── */
+/* ── SHELL ── Sides are logical (inline-start / inline-end), so the layout mirrors in right-to-left languages. */
 /* Light sidebar (reference design): white panel, grey items, the selected item is a soft purple pill. */
 .app-shell .sidebar {
-  background: var(--surface); color: var(--ink); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  background: var(--surface); color: var(--ink); border-inline-end: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--slate); padding: 0 10px; margin: 0 0 6px; }
-.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; text-decoration: none; }
+.app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer; border: none; background: none; width: 100%; text-align: start; font-family: inherit; text-decoration: none; }
 .app-shell .nav-link:hover { background: var(--surface-3); color: var(--ink); }
 .app-shell .nav-link.active { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
 .app-shell .nav-link svg { flex-shrink: 0; color: var(--slate); }
 .app-shell .nav-link.active svg { color: var(--accent-dark); }
-.app-shell .nav-count { margin-left: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
+.app-shell .nav-count { margin-inline-start: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
 /* flex-shrink: 0 keeps the logo from being squeezed to nothing on short screens. */
 .app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; flex-shrink: 0; padding: 2px 6px; }
 .app-shell .sidebar-logo .logo-light { height: 40px; width: auto; display: block; }
@@ -94,10 +95,14 @@
 :root[data-theme="dark"] .app-shell .sidebar-logo .logo-light { display: none; }
 :root[data-theme="dark"] .app-shell .sidebar-logo .logo-dark { display: flex; }
 .app-shell .logo-tile { width: 40px; height: 40px; border-radius: 10px; background: var(--logo-tile); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.app-shell .logo-mark { width: 17px; height: 22px; overflow: hidden; }
+/* ltr: the crop keeps the image's left part (the hexagon) in right-to-left languages too. */
+.app-shell .logo-mark { width: 17px; height: 22px; overflow: hidden; direction: ltr; }
 .app-shell .logo-mark img { height: 22px; width: auto; display: block; filter: brightness(0) invert(1); }
 .app-shell .logo-word { font-size: 16px; font-weight: 400; letter-spacing: .16em; color: var(--ink); }
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
+/* The links under a menu heading, indented behind a thin rule. */
+.app-shell .nav-sub { margin-inline-start: 6px; padding-inline-start: 9px; border-inline-start: 1px solid var(--line); display: flex; flex-direction: column; gap: 1px; margin-bottom: 8px; }
+.app-shell .sidebar-lang { color: var(--slate); --lang-line: var(--line); --lang-focus: var(--accent); }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--avatar); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
 .app-shell .avatar.admin { background: var(--avatar-admin); }
 .app-shell .sidebar .avatar, .app-shell .sidebar .avatar.admin { background: var(--mine); color: var(--on-accent); }
@@ -121,17 +126,18 @@
 
 .app-shell label.lbl, .app-shell .lbl { display: block; font-size: 13px; font-weight: 500; color: var(--slate); margin-bottom: 6px; }
 .app-shell .inp { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; box-shadow: var(--shadow-1); }
-.app-shell .inp.mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.app-shell .inp.mono { font-family: 'IBM Plex Mono', ui-monospace, 'Segoe UI', 'Noto Sans Arabic', Tahoma, monospace; }
 .app-shell .inp:focus { outline: 3px solid var(--accent-soft); outline-offset: 0; border-color: var(--accent); }
 .app-shell .inp[disabled] { opacity: .5; }
-.app-shell select.inp { appearance: none; background-image: linear-gradient(45deg,transparent 50%,var(--slate) 50%),linear-gradient(135deg,var(--slate) 50%,transparent 50%); background-position: calc(100% - 15px) 53%,calc(100% - 10px) 53%; background-size: 5px 5px,5px 5px; background-repeat: no-repeat; padding-right: 28px; }
+.app-shell select.inp { appearance: none; background-image: linear-gradient(45deg,transparent 50%,var(--slate) 50%),linear-gradient(135deg,var(--slate) 50%,transparent 50%); background-position: calc(100% - 15px) 53%,calc(100% - 10px) 53%; background-size: 5px 5px,5px 5px; background-repeat: no-repeat; padding-inline-end: 28px; }
+[dir='rtl'] .app-shell select.inp { background-position: 10px 53%,15px 53%; }
 .app-shell .utcchip { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--slate); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; background: var(--surface-2); }
 .app-shell .err { display: flex; gap: 6px; align-items: baseline; font-size: 12px; color: var(--rust); margin-top: 5px; }
 .app-shell .errcode { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--rust); background: var(--rust-soft); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
 
 
 .app-shell table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
-.app-shell table.grid th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); padding: 11px 16px; border-bottom: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
+.app-shell table.grid th { text-align: start; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); padding: 11px 16px; border-bottom: 1px solid var(--line); background: var(--surface); white-space: nowrap; }
 .app-shell table.grid td { padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .app-shell table.grid tr:last-child td { border-bottom: none; }
 .app-shell table.grid tbody tr:hover { background: var(--surface-2); }
@@ -148,7 +154,8 @@
 
 .app-shell .overlay { position: fixed; inset: 0; background: var(--overlay); z-index: 50; }
 .app-shell .modal { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); width: 560px; max-height: 92vh; overflow-y: auto; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-modal); }
-.app-shell .drawer { position: absolute; right: 0; top: 0; bottom: 0; width: 460px; background: var(--surface); overflow-y: auto; box-shadow: -20px 0 60px var(--shadow-side); border-left: 1px solid var(--line); }
+.app-shell .drawer { position: absolute; inset-inline-end: 0; top: 0; bottom: 0; width: 460px; background: var(--surface); overflow-y: auto; box-shadow: -20px 0 60px var(--shadow-side); border-inline-start: 1px solid var(--line); }
+[dir='rtl'] .app-shell .drawer { box-shadow: 20px 0 60px var(--shadow-side); }
 .app-shell .sheet-head { position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); padding: 15px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; z-index: 2; }
 .app-shell .sheet-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
 .app-shell .sheet-foot { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 18px; display: flex; gap: 10px; justify-content: flex-end; }
@@ -156,15 +163,15 @@
 .app-shell .iconbtn:hover { background: var(--surface-2); color: var(--ink); }
 
 .app-shell .row-menu { position: relative; }
-.app-shell .row-menu-list { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-menu); z-index: 10; min-width: 150px; overflow: hidden; }
-.app-shell .row-menu-item { display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 12.5px; font-family: inherit; background: none; border: none; cursor: pointer; color: var(--ink); }
+.app-shell .row-menu-list { position: absolute; inset-inline-end: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-menu); z-index: 10; min-width: 150px; overflow: hidden; }
+.app-shell .row-menu-item { display: block; width: 100%; text-align: start; padding: 8px 12px; font-size: 12.5px; font-family: inherit; background: none; border: none; cursor: pointer; color: var(--ink); }
 .app-shell .row-menu-item:hover { background: var(--surface-2); }
 
 .app-shell pre.json { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.55; background: var(--code-bg); color: var(--code-ink); padding: 11px 13px; border-radius: 7px; overflow-x: auto; margin: 0; white-space: pre; }
 
-.app-shell .toasts { position: fixed; top: 16px; right: 16px; z-index: 70; display: flex; flex-direction: column; gap: 9px; width: 390px; }
-.app-shell .toast { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: 9px; padding: 11px 13px; box-shadow: var(--shadow-toast); }
-.app-shell .toast.ok { border-left-color: var(--accent); } .app-shell .toast.err { border-left-color: var(--rust); } .app-shell .toast.warn { border-left-color: var(--copper); }
+.app-shell .toasts { position: fixed; top: 16px; inset-inline-end: 16px; z-index: 70; display: flex; flex-direction: column; gap: 9px; width: 390px; }
+.app-shell .toast { background: var(--surface); border: 1px solid var(--line); border-inline-start-width: 3px; border-radius: 9px; padding: 11px 13px; box-shadow: var(--shadow-toast); }
+.app-shell .toast.ok { border-inline-start-color: var(--accent); } .app-shell .toast.err { border-inline-start-color: var(--rust); } .app-shell .toast.warn { border-inline-start-color: var(--copper); }
 
 .app-shell .kv { display: grid; grid-template-columns: 104px 1fr; gap: 7px 12px; font-size: 12.5px; margin: 0; }
 .app-shell .kv dt { color: var(--slate); } .app-shell .kv dd { margin: 0; font-weight: 500; }
@@ -177,15 +184,15 @@
 
 /* ── REQUIRED FIELDS ── */
 .app-shell .lbl.req { font-weight: 700; color: var(--ink); }
-.app-shell .req-mark { color: var(--rust); font-weight: 700; margin-left: 3px; }
+.app-shell .req-mark { color: var(--rust); font-weight: 700; margin-inline-start: 3px; }
 .app-shell .req-note { font-size: 11.5px; color: var(--slate); margin: 0 0 -4px; }
-.app-shell .req-note .req-mark { margin: 0 2px 0 0; }
+.app-shell .req-note .req-mark { margin: 0; margin-inline-end: 2px; }
 .app-shell .modal .req-note { margin: 0; }
 
 /* ── REGISTRY FILTERS + PAGINATION ── */
 .app-shell .filter-bar { display: flex; gap: 12px; align-items: flex-end; padding: 12px 16px 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: var(--surface); }
 .app-shell .pager { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
-.app-shell .pager-summary { font-size: 12px; color: var(--slate); margin-right: auto; }
+.app-shell .pager-summary { font-size: 12px; color: var(--slate); margin-inline-end: auto; }
 .app-shell .pager-pages { display: flex; align-items: center; gap: 2px; }
 .app-shell .pager-pages .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .app-shell .pager-num { min-width: 30px; height: 30px; border: 1px solid transparent; background: none; border-radius: 6px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--slate); cursor: pointer; }
@@ -193,7 +200,7 @@
 .app-shell .pager-num.active { background: var(--accent-soft); color: var(--accent-dark); }
 .app-shell .pager-gap { min-width: 22px; text-align: center; color: var(--slate-2); font-size: 12.5px; }
 .app-shell .pager-size { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--slate); }
-.app-shell .pager-size .inp { width: 74px; padding: 6px 8px; padding-right: 26px; }
+.app-shell .pager-size .inp { width: 74px; padding: 6px 8px; padding-inline-end: 26px; }
 
 /* ── SCHEDULE (shared month-view component) ── */
 .app-shell .sched-toolbar { display: flex; gap: 12px; align-items: flex-end; padding: 14px 16px; flex-wrap: wrap; }
@@ -204,38 +211,38 @@
 .app-shell .month-block { flex: 1; min-width: 300px; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-top: 16px; }
 .app-shell .month-head { padding: 9px 12px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; }
 .app-shell .month-grid { display: grid; grid-template-columns: repeat(7,1fr); }
-.app-shell .wk-label { font-size: 10px; font-weight: 700; color: var(--slate); text-align: center; padding: 6px 0; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-.app-shell .day-cell { min-height: 88px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 5px 6px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.app-shell .day-cell:nth-child(7n) { border-right: none; }
+.app-shell .wk-label { font-size: 10px; font-weight: 700; color: var(--slate); text-align: center; padding: 6px 0; border-bottom: 1px solid var(--line); background: var(--surface-2);; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .day-cell { min-height: 88px; border-inline-end: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 5px 6px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app-shell .day-cell:nth-child(7n) { border-inline-end: none; }
 .app-shell .day-cell:hover { background: var(--surface-2); }
 .app-shell .day-cell.out { background: var(--surface-2); cursor: default; opacity: .45; }
 .app-shell .day-cell.today .day-num { background: var(--mine); color: var(--on-accent); }
 .app-shell .day-num { font-size: 11.5px; font-weight: 600; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 5px; }
-.app-shell .chip { font-size: 10.5px; font-weight: 600; padding: 2px 5px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 2px solid transparent; }
+.app-shell .chip { font-size: 10.5px; font-weight: 600; padding: 2px 5px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 2px solid transparent; }
 .app-shell .chip.mine { background: var(--mine); color: var(--on-accent); }
-.app-shell .chip.other { background: var(--accent-soft); color: var(--accent-dark); border-left-color: var(--accent); }
-.app-shell .chip.inprog { background: var(--copper-soft); color: var(--copper); border-left-color: var(--copper); }
-.app-shell .chip.ended { background: var(--surface-2); color: var(--slate); border-left-color: var(--slate-2); }
+.app-shell .chip.other { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--accent); }
+.app-shell .chip.inprog { background: var(--copper-soft); color: var(--copper); border-inline-start-color: var(--copper); }
+.app-shell .chip.ended { background: var(--surface-2); color: var(--slate); border-inline-start-color: var(--slate-2); }
 .app-shell .more-link { font-size: 10px; font-weight: 600; color: var(--slate); }
 
-/* ── TIME GRID (week / day) ── */
-.app-shell .sched-nav { display: flex; gap: 8px; align-items: center; margin-left: auto; padding-bottom: 1px; }
+/* ── TIME GRID (week / day) ── Time runs down; the day columns follow the reading direction. */
+.app-shell .sched-nav { display: flex; gap: 8px; align-items: center; margin-inline-start: auto; padding-bottom: 1px; }
 .app-shell .period-label { font-size: 12px; font-weight: 600; min-width: 158px; text-align: center; }
 .app-shell .tg-wrap { padding: 16px; }
 .app-shell .tg-scroll { border: 1px solid var(--line); border-radius: 9px; overflow: auto; max-height: 580px; }
 .app-shell .tg-grid { display: grid; }
-.app-shell .tg-corner { position: sticky; top: 0; left: 0; z-index: 4; background: var(--surface-2); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
-.app-shell .tg-colhead { position: sticky; top: 0; z-index: 3; background: var(--surface-2); color: var(--ink); border: none; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 7px 8px; text-align: center; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-.app-shell .tg-colhead:last-child { border-right: none; }
+.app-shell .tg-corner { position: sticky; top: 0; inset-inline-start: 0; z-index: 4; background: var(--surface-2); border-bottom: 1px solid var(--line); border-inline-end: 1px solid var(--line); }
+.app-shell .tg-colhead { position: sticky; top: 0; z-index: 3; background: var(--surface-2); color: var(--ink); border: none; border-bottom: 1px solid var(--line); border-inline-end: 1px solid var(--line); padding: 7px 8px; text-align: center; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.app-shell .tg-colhead:last-child { border-inline-end: none; }
 .app-shell .tg-colhead:hover { background: var(--accent-soft); }
 .app-shell .tg-colhead small { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; color: var(--slate); }
 .app-shell .tg-colhead.today { background: var(--accent-soft); color: var(--accent-dark); }
 .app-shell .tg-colhead.today small { color: var(--accent-dark); }
 .app-shell .tg-colhead.today:hover { background: var(--accent-soft); }
-.app-shell .tg-axis { position: sticky; left: 0; z-index: 2; background: var(--surface); border-right: 1px solid var(--line); }
-.app-shell .tg-hour { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--slate-2); text-align: right; padding: 2px 7px 0 0; border-bottom: 1px solid var(--line); }
-.app-shell .tg-col { position: relative; border-right: 1px solid var(--line); }
-.app-shell .tg-col:last-child { border-right: none; }
+.app-shell .tg-axis { position: sticky; inset-inline-start: 0; z-index: 2; background: var(--surface); border-inline-end: 1px solid var(--line); }
+.app-shell .tg-hour { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--slate-2); text-align: end; padding: 2px 0 0; padding-inline-end: 7px; border-bottom: 1px solid var(--line); }
+.app-shell .tg-col { position: relative; border-inline-end: 1px solid var(--line); }
+.app-shell .tg-col:last-child { border-inline-end: none; }
 .app-shell .tg-col.weekend { background: var(--surface-2); }
 .app-shell .tg-slot { border-bottom: 1px dashed var(--line); cursor: pointer; }
 .app-shell .tg-slot.hard { border-bottom-style: solid; }
@@ -245,21 +252,21 @@
 .app-shell .tg-select { position: absolute; left: 2px; right: 2px; z-index: 2; pointer-events: none; border-radius: 5px; background: var(--accent-soft); border: 1px solid var(--accent); padding: 2px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: var(--accent-dark); }
 .app-shell .tg-wrap.dragging, .app-shell .tg-wrap.dragging .tg-slot { cursor: ns-resize; user-select: none; }
 .app-shell .tg-wrap.dragging .tg-slot:hover { background: none; box-shadow: none; }
-.app-shell .tg-block { position: absolute; border-radius: 5px; padding: 2px 6px; overflow: hidden; cursor: pointer; z-index: 1; font-size: 10.5px; line-height: 1.3; border-left: 2px solid transparent; }
+.app-shell .tg-block { position: absolute; border-radius: 5px; padding: 2px 6px; overflow: hidden; cursor: pointer; z-index: 1; font-size: 10.5px; line-height: 1.3; border-inline-start: 2px solid transparent; }
 .app-shell .tg-block b { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .app-shell .tg-block span { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-shell .tg-block:hover { box-shadow: var(--shadow-hover); }
 .app-shell .tg-block.compact { display: flex; gap: 5px; align-items: baseline; padding-top: 0; }
 .app-shell .tg-block.compact b { display: inline; }
-.app-shell .tg-block.mine { background: var(--mine); color: var(--on-accent); border-left-color: var(--mine-edge); }
-.app-shell .tg-block.other { background: var(--accent-soft); color: var(--accent-dark); border-left-color: var(--accent); }
-.app-shell .tg-block.inprog { background: var(--copper-soft); color: var(--copper); border-left-color: var(--copper); }
-.app-shell .tg-block.ended { background: var(--surface-2); color: var(--slate); border-left-color: var(--slate-2); }
+.app-shell .tg-block.mine { background: var(--mine); color: var(--on-accent); border-inline-start-color: var(--mine-edge); }
+.app-shell .tg-block.other { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--accent); }
+.app-shell .tg-block.inprog { background: var(--copper-soft); color: var(--copper); border-inline-start-color: var(--copper); }
+.app-shell .tg-block.ended { background: var(--surface-2); color: var(--slate); border-inline-start-color: var(--slate-2); }
 .app-shell .tg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
-.app-shell .tg-now::before { content: ''; position: absolute; left: -3px; top: -4.5px; width: 7px; height: 7px; border-radius: 999px; background: var(--rust); }
+.app-shell .tg-now::before { content: ''; position: absolute; inset-inline-start: -3px; top: -4.5px; width: 7px; height: 7px; border-radius: 999px; background: var(--rust); }
 .app-shell .tg-hint { font-size: 11.5px; color: var(--slate-2); margin: 9px 2px 0; }
 
-/* ── FIND A SPACE: ROOM TIMELINE ── */
+/* ── FIND A SPACE: ROOM TIMELINE ── Time runs along the reading direction: right to left in right-to-left languages. */
 .app-shell .find-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
 .app-shell .find-filters { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 .app-shell .find-filters h3 { font-size: 14px; font-weight: 500; color: var(--slate); margin: 0 0 10px; }
@@ -280,15 +287,16 @@
 .app-shell .rt-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
 .app-shell .rt-header { display: flex; position: sticky; top: 0; background: var(--surface); z-index: 3; }
 .app-shell .rt-ruler { position: relative; height: 26px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-shrink: 0; }
-.app-shell .rt-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--slate); padding: 5px 0 0 4px; }
+.app-shell .rt-tick { position: absolute; top: 0; bottom: 0; border-inline-start: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--slate); padding: 5px 0 0; padding-inline-start: 4px; }
 .app-shell .rt-group-head { padding: 7px 12px; font-size: 11.5px; font-weight: 700; color: var(--slate); background: var(--surface-2); border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
 .app-shell .rt-row { display: flex; border-bottom: 1px solid var(--line); }
-.app-shell .rt-roominfo { width: 236px; flex-shrink: 0; padding: 8px 12px; border-right: 1px solid var(--line); background: var(--surface); position: sticky; left: 0; z-index: 2; }
+.app-shell .rt-roominfo { width: 236px; flex-shrink: 0; padding: 8px 12px; border-inline-end: 1px solid var(--line); background: var(--surface); position: sticky; inset-inline-start: 0; z-index: 2; }
 .app-shell .rt-roomname { font-size: 12.5px; font-weight: 600; }
 .app-shell .rt-roommeta { font-size: 11px; color: var(--slate); margin-top: 2px; }
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
+[dir='rtl'] .app-shell .rt-track { background-image: repeating-linear-gradient(to left, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
 .app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: var(--band); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }
-.app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
+.app-shell .rt-now { position: absolute; top: 0; bottom: 0; width: 0; border-inline-start: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
 .app-shell .rt-track { cursor: crosshair; user-select: none; }
 /* The window being dragged on a room's row, with its times. */
 .app-shell .rt-drag { position: absolute; top: 4px; bottom: 4px; z-index: 3; pointer-events: none; border-radius: 6px; background: var(--drag-soft); border: 1.5px solid var(--drag); display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
@@ -299,7 +307,7 @@
 /* CLEANING — hatched so "blocked structurally" reads differently from "already over". */
 .app-shell .chip.cleaning, .app-shell .tg-block.cleaning, .app-shell .rt-block.cleaning {
   background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 5px, var(--line-strong) 5px, var(--line-strong) 6px);
-  color: var(--ink); border-left-color: var(--slate); }
+  color: var(--ink); border-inline-start-color: var(--slate); }
 
 
 .app-shell .main { flex: 1; padding: 22px 26px 44px; min-width: 0; }
@@ -310,11 +318,11 @@
 .app-shell .load-error-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .app-shell .load-error-msg { font-size: 12.5px; color: var(--rust); max-width: 460px; margin-bottom: 6px; }
 /* Someone else's booking, as an employee sees it: grey, no details, nothing to open. */
-.app-shell .tg-block.busy { background: var(--surface-3); color: var(--slate); border-left-color: var(--line-strong); cursor: default; }
+.app-shell .tg-block.busy { background: var(--surface-3); color: var(--slate); border-inline-start-color: var(--line-strong); cursor: default; }
 .app-shell .tg-block.busy:hover { box-shadow: none; }
 .app-shell .sched-period { display: flex; gap: 8px; align-items: center; }
 /* Schedule toolbar: Month / Week / Day on the far left, the period and its arrows centred. */
-.app-shell .sched-nav-spread { flex: 1 1 100%; margin-left: 0; display: grid; grid-template-columns: 1fr auto 1fr; }
+.app-shell .sched-nav-spread { flex: 1 1 100%; margin-inline-start: 0; display: grid; grid-template-columns: 1fr auto 1fr; }
 .app-shell .sched-nav-spread .seg { justify-self: start; }
 
 /* Closed days (holidays and weekly closed days of the chosen building): grey, hatched, not clickable. */
@@ -341,13 +349,15 @@
   .app-shell .find-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 }
 
-/* Tablet portrait and phones: the sidebar slides in from the left behind a menu button. */
+/* Tablet portrait and phones: the sidebar slides in from the side (the right in right-to-left languages) behind a menu button. */
 @media (max-width: 1023.98px) {
   .app-shell { grid-template-columns: minmax(0, 1fr); }
-  .app-shell .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; max-width: 85vw; height: auto; z-index: 60; transform: translateX(-100%); transition: transform .2s ease; box-shadow: none; }
+  .app-shell .sidebar { position: fixed; inset-inline-start: 0; top: 0; bottom: 0; width: 260px; max-width: 85vw; height: auto; z-index: 60; transform: translateX(-100%); transition: transform .2s ease; box-shadow: none; }
   .app-shell .sidebar.open { transform: none; box-shadow: 20px 0 60px var(--shadow-side); }
+  [dir='rtl'] .app-shell .sidebar { transform: translateX(100%); }
+  [dir='rtl'] .app-shell .sidebar.open { transform: none; box-shadow: -20px 0 60px var(--shadow-side); }
   .app-shell .nav-backdrop { position: fixed; inset: 0; background: var(--overlay); z-index: 55; }
-  .app-shell .menu-btn { display: inline-flex; align-items: center; margin-left: -6px; padding: 6px; color: var(--ink); }
+  .app-shell .menu-btn { display: inline-flex; align-items: center; margin-inline-start: -6px; padding: 6px; color: var(--ink); }
   .app-shell .topbar { position: sticky; top: 0; z-index: 20; padding: 12px 18px; }
   .app-shell .main { padding: 16px 18px 36px; }
 }
@@ -374,10 +384,10 @@
   .app-shell .filter-bar > div, .app-shell .sched-toolbar > div:not(.sched-nav) { flex: 1 1 100%; width: auto !important; min-width: 0 !important; }
   .app-shell .filter-bar > div > :not(label), .app-shell .sched-toolbar > div:not(.sched-nav) > :not(label) { width: 100% !important; }
   .app-shell .sched-toolbar, .app-shell .filter-bar { padding: 12px; gap: 10px; }
-  .app-shell .sched-nav, .app-shell .sched-nav-spread { flex: 1 1 100%; margin-left: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .app-shell .sched-nav, .app-shell .sched-nav-spread { flex: 1 1 100%; margin-inline-start: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
   .app-shell .period-label { min-width: 0 !important; }
   .app-shell .pager { justify-content: center; }
-  .app-shell .pager-summary { flex-basis: 100%; text-align: center; margin-right: 0; }
+  .app-shell .pager-summary { flex-basis: 100%; text-align: center; margin-inline-end: 0; }
 
   /* Month view: tighter cells so a full week fits on a phone. */
   .app-shell .month-wrap { padding: 0 10px 10px; }
@@ -392,11 +402,11 @@
   .app-shell .find-header { flex-wrap: wrap; }
   .app-shell .rt-roominfo { width: 128px; padding: 8px; }
 }
-/* Schedule toolbar rows: the first item sits on the left, the last is pushed to the far right. */
+/* Schedule toolbar rows: the first item sits at the start, the last is pushed to the far end. */
 .app-shell .sched-toolbar { flex-direction: column; align-items: stretch; }
 .app-shell .sched-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-.app-shell .sched-row > :last-child { margin-left: auto; }
-.app-shell .sched-row-left > :last-child { margin-left: 0; }
+.app-shell .sched-row > :last-child { margin-inline-start: auto; }
+.app-shell .sched-row-left > :last-child { margin-inline-start: 0; }
 .app-shell .sched-row-top .sched-period { padding-bottom: 2px; }
 .app-shell .sched-range { display: flex; gap: 12px; align-items: flex-end; }
 /* Views on the left, the period in the middle, From / To on the right (equal side columns keep the middle centred). */
@@ -406,7 +416,7 @@
 .app-shell .sched-row-spread > .sched-period { padding-bottom: 2px; }
 @media (max-width: 760px) {
   .app-shell .sched-row-spread { display: flex; }
-  .app-shell .sched-row > :last-child { margin-left: 0; }
+  .app-shell .sched-row > :last-child { margin-inline-start: 0; }
   .app-shell .sched-row > div, .app-shell .sched-range, .app-shell .sched-range > div { flex: 1 1 100%; width: auto !important; min-width: 0 !important; }
   .app-shell .sched-range { flex-wrap: wrap; }
   .app-shell .sched-row > div > :not(label), .app-shell .sched-range > div > :not(label) { width: 100% !important; }

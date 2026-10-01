@@ -19,6 +19,7 @@ public static class PortalDomainErrorCodes
     public const string InvalidSpaceType = "validation.invalid_space_type";
     public const string UnknownTimeZone = "validation.time_zone_unknown";
     public const string InvalidWeekday = "validation.invalid_weekday";
+    public const string UnsupportedLanguage = "validation.unsupported_language";
 
     public const string SpaceNotFound = "space.not_found";
     public const string SpaceNotBookable = "space.not_bookable";
@@ -58,6 +59,7 @@ public static class PortalDomainErrorCodes
         [InvalidSpaceType] = HttpStatusCode.BadRequest,
         [UnknownTimeZone] = HttpStatusCode.BadRequest,
         [InvalidWeekday] = HttpStatusCode.BadRequest,
+        [UnsupportedLanguage] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceNotBookable] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,

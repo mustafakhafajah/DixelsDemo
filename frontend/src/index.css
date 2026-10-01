@@ -1,7 +1,8 @@
 /* Page-wide basics. The colours come from the theme tokens on :root (app/appShell.css), so pages
    outside the app shell (sign-in errors, the splash) follow light and dark too. */
 :root {
-  font: 18px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Noto Sans Arabic and Tahoma cover Arabic where the system font does not. */
+  font: 18px/145% system-ui, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
   letter-spacing: 0.18px;
   color: var(--ink);
   background: var(--paper);
@@ -25,4 +26,14 @@ body {
 
 p {
   margin: 0;
+}
+
+/* Letter spacing pulls joined-up scripts apart, so Arabic text keeps its natural spacing everywhere. */
+:root:lang(ar), :root:lang(ar) * {
+  letter-spacing: normal !important;
+}
+
+/* Icons whose direction has a meaning (arrows, chevrons) point the other way in right-to-left languages. */
+[dir='rtl'] .flip-rtl {
+  transform: scaleX(-1);
 }

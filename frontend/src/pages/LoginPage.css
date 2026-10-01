@@ -18,7 +18,7 @@
   min-width: 0;
   background: var(--lp-paper);
   color: var(--lp-ink);
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   /* The login page is a branded light page in both themes: its own --lp-* colours, light form controls. */
@@ -74,7 +74,7 @@
   letter-spacing: -0.02em;
   color: #fff;
   margin: 0 0 14px;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: system-ui, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
 }
 
 .login-page .promo-copy p {
@@ -114,10 +114,21 @@
 }
 
 .login-page .signin-panel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
+}
+
+/* The language picker, in the sign-in panel's top corner (the right one, or the left in right-to-left languages). */
+.login-page .login-lang {
+  position: absolute;
+  inset-block-start: 20px;
+  inset-inline-end: 24px;
+  color: var(--lp-slate);
+  --lang-line: var(--lp-line);
+  --lang-focus: var(--lp-accent);
 }
 
 .login-page .signin-card {
@@ -127,7 +138,7 @@
 .login-page .signin-card h2 {
   /* Both headings keep the system font they had from the old global h1 / h2 styles. */
   color: var(--lp-ink);
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: system-ui, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
   line-height: 118%;
   font-size: 21px;
   font-weight: 700;
@@ -221,8 +232,16 @@
   }
 
   .login-page .signin-panel {
-    align-items: flex-start;
-    padding: 32px 20px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 20px 32px;
+  }
+
+  .login-page .login-lang {
+    position: static;
+    align-self: flex-end;
   }
 
   .login-page .signin-card {

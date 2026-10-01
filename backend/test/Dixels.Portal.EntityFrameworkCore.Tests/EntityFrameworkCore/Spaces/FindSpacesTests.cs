@@ -80,12 +80,12 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
     private Task<Estate> CreateEstateAsync() => WithUnitOfWorkAsync(async () =>
     {
         var tag = Guid.NewGuid().ToString("N")[..6];
-        var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Find {tag}"), autoSave: true);
-        var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
-        var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2") { IsBookable = false }, autoSave: true);
+        var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), "en", $"Find {tag}"), autoSave: true);
+        var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "1"), autoSave: true);
+        var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "2") { IsBookable = false }, autoSave: true);
 
         async Task Add(string name, Floor floor, int capacity, Guid type, bool bookable = true)
-            => await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"{name} {tag}", building.Id, floor.Id, type)
+            => await _spaces.InsertAsync(new Space(Guid.NewGuid(), "en", $"{name} {tag}", building.Id, floor.Id, type)
             {
                 Capacity = capacity,
                 IsBookable = bookable,

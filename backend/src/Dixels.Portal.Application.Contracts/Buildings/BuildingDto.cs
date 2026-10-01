@@ -8,6 +8,8 @@ namespace Dixels.Portal.Buildings;
 public class BuildingDto : EntityDto<Guid>
 {
     public string Name { get; set; } = null!;
+    /* False when Name (and Note) is shown in a fallback language because none was typed in the reader's. */
+    public bool IsTranslated { get; set; }
     public string TimeZone { get; set; } = null!;
     public bool IsBookable { get; set; } = true;
     public int OpenHour { get; set; }

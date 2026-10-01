@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import dixelsLogo from '../assets/dixels-logo.png'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import './LoginPage.css'
 
 interface PromoSegment {
@@ -27,7 +29,13 @@ function buildPromoGrid(): PromoSegment[][] {
  * decides the admin or user interface. */
 function LoginPage() {
   const auth = useAuth()
+  const { t, i18n } = useTranslation()
   const promoGrid = useMemo(buildPromoGrid, [])
+  /* The sign-in pages open in the language picked here (ABP reads ui_locales, culture or ui-culture). */
+  const signIn = () => {
+    const lang = i18n.language
+    auth.signinRedirect({ extraQueryParams: { ui_locales: lang, culture: lang, 'ui-culture': lang } })
+  }
 
   return (
     <div className="login-page">
@@ -36,11 +44,8 @@ function LoginPage() {
           <img src={dixelsLogo} alt="Dixels" />
         </div>
         <div className="promo-copy">
-          <h1>Every room and every kit, booked once and only once.</h1>
-          <p>
-            Reserve shared spaces across the company. If the space is free and your window fits
-            the rules, it is yours straight away. No approval, no waiting.
-          </p>
+          <h1>{t('login.headline')}</h1>
+          <p>{t('login.pitch')}</p>
         </div>
         <div className="promo-grid" aria-hidden="true">
           {promoGrid.map((lane, laneIndex) => (
@@ -58,23 +63,24 @@ function LoginPage() {
       </div>
 
       <div className="signin-panel">
+        <LanguageSwitcher className="login-lang" />
         <div className="signin-card">
-          <h2>Sign in</h2>
-          <p className="lead">Use your email and password. Your role comes from your account.</p>
+          <h2>{t('login.title')}</h2>
+          <p className="lead">{t('login.lead')}</p>
 
           <button
             type="button"
             className="btn btn-primary btn-lg btn-block real-signin-btn"
-            onClick={() => auth.signinRedirect()}
+            onClick={signIn}
           >
-            Sign in with email
+            {t('login.button')}
             <svg
               width="16"
               height="16"
               viewBox="0 0 16 16"
               fill="none"
               aria-hidden="true"
-              className="real-signin-icon"
+              className="real-signin-icon flip-rtl"
             >
               <path
                 d="M10 2h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2M2 8h7m0 0L6 5m3 3-3 3"

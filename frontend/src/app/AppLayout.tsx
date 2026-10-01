@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { initials } from '../components/bits'
@@ -41,6 +42,7 @@ const Icon = {
   /* The arrow points out of the door, so it turns round in right-to-left languages. */
   signOut: <svg className="flip-rtl" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   sun: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="8" cy="8" r="3" /><path d="M8 1.4v1.4M8 13.2v1.4M1.4 8h1.4M13.2 8h1.4M3.3 3.3l1 1M11.7 11.7l1 1M3.3 12.7l1-1M11.7 4.3l1-1" strokeLinecap="round" /></svg>,
+  chevrons: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M5 6l3-3 3 3M5 10l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   moon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M13.6 9.9A5.8 5.8 0 016.1 2.4a5.8 5.8 0 107.5 7.5z" strokeLinejoin="round" /></svg>,
 }
 
@@ -122,19 +124,27 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
       </nav>
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
-          <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
-            <div style={{ fontSize: 11, color: 'var(--slate)' }}>
-              {session.roles.length ? session.roles.map((r) => roleLabel(r)).join(t('common.listSeparator')) : t('nav.noRole')}
-            </div>
-          </div>
-        </div>
+        {/* The person's name opens a small menu with Sign out. */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
+              <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
+                <div style={{ fontSize: 11, color: 'var(--slate)' }}>
+                  {session.roles.length ? session.roles.map((r) => roleLabel(r)).join(t('common.listSeparator')) : t('nav.noRole')}
+                </div>
+              </div>
+              {Icon.chevrons}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className="tw:w-(--radix-popover-trigger-width) tw:p-1">
+            {/* The menu is drawn outside the app shell, so it uses the shadcn colours rather than the shell's. */}
+            <button type="button" onClick={session.signOut}
+              className="tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-md tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-2 tw:text-start tw:text-sm tw:font-medium tw:text-popover-foreground tw:cursor-pointer tw:outline-none tw:hover:bg-accent tw:hover:text-accent-foreground tw:focus-visible:bg-accent tw:focus-visible:text-accent-foreground">{Icon.signOut}{t('nav.signOut')}</button>
+          </PopoverContent>
+        </Popover>
         <div style={{ padding: '0 4px 8px' }}><LanguageSwitcher className="sidebar-lang" /></div>
-        <button type="button" className="nav-link" style={{ fontSize: 12.5, padding: '7px 10px' }} onClick={session.signOut}>
-          {Icon.signOut}{t('nav.signOut')}
-        </button>
       </div>
     </aside>
   )

@@ -138,6 +138,7 @@
     "userDirectory": "User directory",
     "noRole": "No role",
     "signOut": "Sign out",
+    "accountMenu": "Account menu for {{name}}",
     "openMenu": "Open menu",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",

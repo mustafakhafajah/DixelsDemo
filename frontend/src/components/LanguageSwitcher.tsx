@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { LanguagesIcon } from 'lucide-react'
+import { GlobeIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { setLanguage } from '../i18n'
 import { LANGUAGES } from '../i18n/languages'
@@ -11,8 +11,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   return (
     <div className={className}>
       <Select value={i18n.language} onValueChange={(code) => { void setLanguage(code) }}>
-        <SelectTrigger size="sm" aria-label={t('language.label')} className="tw:w-auto tw:gap-2">
-          <LanguagesIcon className="tw:opacity-70" />
+        <SelectTrigger aria-label={t('language.label')}
+          className="tw:h-auto tw:data-[size=default]:h-auto tw:w-auto tw:gap-2 tw:rounded-lg tw:border-[#d9dbd6] tw:bg-white tw:px-3 tw:py-2 tw:text-[13px] tw:text-[#161b22] tw:shadow-none tw:[&_svg]:text-[#5c6670] tw:[&_svg]:opacity-100 tw:[&_svg:not([class*='size-'])]:size-3.5">
+          <GlobeIcon />
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="end">

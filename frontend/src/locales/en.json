@@ -182,11 +182,84 @@
     "employee": "Employee"
   },
   "login": {
-    "headline": "Every room and every kit, booked once and only once.",
+    "live": "Live availability · {{date}}",
+    "eyebrow": "Rooms · kits · one shared calendar",
+    "headline": "Every room and every kit,\nbooked once and only once.",
     "pitch": "Reserve shared spaces across the company. If the space is free and your window fits the rules, it is yours straight away. No approval, no waiting.",
-    "title": "Sign in",
-    "lead": "Use your email and password. Your role comes from your account.",
+    "board": {
+      "today": "Today",
+      "count": "{{booked}} of {{total}} spaces",
+      "legend": {
+        "booked": "Booked",
+        "yours": "Yours",
+        "free": "Free"
+      },
+      "now": "Now {{time}}",
+      "rooms": {
+        "atlas": {
+          "name": "Atlas",
+          "meta": "Boardroom · 12"
+        },
+        "harbor": {
+          "name": "Harbor",
+          "meta": "Meeting room · 6"
+        },
+        "studioKit": {
+          "name": "Studio kit A",
+          "meta": "Camera + lights"
+        },
+        "podcastKit": {
+          "name": "Podcast kit 02",
+          "meta": "2 mics · recorder"
+        },
+        "focusPod": {
+          "name": "Focus pod 3",
+          "meta": "1 seat"
+        }
+      },
+      "bookings": {
+        "leadership": "Leadership",
+        "interview": "Interview",
+        "designCrit": "Design crit",
+        "sprintPlanning": "Sprint planning",
+        "sprintReview": "Sprint review",
+        "productShoot": "Product shoot",
+        "bookNow": "+ Book now",
+        "workshop": "Workshop",
+        "recording": "Recording",
+        "editSession": "Edit session",
+        "focus": "Focus",
+        "deepWork": "Deep work"
+      }
+    },
+    "principles": {
+      "instant": {
+        "title": "Instant",
+        "desc": "Free slot plus valid window means it is booked."
+      },
+      "exclusive": {
+        "title": "Exclusive",
+        "desc": "One booking per slot. Never double booked."
+      },
+      "roleAware": {
+        "title": "Role-aware",
+        "desc": "Rules follow your account role automatically."
+      }
+    },
+    "welcome": "Welcome back",
+    "subtitle": "Sign in with your email and password. What you can book comes from your account role.",
     "button": "Sign in with email",
+    "companyOnly": "Company accounts only",
+    "after": {
+      "title": "After you sign in",
+      "find": "Find a free room or kit for your window",
+      "pick": "Pick a slot and it is confirmed instantly",
+      "release": "Release it anytime so others can book"
+    },
+    "footer": {
+      "copyright": "© {{year}} Dixels",
+      "noAccount": "No account? Ask your workspace admin."
+    },
     "signingIn": "Signing you in",
     "failed": "Sign-in failed",
     "back": "Back to sign in"

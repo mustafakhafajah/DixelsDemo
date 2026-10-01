@@ -1,254 +1,201 @@
+/* Sign-in page, from the pen.dev frame "Sign in — Booking board": a dark brand panel with a sample booking
+ * board, and the light sign-in panel. Values are the frame's. Logical properties throughout, so Arabic mirrors. */
 .login-page {
   --lp-ink: #161b22;
   --lp-paper: #f2f3f1;
-  --lp-surface: #ffffff;
-  --lp-surface-2: #fafaf9;
-  --lp-line: #dce0db;
-  --lp-accent: #9c6ca4;
-  --lp-accent-dark: #7a4d82;
-  --lp-accent-soft: #f5eef6;
-  --lp-rust: #a5402f;
-  --lp-rust-soft: #faeae7;
   --lp-slate: #5c6670;
-  --lp-slate-2: #8a939b;
+  --lp-muted: #8a929b;
+  --lp-line: #e1e3de;
+  --lp-accent: #6e3a7a;
+  --lp-accent-dark: #5c2f66;
+  --lp-accent-soft: #e9e2ea;
+  --lp-step-ink: #2b323a;
+
+  --bp-bg: #0d0d10;
+  --bp-board: #131317;
+  --bp-ink: #ececef;
+  --bp-text: #98a2ac;
+  --bp-muted: #6b7280;
+  --bp-faint: #5b616b;
+  --bp-lilac: #b994bf;
+  --bp-yours: #9c6ca4;
+  --bp-live: #7ee0a1;
+
+  /* Latin in the frame's fonts; Arabic letters fall through to Cairo. */
+  --font-display: 'Inter Tight Variable', 'Cairo Variable', 'Inter', system-ui, sans-serif;
+  --font-text: 'Inter', 'Cairo Variable', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'Cairo Variable', ui-monospace, monospace;
 
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: minmax(0, 880fr) minmax(440px, 654fr);
   min-height: 100vh;
   min-width: 0;
   background: var(--lp-paper);
   color: var(--lp-ink);
-  font-family: 'Inter', 'Cairo Variable', ui-sans-serif, system-ui, 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+  font-family: var(--font-text);
   font-size: 14px;
+  /* Text without its own line height uses the font's natural one, as in the frame (not the app's fixed 26px). */
+  line-height: normal;
   -webkit-font-smoothing: antialiased;
-  /* The login page is a branded light page in both themes: its own --lp-* colours, light form controls. */
+  /* The login page is a branded page in both themes: its own colours, light form controls. */
   color-scheme: light;
 }
 
 /* The page scrollbar and canvas stay light too (beats the theme's inline color-scheme on <html>). */
 :root:has(.login-page) {
   color-scheme: light !important;
-  background: #ffffff;
+  background: var(--lp-paper);
 }
 
-.login-page * {
-  box-sizing: border-box;
+/* The language list opens in a portal outside the page; it reads the app's theme tokens, so pin their light values
+ * here (html: beats :root[data-theme="dark"]). */
+html:root:has(.login-page) {
+  --ink: #18181b; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5; --line: #e4e4e7;
+  --accent: #9c6ca4; --accent-dark: #6e3a7a; --accent-soft: #f4ecf5; --btn-purple: #6e3a7a; --on-accent: #ffffff; --slate: #66666e;
 }
 
-.login-page .promo {
-  background: #0d0d10;
-  color: #e4e7e4;
-  padding: 48px 52px;
+.login-page * { box-sizing: border-box; }
+.login-page p, .login-page h1, .login-page h2 { margin: 0; }
+
+/* ── Brand panel ── */
+.login-page .brand-panel {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
-  overflow: hidden;
+  gap: 56px;
+  padding: 48px 64px 56px;
+  background: var(--bp-bg);
+  color: var(--bp-text);
+  min-width: 0;
 }
 
-.login-page .promo-logo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
+.login-page .brand-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.login-page .brand-logo { height: 53px; width: auto; display: block; }
+.login-page .live-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px;
+  border: 1px solid #ffffff1f; border-radius: 999px; font-size: 12px; color: #c9ccd2; white-space: nowrap;
 }
+.login-page .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bp-live); flex-shrink: 0; }
 
-.login-page .promo-logo img {
-  /* Three times the original 22px: the image is the mark and the DIXELS name together. */
-  height: 66px;
-  width: auto;
-  display: block;
+.login-page .brand-main { display: flex; flex-direction: column; gap: 64px; min-width: 0; }
+.login-page .hero { display: flex; flex-direction: column; gap: 20px; }
+.login-page .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--bp-lilac); }
+.login-page .hero h1 {
+  font-family: var(--font-display); font-size: 58px; font-weight: 600; letter-spacing: -1.5px; line-height: 1.05;
+  color: #ffffff; white-space: pre-line;
 }
+.login-page .lede { max-width: 520px; font-size: 16px; line-height: 1.6; color: var(--bp-text); }
 
-.login-page .promo-copy {
-  position: relative;
-  z-index: 1;
-  max-width: 420px;
-  /* Keep the copy above the decorative grid pinned to the bottom of the panel. */
-  margin-bottom: 190px;
+/* The sample board: a space column, then 18 half-hour columns from 09:00 to 18:00. */
+.login-page .board {
+  display: flex; flex-direction: column; gap: 16px; padding: 20px;
+  background: var(--bp-board); border: 1px solid #ffffff12; border-radius: 14px; min-width: 0;
 }
+.login-page .board-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.login-page .board-title { display: flex; align-items: center; gap: 10px; }
+.login-page .board-today { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--bp-ink); }
+.login-page .board-count { font-size: 12px; color: var(--bp-muted); }
+.login-page .board-legend { display: flex; align-items: center; gap: 16px; }
+.login-page .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--bp-text); }
+.login-page .swatch { width: 10px; height: 10px; border-radius: 3px; }
+.login-page .swatch.booked { background: #ffffff1a; }
+.login-page .swatch.yours { background: var(--bp-yours); }
+.login-page .swatch.free { background: #b994bf1f; border: 1px solid var(--bp-lilac); }
 
-.login-page .promo-copy h1 {
-  font-size: 32px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #fff;
-  margin: 0 0 14px;
-  font-family: system-ui, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
+.login-page .board-grid { --space-col: 136px; position: relative; padding-block-end: 26px; }
+.login-page .board-hours, .login-page .board-row { display: grid; grid-template-columns: var(--space-col) minmax(0, 1fr); align-items: center; }
+.login-page .board-hours { height: 24px; }
+.login-page .board-hours .track { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.login-page .hour { font-family: var(--font-mono); font-size: 10px; color: var(--bp-faint); }
+.login-page .board-row { height: 52px; border-top: 1px solid #ffffff0b; }
+.login-page .board-space { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.login-page .space-name { font-size: 13px; font-weight: 500; color: var(--bp-ink); }
+.login-page .space-meta { font-size: 11px; color: var(--bp-muted); }
+.login-page .space-name, .login-page .space-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.login-page .board-row .track { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); height: 36px; }
+.login-page .block {
+  display: flex; align-items: center; min-width: 0; margin-inline: 2px; padding-inline: 10px; overflow: hidden;
+  border-radius: 6px; background: #ffffff0e; color: #8b919a; font-size: 11px;
 }
+.login-page .block.yours { background: var(--bp-yours); color: #ffffff; font-weight: 600; }
+.login-page .block.free { background: #b994bf14; border: 1px solid var(--bp-lilac); color: #e3cfe6; font-weight: 500; }
+/* As in the frame: a long label runs into the padding and is cut at the block's edge. */
+.login-page .block-label { white-space: nowrap; }
 
-.login-page .promo-copy p {
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: #98a2ac;
-  margin: 0;
-}
-
-.login-page .promo-grid {
+/* The NOW line at the current time (--now is 0..1 across the day), from the hour labels to the last row. */
+.login-page .now-line, .login-page .now-pill {
   position: absolute;
-  inset: auto -40px -30px -40px;
-  height: 210px;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  opacity: 0.5;
+  inset-inline-start: calc(var(--space-col) + (100% - var(--space-col)) * var(--now));
 }
-
-.login-page .promo-grid .lane {
-  display: flex;
-  gap: 7px;
-  height: 26px;
+.login-page .now-line { top: 24px; height: calc(5 * 52px + 6px); width: 1.5px; background: var(--bp-live); }
+.login-page .now-pill {
+  top: calc(24px + 5 * 52px + 6px); translate: -50% 0; padding: 3px 6px; border-radius: 4px;
+  background: var(--bp-live); color: var(--bp-bg); font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; white-space: nowrap;
 }
+[dir='rtl'] .login-page .now-pill { translate: 50% 0; }
 
-.login-page .promo-grid .pseg {
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.055);
+.login-page .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.login-page .principle { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid #ffffff1a; }
+.login-page .principle-head {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--bp-ink);
 }
+.login-page .principle-head svg { width: 15px; height: 15px; color: var(--bp-lilac); flex-shrink: 0; }
+.login-page .principle p { font-size: 12.5px; line-height: 1.5; color: #7d8590; }
 
-.login-page .promo-grid .pseg.on {
-  background: var(--lp-accent);
-}
-
-.login-page .promo-grid .pseg.on.alt {
-  background: #b994bf;
-}
-
+/* ── Sign-in panel ── */
 .login-page .signin-panel {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+  padding: 48px 64px; min-width: 0;
+}
+.login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.login-page .signin-center { display: flex; justify-content: center; }
+.login-page .signin-form { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 400px; }
+
+.login-page .signin-heading { display: flex; flex-direction: column; gap: 12px; }
+.login-page .mark {
+  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 8px;
+  border-radius: 12px; background: var(--lp-accent); color: #ffffff;
+}
+.login-page .mark svg { width: 20px; height: 20px; }
+.login-page .signin-heading h2 {
+  font-family: var(--font-display); font-size: 36px; font-weight: 600; letter-spacing: -0.8px; line-height: 1.15; color: var(--lp-ink);
+}
+.login-page .subtitle { font-size: 15px; line-height: 1.55; color: var(--lp-slate); }
+
+.login-page .signin-actions { display: flex; flex-direction: column; gap: 14px; }
+.login-page .signin-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px;
+  border: none; border-radius: 10px; background: var(--lp-accent); color: #ffffff;
+  font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 6px 18px #6e3a7a33;
+}
+.login-page .signin-btn:hover { background: var(--lp-accent-dark); }
+.login-page .signin-btn:focus-visible { outline: 3px solid #6e3a7a55; outline-offset: 2px; }
+.login-page .signin-btn svg { width: 16px; height: 16px; color: #ffffffb3; }
+.login-page .signin-btn .signin-mail { width: 17px; height: 17px; color: #ffffff; }
+.login-page .signin-note { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--lp-muted); }
+.login-page .signin-note svg { width: 12px; height: 12px; }
+
+.login-page .next-up { display: flex; flex-direction: column; gap: 12px; padding-top: 24px; border-top: 1px solid var(--lp-line); }
+.login-page .next-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--lp-muted); }
+.login-page .step { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--lp-step-ink); }
+.login-page .step-icon {
+  display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 7px; background: var(--lp-accent-soft); color: var(--lp-accent);
+}
+.login-page .step-icon svg { width: 14px; height: 14px; }
+
+.login-page .signin-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--lp-muted); }
+
+/* ── Narrower screens: the brand panel steps aside, the sign-in panel takes the page. ── */
+@media (max-width: 1100px) {
+  .login-page { grid-template-columns: minmax(0, 1fr); }
+  .login-page .brand-panel { display: none; }
 }
 
-/* The language picker, in the sign-in panel's top corner (the right one, or the left in right-to-left languages). */
-.login-page .login-lang {
-  position: absolute;
-  inset-block-start: 20px;
-  inset-inline-end: 24px;
-}
-
-.login-page .signin-card {
-  width: 378px;
-}
-
-.login-page .signin-card h2 {
-  /* Both headings keep the system font they had from the old global h1 / h2 styles. */
-  color: var(--lp-ink);
-  font-family: system-ui, 'Segoe UI', Roboto, 'Noto Sans Arabic', Tahoma, sans-serif;
-  line-height: 118%;
-  font-size: 21px;
-  font-weight: 700;
-  margin: 0 0 5px;
-  letter-spacing: -0.01em;
-}
-
-.login-page .signin-card .lead {
-  font-size: 13px;
-  color: var(--lp-slate);
-  margin: 0 0 22px;
-}
-
-.login-page .btn {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 7px;
-  padding: 8px 13px;
-  cursor: pointer;
-  border: 1px solid var(--lp-line);
-  background: var(--lp-surface);
-  color: var(--lp-ink);
-}
-
-.login-page .btn-primary {
-  background: var(--lp-ink);
-  border-color: var(--lp-ink);
-  color: #fff;
-}
-
-.login-page .btn-primary:hover {
-  background: #000;
-}
-
-.login-page .btn-lg {
-  padding: 11px 16px;
-  font-size: 14px;
-}
-
-.login-page .btn-block {
-  width: 100%;
-}
-
-/* Same solid purple as the app's main-action buttons (#6e3a7a). */
-.login-page .real-signin-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #6e3a7a;
-  border-color: #6e3a7a;
-  color: #fff;
-}
-
-.login-page .real-signin-btn:hover {
-  background: #5a2e64;
-  border-color: #5a2e64;
-}
-
-.login-page .real-signin-icon {
-  flex-shrink: 0;
-}
-
-/* Tablets and phones: the promo becomes a short band above the sign-in card. */
-@media (max-width: 900px) {
-  .login-page {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .login-page .promo {
-    padding: 28px 24px;
-    gap: 24px;
-  }
-
-  .login-page .promo-logo img {
-    height: 44px;
-  }
-
-  .login-page .promo-copy {
-    margin-bottom: 0;
-  }
-
-  .login-page .promo-copy h1 {
-    font-size: 24px;
-  }
-
-  .login-page .promo-grid {
-    display: none;
-  }
-
-  .login-page .signin-panel {
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 20px;
-    padding: 20px 20px 32px;
-  }
-
-  .login-page .login-lang {
-    position: static;
-    align-self: flex-end;
-  }
-
-  .login-page .signin-card {
-    width: 100%;
-    max-width: 378px;
-  }
-}
-
-/* Those two headings use the system font, which has its own Arabic letters; in Arabic they use Cairo like the rest. */
-:root:lang(ar) .login-page .promo-copy h1,
-:root:lang(ar) .login-page .signin-card h2 {
-  font-family: 'Cairo Variable', system-ui, 'Segoe UI', Tahoma, sans-serif;
+@media (max-width: 560px) {
+  .login-page .signin-panel { padding: 24px 20px; }
+  .login-page .signin-heading h2 { font-size: 30px; }
 }

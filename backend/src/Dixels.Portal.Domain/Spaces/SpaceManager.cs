@@ -35,7 +35,7 @@ public class SpaceManager : PortalDomainService
     public async Task<Space> CreateAsync(string name, string? note, IEnumerable<NameTranslation>? translations,
         Guid buildingId, Guid floorId, Guid typeId, ConstraintOverrides overrides)
     {
-        var (english, extras) = await CheckAsync(name, translations, buildingId, floorId, typeId, overrides, null);
+        var (english, extras) = await CheckAsync(name, note, translations, buildingId, floorId, typeId, overrides, null);
         var space = new Space(GuidGenerator.Create(), english, buildingId, floorId, typeId, CleanNote(note));
         foreach (var t in extras) space.SetText(t.Language, t.Name, t.Note);
         ApplyOverrides(space, overrides);
@@ -46,7 +46,7 @@ public class SpaceManager : PortalDomainService
     public async Task UpdateAsync(Space space, string name, string? note, IEnumerable<NameTranslation>? translations,
         Guid buildingId, Guid floorId, Guid typeId, ConstraintOverrides overrides)
     {
-        var (english, extras) = await CheckAsync(name, translations, buildingId, floorId, typeId, overrides, space.Id);
+        var (english, extras) = await CheckAsync(name, note, translations, buildingId, floorId, typeId, overrides, space.Id);
         space.SetText(PortalLanguages.Default, english, CleanNote(note));
         foreach (var t in extras) space.SetText(t.Language, t.Name, t.Note);
         space.RemoveTranslationsExcept(extras.Select(t => t.Language));
@@ -58,10 +58,11 @@ public class SpaceManager : PortalDomainService
 
     private static string? CleanNote(string? note) => string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 
-    private async Task<(string English, List<NameTranslation> Extras)> CheckAsync(string? name, IEnumerable<NameTranslation>? translations,
+    private async Task<(string English, List<NameTranslation> Extras)> CheckAsync(string? name, string? note, IEnumerable<NameTranslation>? translations,
         Guid buildingId, Guid floorId, Guid typeId, ConstraintOverrides o, Guid? excludeId)
     {
         var english = await CheckNameAsync(PortalLanguages.Default, name, excludeId, "name");
+        ScriptRules.EnsureFits(L, PortalLanguages.Default, note, "note");
         var extras = TranslationRules.Clean(L, translations, SpaceConsts.MaxNameLength, SpaceConsts.MaxNoteLength);
         foreach (var t in extras) await CheckNameAsync(t.Language, t.Name, excludeId, $"translations.{t.Language}");
 
@@ -85,6 +86,7 @@ public class SpaceManager : PortalDomainService
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:SpaceNameMissing"]).ForField(field);
+        ScriptRules.EnsureFits(L, language, trimmed, field);
         var lower = trimmed.ToLower();
         if (await _spaces.AnyAsync(s => s.Id != excludeId && s.Translations.Any(t => t.Language == language && t.Name.ToLower() == lower)))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceDuplicateName, message: L["Error:SpaceDuplicate"]).ForField(field);

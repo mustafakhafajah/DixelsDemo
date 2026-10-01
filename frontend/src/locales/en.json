@@ -142,6 +142,9 @@
     "openMenu": "Open menu",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",
+    "theme": "Theme",
+    "themeLightName": "Light",
+    "themeDarkName": "Dark",
     "newBooking": "New booking"
   },
   "pages": {
@@ -268,17 +271,19 @@
     }
   },
   "forms": {
-    "nameEnglish": "Name (English)",
-    "descriptionEnglish": "Description (English)",
+    "name": "Name",
+    "description": "Description",
     "translations": {
-      "title": "Other languages",
-      "hint": "Optional. People who use the portal in that language see this name; everyone else sees the English one.",
-      "add": "Add a language",
-      "remove": "Remove",
-      "removeLanguage": "Remove {{language}}",
-      "name": "Name ({{language}})",
-      "note": "Description ({{language}})",
-      "nameMissing": "Type the {{language}} name, or remove that language."
+      "language": "Language",
+      "optional": "Optional. People who use the portal in {{language}} see this; everyone else sees the English one.",
+      "filled": "{{language}} ✓",
+      "needsFix": "{{language}} · needs a fix",
+      "show": "Show",
+      "wrongScript": {
+        "latin": "Use English letters (A–Z) only.",
+        "arabic": "Use Arabic letters. Latin codes such as VIP may stay."
+      },
+      "nameMissing": "Type the {{language}} name as well, or clear the {{language}} description."
     },
     "closeAfterOpen": "Close hour must be after open hour.",
     "number": {
@@ -347,7 +352,7 @@
     },
     "floor": {
       "addTitle": "Add a floor",
-      "nameEnglish": "Floor (English)",
+      "name": "Floor",
       "editTitle": "Edit floor",
       "subtitle": "Inherits its building's hours and duration unless overridden below.",
       "save": "Save floor",

@@ -7,7 +7,7 @@ namespace Dixels.Portal.Localization;
 
 /* The languages the portal speaks (ABP's own pages, such as sign-in, keep ABP's language list). To add one:
  * add it here, add Localization/Portal/{code}.json, and add the same code to the SPA's src/i18n/languages.ts
- * with its src/locales/{code}.json.
+ * with its src/locales/{code}.json. Script says which letters a name in that language may use (see ScriptRules).
  * Names typed in any language are stored per language, so no database change is needed. */
 public static class PortalLanguages
 {
@@ -16,11 +16,13 @@ public static class PortalLanguages
 
     public const int MaxCodeLength = 10;
 
-    public static readonly IReadOnlyList<(string Code, string DisplayName)> All = new[]
+    public static readonly IReadOnlyList<(string Code, string DisplayName, LanguageScript Script)> All = new[]
     {
-        ("en", "English"),
-        ("ar", "العربية"),
+        ("en", "English", LanguageScript.Latin),
+        ("ar", "العربية", LanguageScript.Arabic),
     };
+
+    public static LanguageScript ScriptOf(string code) => All.FirstOrDefault(l => l.Code == code).Script;
 
     /* "ar" → "العربية"; the code itself for an unknown one. */
     public static string DisplayName(string code) => All.FirstOrDefault(l => l.Code == code).DisplayName ?? code;
@@ -43,4 +45,11 @@ public static class PortalLanguages
         }
         return Default;
     }
+}
+
+/* The alphabet a language is written in. Latin is the default, so an unknown code is treated as Latin. */
+public enum LanguageScript
+{
+    Latin,
+    Arabic,
 }

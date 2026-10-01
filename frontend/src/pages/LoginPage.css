@@ -126,9 +126,6 @@
   position: absolute;
   inset-block-start: 20px;
   inset-inline-end: 24px;
-  color: var(--lp-slate);
-  --lang-line: var(--lp-line);
-  --lang-focus: var(--lp-accent);
 }
 
 .login-page .signin-card {

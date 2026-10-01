@@ -58,6 +58,7 @@ public class BuildingManager : PortalDomainService
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:BuildingNameMissing"]).ForField(field);
+        ScriptRules.EnsureFits(L, language, trimmed, field);
         var lower = trimmed.ToLower();
         if (await _buildings.AnyAsync(b => b.Id != excludeId && b.Translations.Any(t => t.Language == language && t.Name.ToLower() == lower)))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BuildingDuplicate, message: L["Error:BuildingDuplicate", trimmed]).ForField(field);

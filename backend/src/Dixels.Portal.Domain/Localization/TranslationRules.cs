@@ -7,7 +7,8 @@ namespace Dixels.Portal.Localization;
 
 /* The rules for a record's extra languages, shared by buildings, floors, space types and spaces: only the
  * portal's other languages (English has its own required field), each once, with a name that fits.
- * Errors point at "translations.{code}" (or "translations.{code}.note") so the form can show them in place. */
+ * Errors point at "translations.{code}" (or "translations.{code}.note") so the form can show them in place.
+ * A name's letters are checked by the manager with its other name rules; a note's here. */
 public static class TranslationRules
 {
     public static List<NameTranslation> Clean(IStringLocalizer l, IEnumerable<NameTranslation>? input, int maxNameLength,
@@ -39,6 +40,7 @@ public static class TranslationRules
             if (note?.Length > maxNoteLength)
                 throw new UserFriendlyException(code: PortalDomainErrorCodes.TooLong, message:
                     l["Error:NoteTooLong", maxNoteLength]).ForField($"{field}.note");
+            ScriptRules.EnsureFits(l, language, note, $"{field}.note");
             cleaned.Add(new NameTranslation(language, name, note));
         }
         return cleaned;

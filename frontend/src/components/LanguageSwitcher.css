@@ -1,9 +1,0 @@
-/* The language picker: a small native select with a globe, in the sidebar footer and on the sign-in page.
- * Colours come from where it sits (currentColor), so it fits the light sign-in page and both app themes. */
-.lang-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: inherit; cursor: pointer; }
-.lang-switch svg { flex-shrink: 0; opacity: .7; }
-.lang-switch select {
-  font: inherit; color: inherit; background: transparent; cursor: pointer;
-  border: 1px solid var(--lang-line, currentColor); border-radius: 8px; padding: 4px 8px;
-}
-.lang-switch select:focus-visible { outline: 2px solid var(--lang-focus, currentColor); outline-offset: 2px; }

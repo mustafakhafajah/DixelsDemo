@@ -42,6 +42,8 @@
     "Error:TranslationNameMissing": "Type the {0} name, or remove that language.",
     "Error:NameTooLong": "Keep the name to {0} characters.",
     "Error:NoteTooLong": "Keep the description to {0} characters.",
+    "Error:WrongScript:Latin": "Use English letters (A–Z) only.",
+    "Error:WrongScript:Arabic": "Use Arabic letters. Latin codes such as VIP may stay.",
     "Error:CloseBeforeOpen": "Close hour must be after open hour.",
     "Error:BuildingNameMissing": "Give the building a name.",
     "Error:BuildingDuplicate": "{0} is already in the estate.",

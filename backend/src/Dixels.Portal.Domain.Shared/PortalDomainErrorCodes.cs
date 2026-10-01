@@ -21,6 +21,7 @@ public static class PortalDomainErrorCodes
     public const string InvalidWeekday = "validation.invalid_weekday";
     public const string UnsupportedLanguage = "validation.unsupported_language";
     public const string TooLong = "validation.too_long";
+    public const string WrongScript = "validation.wrong_script";
 
     public const string SpaceNotFound = "space.not_found";
     public const string SpaceNotBookable = "space.not_bookable";
@@ -62,6 +63,7 @@ public static class PortalDomainErrorCodes
         [InvalidWeekday] = HttpStatusCode.BadRequest,
         [UnsupportedLanguage] = HttpStatusCode.BadRequest,
         [TooLong] = HttpStatusCode.BadRequest,
+        [WrongScript] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceNotBookable] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,

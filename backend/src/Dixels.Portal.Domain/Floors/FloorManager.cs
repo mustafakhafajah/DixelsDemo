@@ -66,6 +66,7 @@ public class FloorManager : PortalDomainService
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:FloorNameMissing"]).ForField(field);
+        ScriptRules.EnsureFits(L, language, trimmed, field);
         if (await _floors.AnyAsync(f => f.BuildingId == building.Id && f.Id != excludeId
                 && f.Translations.Any(t => t.Language == language && t.Name == trimmed)))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.FloorDuplicate, message:

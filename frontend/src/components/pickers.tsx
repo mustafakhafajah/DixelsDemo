@@ -17,7 +17,7 @@ const EMPTY = '__empty__'
 const enc = (v: string) => (v === '' ? EMPTY : v)
 const dec = (v: string) => (v === EMPTY ? '' : v)
 
-export function Dropdown({ id, value, onChange, options, placeholder, disabled, size, className, style, 'aria-label': ariaLabel }: {
+export function Dropdown({ id, value, onChange, options, placeholder, disabled, size, className, style, 'aria-label': ariaLabel, onCloseAutoFocus, invalid }: {
   id?: string
   value: string
   onChange: (value: string) => void
@@ -28,16 +28,20 @@ export function Dropdown({ id, value, onChange, options, placeholder, disabled, 
   className?: string
   style?: CSSProperties
   'aria-label'?: string
+  /* Where focus goes when the list closes; by default back to the dropdown itself. */
+  onCloseAutoFocus?: (event: Event) => void
+  /* Marks the dropdown as needing attention (red border), e.g. a language with a problem in it. */
+  invalid?: boolean
 }) {
   const { t } = useTranslation()
   /* A value that is not in the list (e.g. not chosen yet) shows the placeholder. */
   const known = options.some((o) => o.value === value)
   return (
     <Select value={known ? enc(value) : ''} onValueChange={(v) => onChange(dec(v))} disabled={disabled}>
-      <SelectTrigger id={id} size={size} className={className} style={style} aria-label={ariaLabel}>
+      <SelectTrigger id={id} size={size} className={className} style={style} aria-label={ariaLabel} aria-invalid={invalid || undefined}>
         <SelectValue placeholder={placeholder ?? t('common.select')} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent onCloseAutoFocus={onCloseAutoFocus}>
         {options.map((o) => <SelectItem key={o.value} value={enc(o.value)} disabled={o.disabled}>{o.label}</SelectItem>)}
       </SelectContent>
     </Select>

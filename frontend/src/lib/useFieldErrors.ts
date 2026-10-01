@@ -11,6 +11,8 @@ export type FieldErrors = Record<string, FieldError | undefined>
  * together; a server error lands under the field it names; one with no field of this form is a toast. */
 export function useFieldErrors() {
   const [errors, setErrors] = useState<FieldErrors>({})
+  /* Goes up on every Save that finds a problem, even the same one again, so a field can bring itself into view. */
+  const [attempt, setAttempt] = useState(0)
 
   /* Editing a field takes its message away. */
   const clear = (...ids: string[]) => setErrors((prev) => (ids.some((id) => prev[id])
@@ -21,7 +23,9 @@ export function useFieldErrors() {
   const show = (next: FieldErrors) => {
     const found = Object.fromEntries(Object.entries(next).filter(([, v]) => v)) as FieldErrors
     setErrors(found)
-    return Object.keys(found).length > 0
+    const failed = Object.keys(found).length > 0
+    if (failed) setAttempt((n) => n + 1)
+    return failed
   }
 
   /* serverFields maps the server's field names (e.g. "name", "closeHourOverride") to this form's field ids. */
@@ -35,11 +39,12 @@ export function useFieldErrors() {
     }
     if (Object.keys(placed).length) {
       setErrors(placed)
+      setAttempt((n) => n + 1)
       return
     }
     const { code, message } = errorText(e)
     toast('err', toastTitle, message, code)
   }
 
-  return { errors, clear, show, fromServer }
+  return { errors, attempt, clear, show, fromServer }
 }

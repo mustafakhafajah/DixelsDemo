@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { LanguagesIcon, MoonIcon, SunIcon } from 'lucide-react'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { initials } from '../components/bits'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { Toasts } from '../components/Toasts'
 import { roleLabel } from '../features/users/api'
+import { setLanguage } from '../i18n'
+import { LANGUAGES } from '../i18n/languages'
 import { useLanguagePreferenceSync } from '../i18n/useLanguagePreferenceSync'
 import { dayAt, todayKey } from '../lib/dateUtils'
 import { modals } from '../state/modalStore'
 import { useNavCountStore } from '../state/navCountStore'
-import { useThemeStore } from '../state/themeStore'
+import { useThemeStore, type Theme } from '../state/themeStore'
 import { Overlays } from './Overlays'
 import { PageActionsSlot } from './pageActions'
 import { ESTATE_PAGES, manageAny, useSession } from './session'
@@ -41,9 +46,7 @@ const Icon = {
   menu: <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" strokeLinecap="round" /></svg>,
   /* The arrow points out of the door, so it turns round in right-to-left languages. */
   signOut: <svg className="flip-rtl" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6.4 2.6H3.6A1.2 1.2 0 002.4 3.8v8.4a1.2 1.2 0 001.2 1.2h2.8M10 11l3-3-3-3M13 8H6.2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-  sun: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="8" cy="8" r="3" /><path d="M8 1.4v1.4M8 13.2v1.4M1.4 8h1.4M13.2 8h1.4M3.3 3.3l1 1M11.7 11.7l1 1M3.3 12.7l1-1M11.7 4.3l1-1" strokeLinecap="round" /></svg>,
   chevrons: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M5 6l3-3 3 3M5 10l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-  moon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M13.6 9.9A5.8 5.8 0 016.1 2.4a5.8 5.8 0 107.5 7.5z" strokeLinejoin="round" /></svg>,
 }
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-link${isActive ? ' active' : ''}`
@@ -77,8 +80,9 @@ function SpaceManagementNav({ show }: { show: Record<string, boolean> }) {
 }
 
 function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const session = useSession()
+  const { theme, setTheme } = useThemeStore()
   const today = useMemo(() => dayAt(todayKey()), [])
   const seesBookings = session.can(P.Bookings.Default)
   const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
@@ -124,9 +128,9 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
       </nav>
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
-        {/* The person's name opens a small menu with Sign out. */}
-        <Popover>
-          <PopoverTrigger asChild>
+        {/* The person's name opens a small menu: who is signed in, Language and Theme submenus, then Sign out. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
               <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -137,14 +141,41 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
               </div>
               {Icon.chevrons}
             </button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="start" className="tw:w-(--radix-popover-trigger-width) tw:p-1">
-            {/* The menu is drawn outside the app shell, so it uses the shadcn colours rather than the shell's. */}
-            <button type="button" onClick={session.signOut}
-              className="tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-md tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-2 tw:text-start tw:text-sm tw:font-medium tw:text-popover-foreground tw:cursor-pointer tw:outline-none tw:hover:bg-accent tw:hover:text-accent-foreground tw:focus-visible:bg-accent tw:focus-visible:text-accent-foreground">{Icon.signOut}{t('nav.signOut')}</button>
-          </PopoverContent>
-        </Popover>
-        <div style={{ padding: '0 4px 8px' }}><LanguageSwitcher className="sidebar-lang" /></div>
+          </DropdownMenuTrigger>
+          {/* The menu is drawn outside the app shell, so it uses the shadcn colours rather than the shell's. */}
+          <DropdownMenuContent side="top" align="start" className="tw:w-(--radix-dropdown-menu-trigger-width)">
+            <DropdownMenuLabel className="tw:flex tw:items-center tw:gap-2.5 tw:font-normal">
+              <span className="tw:flex tw:size-8 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-primary tw:text-xs tw:font-bold tw:text-primary-foreground">{initials(session.name)}</span>
+              <span className="tw:min-w-0">
+                <span className="tw:block tw:truncate tw:text-sm tw:font-semibold"><bdi>{session.name}</bdi></span>
+                <span className="tw:block tw:truncate tw:text-xs tw:text-muted-foreground">
+                  {session.roles.length ? session.roles.map((r) => roleLabel(r)).join(t('common.listSeparator')) : t('nav.noRole')}
+                </span>
+              </span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><LanguagesIcon />{t('language.label')}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="tw:min-w-40">
+                {/* Each language is listed by its own name, so anyone can find theirs whatever the page is in now. */}
+                <DropdownMenuRadioGroup value={i18n.language} onValueChange={(code) => { void setLanguage(code) }}>
+                  {LANGUAGES.map((l) => <DropdownMenuRadioItem key={l.code} value={l.code} lang={l.code}>{l.name}</DropdownMenuRadioItem>)}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{theme === 'dark' ? <MoonIcon /> : <SunIcon />}{t('nav.theme')}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="tw:min-w-40">
+                <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+                  <DropdownMenuRadioItem value="light"><SunIcon />{t('nav.themeLightName')}</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark"><MoonIcon />{t('nav.themeDarkName')}</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={session.signOut}>{Icon.signOut}{t('nav.signOut')}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   )
@@ -169,7 +200,11 @@ function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivEl
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{t(meta[1])}</p>
       </div>
       {/* Moon in light, sun in dark: the icon shows what a click switches to. */}
-      <button type="button" className="iconbtn theme-toggle" aria-pressed={dark} aria-label={themeLabel} title={themeLabel} onClick={toggle}>{dark ? Icon.sun : Icon.moon}</button>
+      {/* One click flips light and dark; the account menu offers the same choice. */}
+      <button type="button" aria-pressed={dark} aria-label={themeLabel} title={themeLabel} onClick={toggle}
+        className="tw:inline-flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-muted-foreground tw:cursor-pointer tw:outline-none tw:hover:bg-accent tw:hover:text-accent-foreground tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:[&_svg]:size-[18px]">
+        {dark ? <SunIcon /> : <MoonIcon />}
+      </button>
       {/* The page's own main buttons (PageActions) land here, next to New booking. */}
       <div ref={onSlot} className="page-actions" />
       {BOOKING_VIEWS.has(view) && can(P.Bookings.Create) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>{t('nav.newBooking')}</button>}

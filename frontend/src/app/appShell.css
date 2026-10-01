@@ -102,7 +102,6 @@
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
 /* The links under a menu heading, indented behind a thin rule. */
 .app-shell .nav-sub { margin-inline-start: 6px; padding-inline-start: 9px; border-inline-start: 1px solid var(--line); display: flex; flex-direction: column; gap: 1px; margin-bottom: 8px; }
-.app-shell .sidebar-lang { color: var(--slate); --lang-line: var(--line); --lang-focus: var(--accent); }
 .app-shell .avatar { width: 34px; height: 34px; border-radius: 999px; background: var(--avatar); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; }
 .app-shell .avatar.admin { background: var(--avatar-admin); }
 /* The person at the bottom of the sidebar: clicking it opens the Sign out menu. */
@@ -192,10 +191,12 @@
 .app-shell .req-note { font-size: 11.5px; color: var(--slate); margin: 0 0 -4px; }
 .app-shell .req-note .req-mark { margin: 0; margin-inline-end: 2px; }
 .app-shell .modal .req-note { margin: 0; }
-/* One extra language of a record in the edit form (TranslationFields). */
-.app-shell .tr-box { border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); padding: 10px 12px; margin-bottom: 8px; }
-.app-shell .tr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.app-shell .tr-lang { font-size: 13px; font-weight: 600; color: var(--ink); }
+/* A text box with its language dropdown beside it (LocalizedInput). */
+.app-shell .loc-row { display: flex; gap: 8px; align-items: center; }
+.app-shell .loc-row > .inp { flex: 1; min-width: 0; }
+/* A box or language dropdown with a problem in it, and the "Show" button next to another language's message. */
+.app-shell .inp[aria-invalid="true"], .app-shell [data-slot="select-trigger"][aria-invalid="true"] { border-color: var(--rust); }
+.app-shell .link-btn { border: none; background: none; padding: 0; margin-inline-start: 6px; font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; cursor: pointer; }
 
 /* ── REGISTRY FILTERS + PAGINATION ── */
 .app-shell .filter-bar { display: flex; gap: 12px; align-items: flex-end; padding: 12px 16px 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: var(--surface); }
@@ -433,5 +434,3 @@
 /* Top bar: the page's own main buttons (PageActions), next to New booking. */
 .app-shell .page-actions { display: flex; gap: 8px; align-items: center; }
 .app-shell .page-actions:empty { display: none; }
-/* Top bar: the sun / moon button that switches light and dark. */
-.app-shell .theme-toggle { display: inline-flex; align-items: center; padding: 6px; flex-shrink: 0; }

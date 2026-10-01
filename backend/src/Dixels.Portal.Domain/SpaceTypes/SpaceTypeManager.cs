@@ -63,6 +63,7 @@ public class SpaceTypeManager : PortalDomainService
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:SpaceTypeNameMissing"]).ForField(field);
+        ScriptRules.EnsureFits(L, language, trimmed, field);
         var lower = trimmed.ToLower();
         if (await _types.AnyAsync(t => t.Id != excludeId && t.Translations.Any(x => x.Language == language && x.Name.ToLower() == lower)))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceTypeDuplicate, message: L["Error:SpaceTypeDuplicate", trimmed]).ForField(field);

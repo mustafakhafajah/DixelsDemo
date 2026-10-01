@@ -11,8 +11,8 @@ import { weekdayName } from '../../lib/dateUtils'
 import { useFieldErrors, type FieldError, type FieldErrors } from '../../lib/useFieldErrors'
 import { modals } from '../../state/modalStore'
 import { BookableField, useCancelUpcomingAfterSave } from './Bookable'
-import { TranslationFields } from './TranslationFields'
-import { checkTranslations, draftsOf, englishOf, toTranslations, translationServerFields } from './translationDrafts'
+import { LocalizedInput } from './LocalizedInput'
+import { checkTranslations, draftsOf, englishOf, NOTE_MAX, scriptProblem, toTranslations, translationServerFields } from './translationDrafts'
 import { toast } from '../../state/toastStore'
 
 const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v))
@@ -160,7 +160,7 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
   const submit = () => {
     const o = Number(open), c = Number(close), mi = Number(min), ma = Number(max)
     const found: FieldErrors = {
-      'bld-name': name.trim() ? undefined : missing(t('forms.building.nameMissing')),
+      'bld-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.building.nameMissing')),
       'bld-tz': tzError,
       'bld-open': checkNumber(open, 'open', 0, 23),
       'bld-close': checkNumber(close, 'close', 1, 24),
@@ -191,10 +191,8 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
     <Modal title={editing ? t('forms.building.editTitle') : t('forms.building.addTitle')} subtitle={t('forms.building.subtitle')} onClose={modals.close}
       footer={<Footer onSave={submit} label={t('forms.building.save')} busy={save.isPending} />}>
       <RequiredNote />
-      <Field id="bld-name" label={t('forms.nameEnglish')} required error={errors['bld-name']}>
-        <input id="bld-name" className="inp" lang="en" dir="ltr" placeholder={t('forms.building.namePlaceholder')} value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('bld-name') }} />
-      </Field>
-      <TranslationFields prefix="bld" drafts={drafts} onChange={setDrafts} errors={errors} clear={fields.clear} />
+      <LocalizedInput prefix="bld" field="name" id="bld-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.building.namePlaceholder')} autoFocus />
       <Field id="bld-tz" label={t('forms.building.timeZone')} required error={tzError}>
         <input id="bld-tz" className="inp mono" dir="ltr" placeholder="UTC" value={tz} onChange={(e) => { setTz(e.target.value); fields.clear('bld-tz') }} />
         {!tzError && <p className="card-sub" style={{ marginTop: 5 }}>{t('forms.building.tzHint')}</p>}
@@ -276,7 +274,7 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
   const submit = () => {
     const found: FieldErrors = {
       'flr-building': b ? undefined : missing(t('forms.floor.buildingMissing')),
-      'flr-name': name.trim() ? undefined : missing(t('forms.floor.nameMissing')),
+      'flr-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.floor.nameMissing')),
       ...checkTranslations('flr', drafts),
       ...(b ? checkOverrides('flr', ov, [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours], 'floor') : {}),
     }
@@ -296,17 +294,13 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
     <Modal width={460} title={editing ? t('forms.floor.editTitle') : t('forms.floor.addTitle')} subtitle={t('forms.floor.subtitle')}
       onClose={modals.close} footer={<Footer onSave={submit} label={t('forms.floor.save')} busy={save.isPending} />}>
       <RequiredNote />
-      <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="flr-building" label={t('common.building')} required error={errors['flr-building']}>
-          <Dropdown id="flr-building" value={effBuildingId} disabled={!!editing}
-            onChange={(v) => { setBuildingId(v); fields.clear('flr-building', 'flr-open', 'flr-close', 'flr-min', 'flr-max') }}
-            options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
-        </Field>
-        <Field id="flr-name" label={t('forms.floor.nameEnglish')} required error={errors['flr-name']}>
-          <input id="flr-name" className="inp mono" lang="en" dir="ltr" placeholder={t('forms.floor.namePlaceholder')} value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('flr-name') }} />
-        </Field>
-      </div>
-      <TranslationFields prefix="flr" drafts={drafts} onChange={setDrafts} errors={errors} clear={fields.clear} />
+      <Field id="flr-building" label={t('common.building')} required error={errors['flr-building']}>
+        <Dropdown id="flr-building" value={effBuildingId} disabled={!!editing}
+          onChange={(v) => { setBuildingId(v); fields.clear('flr-building', 'flr-open', 'flr-close', 'flr-min', 'flr-max') }}
+          options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
+      </Field>
+      <LocalizedInput prefix="flr" field="name" id="flr-name" label={t('forms.floor.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.floor.namePlaceholder')} className="inp mono" autoFocus />
       <OverrideFields prefix="flr" parent="building" values={ov} errors={errors}
         onChange={(v) => { setOv(v); fields.clear('flr-open', 'flr-close', 'flr-min', 'flr-max') }}
         inherits={b ? [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours] : null} />
@@ -361,12 +355,12 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const submit = () => {
     const cap = capacity.trim() === '' ? 0 : Number(capacity)
     const found: FieldErrors = {
-      'sp-name': name.trim() ? undefined : missing(t('forms.space.nameMissing')),
+      'sp-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.space.nameMissing')),
       'sp-type': effTypeId ? undefined : err(t('forms.space.typeMissing'), 'validation.invalid_space_type'),
       'sp-capacity': Number.isInteger(cap) && cap >= 0 && cap <= 999 ? undefined : err(t('forms.space.capacityRange'), 'validation.invalid_request'),
       'sp-building': b ? undefined : missing(t('forms.space.buildingMissing')),
       'sp-floor': !b ? undefined : !bFloors.length ? missing(t('forms.space.buildingHasNoFloors', { name: b.name })) : f ? undefined : missing(t('forms.space.floorMissing')),
-      'sp-note': note.trim().length > 500 ? err(t('forms.space.noteTooLong'), 'validation.invalid_request') : undefined,
+      'sp-note': note.trim().length > 500 ? err(t('forms.space.noteTooLong'), 'validation.invalid_request') : scriptProblem('en', note),
       ...checkTranslations('sp', drafts, true),
       ...(bounds && f ? checkOverrides('sp', ov, bounds, 'space') : {}),
     }
@@ -393,10 +387,8 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       subtitle={editing ? t('forms.space.editSubtitle') : t('forms.space.addSubtitle')}
       onClose={modals.close} footer={<Footer onSave={submit} label={editing ? t('common.saveChanges') : t('forms.space.save')} busy={save.isPending} />}>
       <RequiredNote />
-      <Field id="sp-name" label={t('forms.nameEnglish')} required error={errors['sp-name']}>
-        <input id="sp-name" className="inp" lang="en" dir="ltr" placeholder={t('forms.space.namePlaceholder')} value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('sp-name') }} />
-      </Field>
-      <TranslationFields prefix="sp" drafts={drafts} onChange={setDrafts} errors={errors} clear={fields.clear} withNote />
+      <LocalizedInput prefix="sp" field="name" id="sp-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.space.namePlaceholder')} autoFocus />
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
         <Field id="sp-type" label={t('common.type')} required error={errors['sp-type']}>
           <Dropdown id="sp-type" value={effTypeId} onChange={(v) => { setTypeId(v); fields.clear('sp-type') }} disabled={!types.length}
@@ -425,9 +417,8 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       </div>
       <OverrideFields prefix="sp" parent="floor" values={ov} errors={errors} inherits={bounds}
         onChange={(v) => { setOv(v); fields.clear(...SPACE_OVERRIDE_IDS) }} />
-      <Field id="sp-note" label={t('forms.descriptionEnglish')} error={errors['sp-note']}>
-        <input id="sp-note" className="inp" lang="en" dir="ltr" placeholder={t('forms.space.notePlaceholder')} value={note} maxLength={500} onChange={(e) => { setNote(e.target.value); fields.clear('sp-note') }} />
-      </Field>
+      <LocalizedInput prefix="sp" field="note" id="sp-note" label={t('forms.description')} english={note} onEnglish={setNote}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.space.notePlaceholder')} maxLength={NOTE_MAX} />
       <BookableField idPrefix="sp" kind="space" value={isBookable} onChange={setIsBookable}
         existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
       {/* The space's own tick can be on while its floor or building is off: say so. */}
@@ -450,7 +441,7 @@ export function SpaceTypeFormModal({ editing }: { editing: SpaceType | null }) {
   const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
 
   const submit = () => {
-    if (fields.show({ 'st-name': name.trim() ? undefined : missing(t('forms.spaceType.nameMissing')), ...checkTranslations('st', drafts) })) return
+    if (fields.show({ 'st-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.spaceType.nameMissing')), ...checkTranslations('st', drafts) })) return
     save.mutateAsync({ id: editing?.id, name: name.trim(), translations: toTranslations(drafts) }).then(() => {
       toast('ok', editing ? t('forms.spaceType.renamed') : t('forms.spaceType.added'),
         editing ? t('forms.spaceType.renamedMessage', { from: editing.name, to: name.trim() }) : t('forms.spaceType.addedMessage', { name: name.trim() }))
@@ -463,12 +454,9 @@ export function SpaceTypeFormModal({ editing }: { editing: SpaceType | null }) {
     <Modal width={420} title={editing ? t('forms.spaceType.editTitle') : t('forms.spaceType.addTitle')} subtitle={used}
       onClose={modals.close} footer={<Footer onSave={submit} label={editing ? t('common.saveChanges') : t('forms.spaceType.save')} busy={save.isPending} />}>
       <RequiredNote />
-      <Field id="st-name" label={t('forms.nameEnglish')} required error={fields.errors['st-name']}>
-        <input id="st-name" className="inp" lang="en" dir="ltr" placeholder={t('forms.spaceType.namePlaceholder')} value={name} autoFocus maxLength={64}
-          onChange={(e) => { setName(e.target.value); fields.clear('st-name') }}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />
-      </Field>
-      <TranslationFields prefix="st" drafts={drafts} onChange={setDrafts} errors={fields.errors} clear={fields.clear} />
+      <LocalizedInput prefix="st" field="name" id="st-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={fields.errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.spaceType.namePlaceholder')}
+        maxLength={64} autoFocus onEnter={submit} />
     </Modal>
   )
 }

@@ -42,6 +42,8 @@
     "Error:TranslationNameMissing": "أدخل الاسم باللغة {0}، أو احذف هذه اللغة.",
     "Error:NameTooLong": "يجب ألا يتجاوز الاسم {0} حرفاً.",
     "Error:NoteTooLong": "يجب ألا يتجاوز الوصف {0} حرفاً.",
+    "Error:WrongScript:Latin": "استخدم الحروف الإنجليزية (A–Z) فقط.",
+    "Error:WrongScript:Arabic": "استخدم الحروف العربية. يمكن إبقاء رموز لاتينية مثل VIP.",
     "Error:CloseBeforeOpen": "يجب أن تكون ساعة الإغلاق بعد ساعة الفتح.",
     "Error:BuildingNameMissing": "أدخل اسماً للمبنى.",
     "Error:BuildingDuplicate": "{0} موجود بالفعل ضمن المباني.",

@@ -99,6 +99,41 @@ public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
         ex.Code.ShouldBe(code);
     }
 
+    /* Each box only takes its own language's letters; the error names the box it is about. */
+    [Theory]
+    [InlineData("غرفة", null, "name")]                    // Arabic letters in the English name
+    [InlineData("Quiet room", "Quiet room", "translations.ar")] // Arabic name with only Latin letters
+    public async Task Text_in_another_alphabet_is_rejected_on_its_own_field(string english, string? arabic, string field)
+    {
+        var extras = arabic == null ? [] : new[] { ("ar", $"{arabic} {Tag()}") };
+        var ex = await Should.ThrowAsync<BusinessException>(() => _types.CreateAsync(Type($"{english} {Tag()}", extras)));
+        ex.Code.ShouldBe(PortalDomainErrorCodes.WrongScript);
+        ex.Data[ErrorFieldExtensions.FieldKey].ShouldBe(field);
+    }
+
+    [Fact]
+    public async Task An_arabic_name_may_keep_a_latin_code()
+    {
+        var created = await _types.CreateAsync(Type($"VIP lounge {Tag()}", ("ar", $"صالة VIP {Tag()}")));
+        created.Translations.Select(t => t.Language).ShouldBe(new[] { "en", "ar" });
+    }
+
+    [Fact]
+    public async Task A_space_description_follows_the_same_letters_rule()
+    {
+        var (building, floor) = await CreateBuildingAsync(Tag());
+        var ex = await Should.ThrowAsync<BusinessException>(() => _spaces.CreateAsync(new CreateUpdateSpaceDto
+        {
+            Name = $"Pod {Tag()}",
+            Translations = [new() { Language = "ar", Name = $"كبسولة {Tag()}", Note = "Seats four" }],
+            TypeId = DefaultSpaceTypes.MeetingRoom,
+            BuildingId = building.Id,
+            FloorId = floor.Id,
+        }));
+        ex.Code.ShouldBe(PortalDomainErrorCodes.WrongScript);
+        ex.Data[ErrorFieldExtensions.FieldKey].ShouldBe("translations.ar.note");
+    }
+
     [Fact]
     public async Task The_english_name_is_required()
     {
@@ -112,9 +147,6 @@ public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
     {
         var tag = Tag();
         await _types.CreateAsync(Type($"Hall {tag}", ("ar", $"قاعة {tag}")));
-
-        /* The same text in another language is fine. */
-        await _types.CreateAsync(Type($"Annex hall {tag}", ("ar", $"Hall {tag}")));
 
         using (CultureHelper.Use("ar"))
         {

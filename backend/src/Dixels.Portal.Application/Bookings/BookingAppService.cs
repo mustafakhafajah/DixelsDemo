@@ -122,7 +122,8 @@ public class BookingAppService : PortalAppService, IBookingAppService
             {
                 created.Add(await CreateOneAsync(input.SpaceId, o.StartUtc, o.EndUtc, seriesId, null));
             }
-            catch (BusinessException ex)
+            /* Losing a same-moment race stops the whole series (see BookingRaceException); other clashes skip the date. */
+            catch (BusinessException ex) when (ex is not BookingRaceException)
             {
                 skipped.Add(new BookingWindowFailureDto
                 {
@@ -171,7 +172,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         b.StartUtc = start;
         b.EndUtc = end;
         b.Version++;
-        await _bookings.UpdateAsync(b, autoSave: true);
+        await BookingOverlap.Translate(() => _bookings.UpdateAsync(b, autoSave: true));
         return await MapAsync(b);
     }
 
@@ -219,7 +220,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
                 "Only a booking that has already started can be ended early.");
         b.EndUtc = Clock.Now;
         b.Version++;
-        await _bookings.UpdateAsync(b, autoSave: true);
+        await BookingOverlap.Translate(() => _bookings.UpdateAsync(b, autoSave: true));
         return await MapAsync(b);
     }
 
@@ -253,7 +254,8 @@ public class BookingAppService : PortalAppService, IBookingAppService
         /* Admins may hold several spaces at the same time; employees may not. */
         var booking = await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
             seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll));
-        await _bookings.InsertAsync(booking, autoSave: true);
+        /* The database has the last word on overlaps; a same-moment loser gets the normal conflict. */
+        await BookingOverlap.Translate(() => _bookings.InsertAsync(booking, autoSave: true));
         return booking;
     }
 

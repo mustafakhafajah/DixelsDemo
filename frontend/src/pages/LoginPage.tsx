@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import {
@@ -108,6 +108,34 @@ function BookingBoard() {
   )
 }
 
+/* The page never scrolls: when the window is shorter than a panel's content, the content is shrunk evenly
+ * (CSS zoom) to fit, so the design keeps its proportions. It never grows past the design's size, and stops at
+ * MIN_FIT so text stays readable; a window shorter than that scrolls the panel instead. */
+const MIN_FIT = 0.6
+
+function FitPanel({ className, children }: { className: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { i18n } = useTranslation()
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      el.style.setProperty('--fit', '1')
+      el.style.height = 'auto'
+      const natural = el.scrollHeight
+      el.style.height = ''
+      /* A hidden panel (narrow screens) measures 0 and simply stays at 1. */
+      el.style.setProperty('--fit', String(Math.max(MIN_FIT, Math.min(1, window.innerHeight / natural))))
+    }
+    fit()
+    /* Again once the web fonts are in, as they change the text's size. */
+    void document.fonts?.ready.then(fit)
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [i18n.language])
+  return <section className={className}><div ref={ref} className="panel-fit">{children}</div></section>
+}
+
 /* One way in: the real ABP sign-in page (email + password), which returns a token whose role
  * decides the admin or user interface. */
 function LoginPage() {
@@ -118,7 +146,7 @@ function LoginPage() {
 
   return (
     <div className="login-page">
-      <section className="brand-panel">
+      <FitPanel className="brand-panel">
         <div className="brand-top">
           <img className="brand-logo" src={dixelsLogo} alt="Dixels" />
           <span className="live-chip"><span className="live-dot" />{t('login.live', { date: today })}</span>
@@ -139,9 +167,9 @@ function LoginPage() {
             </div>
           ))}
         </div>
-      </section>
+      </FitPanel>
 
-      <section className="signin-panel">
+      <FitPanel className="signin-panel">
         <div className="signin-top">
           <LanguageSwitcher className="login-lang" />
         </div>
@@ -172,7 +200,7 @@ function LoginPage() {
           <span>{t('login.footer.copyright', { year: now.getFullYear() })}</span>
           <span>{t('login.footer.noAccount')}</span>
         </footer>
-      </section>
+      </FitPanel>
     </div>
   )
 }

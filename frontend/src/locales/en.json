@@ -246,7 +246,7 @@
         "desc": "Rules follow your account role automatically."
       }
     },
-    "welcome": "Welcome back",
+    "welcome": "Welcome",
     "subtitle": "Sign in with your email and password. What you can book comes from your account role.",
     "button": "Sign in with email",
     "companyOnly": "Company accounts only",

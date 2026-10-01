@@ -11,7 +11,8 @@ public class SpaceTypeConfiguration : IEntityTypeConfiguration<SpaceType>
     {
         b.ToTable(PortalConsts.DbTablePrefix + "SpaceTypes", PortalConsts.DbSchema);
         b.ConfigureByConvention();
-        b.Property(x => x.Name).IsRequired().HasMaxLength(SpaceTypeConsts.MaxNameLength);
-        b.HasIndex(x => x.Name).IsUnique();
+        b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceTypeId).OnDelete(DeleteBehavior.Cascade);
+        /* Every query that loads a space type loads its names, so GetName() can pick the reader's language. */
+        b.Navigation(x => x.Translations).AutoInclude();
     }
 }

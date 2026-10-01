@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Localization;
@@ -56,7 +57,7 @@ public class SpaceAppService
     [Authorize(PortalPermissions.Spaces.Create)]
     public override async Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input)
     {
-        var space = await _spaceManager.CreateAsync(input.Name, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
+        var space = await _spaceManager.CreateAsync(input.Name, input.Note, input.Translations.ToNameTranslations(), input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
         await Repository.InsertAsync(space, autoSave: true);
         return await MapToGetOutputDtoAsync(space);
@@ -66,7 +67,7 @@ public class SpaceAppService
     public override async Task<SpaceDto> UpdateAsync(Guid id, CreateUpdateSpaceDto input)
     {
         var space = await GetEntityByIdAsync(id);
-        await _spaceManager.UpdateAsync(space, input.Name, input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
+        await _spaceManager.UpdateAsync(space, input.Name, input.Note, input.Translations.ToNameTranslations(), input.BuildingId, input.FloorId, input.TypeId, Overrides(input));
         CopyFields(space, input);
         await Repository.UpdateAsync(space, autoSave: true);
         return await MapToGetOutputDtoAsync(space);
@@ -98,17 +99,23 @@ public class SpaceAppService
             join f in await _floors.GetQueryableAsync() on s.FloorId equals f.Id into floorJoin
             from f in floorJoin.DefaultIfEmpty()
             where s.IsBookable && b.IsBookable && (f == null || f.IsBookable)
-            select new { Space = s, BuildingName = b.Name, FloorName = f == null ? null : f.Name };
+            select new { Space = s, Floor = f };
 
+        /* A name typed in any language matches, so people find a space by whichever name they know. */
         rows = rows
             .WhereIf(input.BuildingId.HasValue, r => r.Space.BuildingId == input.BuildingId)
-            .WhereIf(!string.IsNullOrEmpty(floorName), r => r.FloorName == floorName)
+            .WhereIf(!string.IsNullOrEmpty(floorName), r => r.Floor != null && r.Floor.Translations.Any(t => t.Name == floorName))
             .WhereIf(minCapacity > 0, r => r.Space.Capacity >= minCapacity)
             .WhereIf(typeIds.Count > 0, r => typeIds.Contains(r.Space.TypeId))
-            .WhereIf(!string.IsNullOrEmpty(name), r => r.Space.Name.ToLower().Contains(name!));
+            .WhereIf(!string.IsNullOrEmpty(name), r => r.Space.Translations.Any(t => t.Name.ToLower().Contains(name!)));
 
-        var spaces = await AsyncExecuter.ToListAsync(rows.OrderBy(r => r.BuildingName).ThenBy(r => r.Space.Name).Select(r => r.Space));
-        return new ListResultDto<SpaceDto>(await MapToGetListOutputDtosAsync(spaces));
+        /* The whole list comes back, so it is sorted by the names in the reader's language after mapping. */
+        var spaces = await AsyncExecuter.ToListAsync(rows.Select(r => r.Space));
+        var dtos = (await MapToGetListOutputDtosAsync(spaces))
+            .OrderBy(d => d.BuildingName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        return new ListResultDto<SpaceDto>(dtos);
     }
 
     /* One filtered page for the admin registry, with each space's upcoming-booking count. */
@@ -118,11 +125,8 @@ public class SpaceAppService
         var filtered = (await Repository.GetQueryableAsync()).ApplyRegistryFilter(input);
         var total = await AsyncExecuter.CountAsync(filtered);
 
-        /* Building name, then space name (Id breaks ties so pages never overlap). */
-        var ordered = from s in filtered
-                      join b in await _buildings.GetQueryableAsync() on s.BuildingId equals b.Id
-                      orderby b.Name, s.Name, s.Id
-                      select s;
+        /* Building name, then space name, in the reader's language. */
+        var ordered = OrderByNames(filtered, await _buildings.GetQueryableAsync(), PortalLanguages.Current);
         var take = Math.Clamp(input.MaxResultCount, 1, MaxRegistryPageSize);
         var page = await AsyncExecuter.ToListAsync(ordered.Skip(Math.Max(0, input.SkipCount)).Take(take));
 
@@ -136,9 +140,20 @@ public class SpaceAppService
 
     /* The full list (pickers) is ordered by building name, then space name. */
     protected override async Task<IQueryable<Space>> CreateFilteredQueryAsync(EstateListInput input)
-        => from s in await base.CreateFilteredQueryAsync(input)
-           join b in await _buildings.GetQueryableAsync() on s.BuildingId equals b.Id
-           orderby b.Name, s.Name
+        => OrderByNames(await base.CreateFilteredQueryAsync(input), await _buildings.GetQueryableAsync(), PortalLanguages.Current);
+
+    /* Sorted in the database by each name in the given language (see LocalizedNameQuery for the fallback);
+     * Id breaks ties so pages never overlap. */
+    private static IQueryable<Space> OrderByNames(IQueryable<Space> spaces, IQueryable<Building> buildings, string language)
+        => from s in spaces
+           join b in buildings on s.BuildingId equals b.Id
+           let buildingName = b.Translations
+               .Where(t => t.Language == language || t.Language == PortalLanguages.Default).OrderBy(t => t.Language == language ? 0 : 1)
+               .Select(t => t.Name).FirstOrDefault()
+           let spaceName = s.Translations
+               .Where(t => t.Language == language || t.Language == PortalLanguages.Default).OrderBy(t => t.Language == language ? 0 : 1)
+               .Select(t => t.Name).FirstOrDefault()
+           orderby buildingName, spaceName, s.Id
            select s;
 
     /* Keep the building-then-name order set above instead of ABP's default (creation time). */
@@ -148,7 +163,7 @@ public class SpaceAppService
         => (await MapToGetListOutputDtosAsync(new List<Space> { entity }))[0];
 
     /* Building, floor and type for every space on the list (one query each), then the rules the space
-     * actually follows and whether it can be booked. */
+     * actually follows and whether it can be booked. Names are in the reader's language. */
     protected override async Task<List<SpaceDto>> MapToGetListOutputDtosAsync(List<Space> entities)
     {
         var buildingIds = entities.Select(s => s.BuildingId).Distinct().ToList();
@@ -156,7 +171,7 @@ public class SpaceAppService
         var typeIds = entities.Select(s => s.TypeId).Distinct().ToList();
         var buildings = (await _buildings.GetListAsync(b => buildingIds.Contains(b.Id))).ToDictionary(b => b.Id);
         var floors = (await _floors.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
-        var typeNames = (await _types.GetListAsync(t => typeIds.Contains(t.Id))).ToDictionary(t => t.Id, t => t.Name);
+        var typeNames = (await _types.GetListAsync(t => typeIds.Contains(t.Id))).ToDictionary(t => t.Id, t => t.GetName());
 
         return entities.Select(s =>
         {
@@ -166,9 +181,12 @@ public class SpaceAppService
             var c = ctx.Constraints;
 
             var dto = ObjectMapper.Map<Space, SpaceDto>(s);
-            dto.TypeName = typeNames.GetValueOrDefault(s.TypeId, "Unknown type");
-            dto.BuildingName = building.Name;
-            dto.FloorName = floor?.Name ?? "";
+            dto.Name = s.GetName();
+            dto.Note = s.GetNote();
+            dto.Translations = TranslationDtos.Of(s.Translations, t => new TranslationDto { Language = t.Language, Name = t.Name, Note = t.Note });
+            dto.TypeName = typeNames.GetValueOrDefault(s.TypeId) ?? L["UnknownType"];
+            dto.BuildingName = building.GetName();
+            dto.FloorName = floor?.GetName() ?? "";
             dto.TimeZone = building.TimeZone;
             dto.Constraints = new ResolvedConstraintsDto
             {
@@ -181,7 +199,7 @@ public class SpaceAppService
                 TimeZone = c.TimeZone,
             };
             dto.CanCurrentUserBook = BookingManager.CanBook(ctx);
-            dto.NotBookableReason = BookingManager.FindNotBookableReason(ctx);
+            dto.NotBookableReason = BookingManager.FindNotBookableReason(ctx, L);
             return dto;
         }).ToList();
     }
@@ -202,7 +220,6 @@ public class SpaceAppService
     {
         s.IsBookable = input.IsBookable;
         s.Capacity = Math.Max(0, input.Capacity);
-        s.Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
     }
 
     private static ConstraintOverrides Overrides(CreateUpdateSpaceDto input) => new(

@@ -87,12 +87,12 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         foreach (var o in input.Occurrences)
         {
             if (o.StartUtc == default || o.EndUtc == default)
-                throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.").ForField("start");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:StartEndRequired"]).ForField("start");
             if (o.EndUtc <= o.StartUtc)
-                throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.").ForField("end");
+                throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: L["Error:EndBeforeStart"]).ForField("end");
         }
 
-        var note = string.IsNullOrWhiteSpace(input.Note) ? "Blocked" : input.Note.Trim();
+        var note = string.IsNullOrWhiteSpace(input.Note) ? L["Blocked"] : input.Note.Trim();
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
         var created = 0;
         var affected = 0;
@@ -137,7 +137,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
 
     private async Task<MaintenanceWindow> GetWindowAsync(Guid id)
         => await _maintenance.FindAsync(id)
-           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MaintenanceNotFound, message: "No blocked time with that ID.");
+           ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.MaintenanceNotFound, message: L["Error:MaintenanceNotFound"]);
 
     /* The preview and the real schedule count "affected" the same way: confirmed bookings overlapping the window. */
     private async Task<int> CountAffectedAsync(List<Guid> spaceIds, DateTime startUtc, DateTime endUtc)
@@ -164,7 +164,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
     {
         if (list.Count == 0) return new();
         var spaceIds = list.Select(m => m.SpaceId).Distinct().ToList();
-        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.Name);
+        var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.GetName());
         var labels = new Dictionary<(MaintenanceScopeType, Guid), string>();
         foreach (var key in list.Select(m => (m.ScopeType, m.ScopeId)).Distinct())
             labels[key] = await ScopeLabelAsync(key.ScopeType, key.ScopeId);
@@ -172,7 +172,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         return list.Select(m =>
         {
             var dto = ObjectMapper.Map<MaintenanceWindow, MaintenanceWindowDto>(m);
-            dto.SpaceName = spaces.GetValueOrDefault(m.SpaceId, "Unknown space");
+            dto.SpaceName = spaces.GetValueOrDefault(m.SpaceId) ?? L["UnknownSpace"];
             dto.ScopeLabel = labels[(m.ScopeType, m.ScopeId)];
             dto.Lifecycle = m.GetLifecycle(now).ToApiValue();
             return dto;
@@ -184,14 +184,14 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         switch (type)
         {
             case MaintenanceScopeType.Space:
-                return (await _spaces.FindAsync(scopeId))?.Name ?? "a space";
+                return (await _spaces.FindAsync(scopeId))?.GetName() ?? L["ASpace"];
             case MaintenanceScopeType.Floor:
                 var f = await _floors.FindAsync(scopeId);
-                if (f == null) return "a floor";
+                if (f == null) return L["AFloor"];
                 var fb = await _buildings.FindAsync(f.BuildingId);
-                return $"{fb?.Name} · Floor {f.Name}";
+                return L["BuildingFloorLabel", fb?.GetName() ?? "", f.GetName()];
             default:
-                return (await _buildings.FindAsync(scopeId))?.Name ?? "a building";
+                return (await _buildings.FindAsync(scopeId))?.GetName() ?? L["ABuilding"];
         }
     }
 }

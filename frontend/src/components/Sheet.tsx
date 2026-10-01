@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface SheetProps {
   title: ReactNode
@@ -19,13 +20,14 @@ function useEscape(onClose: () => void) {
 }
 
 function SheetHead({ title, subtitle, onClose, titleClassName }: Omit<SheetProps, 'children' | 'footer'>) {
+  const { t } = useTranslation()
   return (
     <div className="sheet-head">
       <div>
         <h2 className={titleClassName} style={{ fontSize: 15.5 }}>{title}</h2>
         {subtitle && <p style={{ fontSize: 12, color: 'var(--slate)', margin: '3px 0 0' }}>{subtitle}</p>}
       </div>
-      <button type="button" className="iconbtn" onClick={onClose} aria-label="Close">×</button>
+      <button type="button" className="iconbtn" onClick={onClose} aria-label={t('common.close')}>×</button>
     </div>
   )
 }

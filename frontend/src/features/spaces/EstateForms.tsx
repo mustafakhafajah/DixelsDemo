@@ -1,13 +1,18 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from 'i18next'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, Floor, Space, SpaceType } from '../../api/types'
-import { ErrorLine, plural, RequiredMark } from '../../components/bits'
+import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { isValidTimeZone, WEEKDAYS } from '../../lib/closedDays'
+import { weekdayName } from '../../lib/dateUtils'
 import { useFieldErrors, type FieldError, type FieldErrors } from '../../lib/useFieldErrors'
 import { modals } from '../../state/modalStore'
 import { BookableField, useCancelUpcomingAfterSave } from './Bookable'
+import { LocalizedInput } from './LocalizedInput'
+import { checkTranslations, draftsOf, englishOf, NOTE_MAX, scriptProblem, toTranslations, translationServerFields } from './translationDrafts'
 import { toast } from '../../state/toastStore'
 
 const numOrNull = (v: string) => (v.trim() === '' ? null : Number(v))
@@ -16,9 +21,10 @@ const err = (message: string, code = 'validation.invalid_hours'): FieldError => 
 const missing = (message: string): FieldError => ({ code: 'validation.missing_field', message })
 
 function Footer({ onSave, label, busy }: { onSave: () => void; label: string; busy: boolean }) {
+  const { t } = useTranslation()
   return (
     <>
-      <button type="button" className="btn" onClick={modals.close}>Discard</button>
+      <button type="button" className="btn" onClick={modals.close}>{t('common.discard')}</button>
       <button type="button" className="btn btn-primary" disabled={busy} onClick={onSave}>{label}</button>
     </>
   )
@@ -35,6 +41,11 @@ function Field({ id, label, required, error, children }: { id: string; label: st
   )
 }
 
+function RequiredNote() {
+  const { t } = useTranslation()
+  return <p className="req-note"><RequiredMark /> {t('common.requiredField')}</p>
+}
+
 type Overrides = [string, string, string, string]
 const OVERRIDE_KEYS = ['open', 'close', 'min', 'max'] as const
 const OVERRIDE_SERVER_FIELDS = ['openHourOverride', 'closeHourOverride', 'minBookingMinutesOverride', 'maxBookingHoursOverride']
@@ -42,16 +53,16 @@ const overrideServerFields = (prefix: string) =>
   Object.fromEntries(OVERRIDE_SERVER_FIELDS.map((f, i) => [f, `${prefix}-${OVERRIDE_KEYS[i]}`]))
 
 /* The same checks the server makes on a floor's or space's overrides: each may only narrow its parent
- * (subject "Floor" or "Space", parent e.g. "the building" / "its floor"), and close stays after open. */
-function checkOverrides(prefix: string, ov: Overrides, bounds: [number, number, number, number], subject: string, parent: string, parentPossessive: string): FieldErrors {
+ * (a floor's building, a space's floor), and close stays after open. */
+function checkOverrides(prefix: string, ov: Overrides, bounds: [number, number, number, number], kind: 'floor' | 'space'): FieldErrors {
   const [o, c, mi, ma] = ov.map(numOrNull)
   const [bo, bc, bmi, bma] = bounds
   const out: FieldErrors = {}
-  if (o != null && o < bo) out[`${prefix}-open`] = err(`${subject} cannot open earlier (${o}) than ${parent} (${bo}).`, 'validation.narrowing_violation')
-  if (c != null && c > bc) out[`${prefix}-close`] = err(`${subject} cannot close later (${c}) than ${parent} (${bc}).`, 'validation.narrowing_violation')
-  if ((c ?? bc) <= (o ?? bo)) out[c != null || o == null ? `${prefix}-close` : `${prefix}-open`] ??= err('Close hour must be after open hour.')
-  if (mi != null && mi < bmi) out[`${prefix}-min`] = err(`${subject}'s minimum duration cannot be less than ${parentPossessive} (${bmi}m).`, 'validation.narrowing_violation')
-  if (ma != null && ma > bma) out[`${prefix}-max`] = err(`${subject}'s maximum duration cannot exceed ${parentPossessive} (${bma}h).`, 'validation.narrowing_violation')
+  if (o != null && o < bo) out[`${prefix}-open`] = err(i18n.t(`forms.override.openEarlier.${kind}`, { value: o, limit: bo }), 'validation.narrowing_violation')
+  if (c != null && c > bc) out[`${prefix}-close`] = err(i18n.t(`forms.override.closeLater.${kind}`, { value: c, limit: bc }), 'validation.narrowing_violation')
+  if ((c ?? bc) <= (o ?? bo)) out[c != null || o == null ? `${prefix}-close` : `${prefix}-open`] ??= err(i18n.t('forms.closeAfterOpen'))
+  if (mi != null && mi < bmi) out[`${prefix}-min`] = err(i18n.t(`forms.override.minBelow.${kind}`, { limit: bmi }), 'validation.narrowing_violation')
+  if (ma != null && ma > bma) out[`${prefix}-max`] = err(i18n.t(`forms.override.maxAbove.${kind}`, { limit: bma }), 'validation.narrowing_violation')
   return out
 }
 
@@ -63,10 +74,11 @@ function OverrideFields({ prefix, values, onChange, inherits, parent, errors }: 
   values: Overrides
   onChange: (v: Overrides) => void
   inherits: [number, number, number, number] | null
-  /* "building" or "floor", for the hint. */
-  parent: string
+  /* Whose values an empty field takes, for the hint. */
+  parent: 'building' | 'floor'
   errors: FieldErrors
 }) {
+  const { t } = useTranslation()
   const set = (i: number, v: string) => { const next = [...values] as Overrides; next[i] = v; onChange(next) }
   const [o, c, mi, ma] = values.map(numOrNull)
   const ranges = inherits ? (() => {
@@ -78,7 +90,7 @@ function OverrideFields({ prefix, values, onChange, inherits, parent, errors }: 
       [Math.max(1, Math.ceil((mi ?? pMin) / 60)), pMax],
     ] as [number, number][]
   })() : null
-  const ph = (i: number) => (ranges ? `min ${ranges[i][0]} · max ${ranges[i][1]}` : '')
+  const ph = (i: number) => (ranges ? t('forms.override.range', { min: ranges[i][0], max: ranges[i][1] }) : '')
   const field = (i: number, label: string) => {
     const id = `${prefix}-${OVERRIDE_KEYS[i]}`
     return (
@@ -91,16 +103,16 @@ function OverrideFields({ prefix, values, onChange, inherits, parent, errors }: 
   return (
     <>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {field(0, 'Open hour override')}
-        {field(1, 'Close hour override')}
+        {field(0, t('forms.override.open'))}
+        {field(1, t('forms.override.close'))}
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {field(2, 'Min duration override (minutes)')}
-        {field(3, 'Max duration override (hours)')}
+        {field(2, t('forms.override.min'))}
+        {field(3, t('forms.override.max'))}
       </div>
       {inherits && (
         <p style={{ fontSize: 11.5, color: 'var(--slate)', marginTop: -6 }}>
-          Leave a field empty to use the {parent}'s value: open {inherits[0]}:00–{inherits[1]}:00, bookings {inherits[2]} min to {inherits[3]} h.
+          {t(`forms.override.inherit.${parent}`, { open: inherits[0], close: inherits[1], min: inherits[2], max: inherits[3] })}
         </p>
       )}
     </>
@@ -108,10 +120,10 @@ function OverrideFields({ prefix, values, onChange, inherits, parent, errors }: 
 }
 
 /* A whole number within [lo, hi], or the message saying what is wrong with it. */
-function checkNumber(value: string, label: string, lo: number, hi: number, unit = ''): FieldError | undefined {
-  if (value.trim() === '') return missing(`Enter the ${label}.`)
+function checkNumber(value: string, field: 'open' | 'close' | 'min' | 'max', lo: number, hi: number): FieldError | undefined {
+  if (value.trim() === '') return missing(i18n.t(`forms.number.enter.${field}`))
   const n = Number(value)
-  if (!Number.isInteger(n) || n < lo || n > hi) return err(`The ${label} must be a whole number from ${lo} to ${hi}${unit}.`)
+  if (!Number.isInteger(n) || n < lo || n > hi) return err(i18n.t(`forms.number.range.${field}`, { lo, hi }))
   return undefined
 }
 
@@ -123,10 +135,12 @@ const BUILDING_SERVER_FIELDS = {
 }
 
 export function BuildingFormModal({ editing }: { editing: Building | null }) {
+  const { t } = useTranslation()
   const save = useSaveBuilding()
   const fields = useFieldErrors()
   const { errors } = fields
-  const [name, setName] = useState(editing?.name ?? '')
+  const [name, setName] = useState(englishOf(editing?.translations)?.name ?? editing?.name ?? '')
+  const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
   const [tz, setTz] = useState(editing?.timeZone ?? 'UTC')
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
   const [cancelUpcoming, setCancelUpcoming] = useState(false)
@@ -141,91 +155,91 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
   const tzValid = isValidTimeZone(tz.trim() || 'UTC')
   /* The time zone is checked as it is typed, so its message shows before saving too. */
   const tzError = errors['bld-tz'] ?? (tzValid ? undefined
-    : err(`"${tz.trim()}" is not a known time zone. Use a name like Europe/Warsaw or Asia/Dubai.`, 'validation.time_zone_unknown'))
+    : err(t('forms.building.tzUnknown', { tz: tz.trim() }), 'validation.time_zone_unknown'))
 
   const submit = () => {
     const o = Number(open), c = Number(close), mi = Number(min), ma = Number(max)
     const found: FieldErrors = {
-      'bld-name': name.trim() ? undefined : missing('Give the building a name.'),
+      'bld-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.building.nameMissing')),
       'bld-tz': tzError,
-      'bld-open': checkNumber(open, 'open hour', 0, 23),
-      'bld-close': checkNumber(close, 'close hour', 1, 24),
-      'bld-min': checkNumber(min, 'minimum duration', 5, 1440, ' minutes'),
-      'bld-max': checkNumber(max, 'maximum duration', 1, 24, ' hours'),
+      'bld-open': checkNumber(open, 'open', 0, 23),
+      'bld-close': checkNumber(close, 'close', 1, 24),
+      'bld-min': checkNumber(min, 'min', 5, 1440),
+      'bld-max': checkNumber(max, 'max', 1, 24),
+      ...checkTranslations('bld', drafts),
     }
-    if (!found['bld-open'] && !found['bld-close'] && c <= o) found['bld-close'] = err('Close hour must be after open hour.')
+    if (!found['bld-open'] && !found['bld-close'] && c <= o) found['bld-close'] = err(t('forms.closeAfterOpen'))
     if (fields.show(found)) return
     save.mutateAsync({
       id: editing?.id,
-      body: { name: name.trim(), timeZone: tz.trim() || 'UTC', isBookable, openHour: o, closeHour: c, minBookingMinutes: mi, maxBookingHours: ma, holidays, closedWeekdays },
+      body: { name: name.trim(), translations: toTranslations(drafts), timeZone: tz.trim() || 'UTC', isBookable, openHour: o, closeHour: c, minBookingMinutes: mi, maxBookingHours: ma, holidays, closedWeekdays },
     }).then(async () => {
       if (editing && cancelUpcoming && !isBookable) await cancelAfter('building', editing.id, name.trim())
-      toast('ok', editing ? 'Building updated' : 'Building added', name.trim())
+      toast('ok', editing ? t('forms.building.updated') : t('forms.building.added'), name.trim())
       modals.close()
-    }, (e) => fields.fromServer(e, BUILDING_SERVER_FIELDS))
+    }, (e) => fields.fromServer(e, { ...BUILDING_SERVER_FIELDS, ...translationServerFields('bld') }))
   }
 
   const addHoliday = () => {
-    if (!holidayInput) return fields.show({ ...errors, 'bld-holiday': missing('Pick a date, then press Add.') })
+    if (!holidayInput) return fields.show({ ...errors, 'bld-holiday': missing(t('forms.building.holidayMissing')) })
     if (!holidays.includes(holidayInput)) setHolidays([...holidays, holidayInput].sort())
     setHolidayInput('')
     fields.clear('bld-holiday')
   }
 
   return (
-    <Modal title={editing ? 'Edit building' : 'Add a building'} subtitle="One record is one physical building." onClose={modals.close}
-      footer={<Footer onSave={submit} label="Save building" busy={save.isPending} />}>
-      <p className="req-note"><RequiredMark /> Required field</p>
-      <Field id="bld-name" label="Name" required error={errors['bld-name']}>
-        <input id="bld-name" className="inp" placeholder="e.g. Riverside Studio" value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('bld-name') }} />
-      </Field>
-      <Field id="bld-tz" label="Local timezone" required error={tzError}>
-        <input id="bld-tz" className="inp mono" placeholder="UTC" value={tz} onChange={(e) => { setTz(e.target.value); fields.clear('bld-tz') }} />
-        {!tzError && <p className="card-sub" style={{ marginTop: 5 }}>Holidays and closed days follow this time zone, e.g. Europe/Warsaw or Asia/Dubai.</p>}
+    <Modal title={editing ? t('forms.building.editTitle') : t('forms.building.addTitle')} subtitle={t('forms.building.subtitle')} onClose={modals.close}
+      footer={<Footer onSave={submit} label={t('forms.building.save')} busy={save.isPending} />}>
+      <RequiredNote />
+      <LocalizedInput prefix="bld" field="name" id="bld-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.building.namePlaceholder')} autoFocus />
+      <Field id="bld-tz" label={t('forms.building.timeZone')} required error={tzError}>
+        <input id="bld-tz" className="inp mono" dir="ltr" placeholder="UTC" value={tz} onChange={(e) => { setTz(e.target.value); fields.clear('bld-tz') }} />
+        {!tzError && <p className="card-sub" style={{ marginTop: 5 }}>{t('forms.building.tzHint')}</p>}
       </Field>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="bld-open" label="Open hour (UTC)" required error={errors['bld-open']}>
+        <Field id="bld-open" label={t('forms.building.openHour')} required error={errors['bld-open']}>
           <input type="number" id="bld-open" className="inp mono" min={0} max={23} value={open} onChange={(e) => { setOpen(e.target.value); fields.clear('bld-open', 'bld-close') }} />
         </Field>
-        <Field id="bld-close" label="Close hour (UTC)" required error={errors['bld-close']}>
+        <Field id="bld-close" label={t('forms.building.closeHour')} required error={errors['bld-close']}>
           <input type="number" id="bld-close" className="inp mono" min={1} max={24} value={close} onChange={(e) => { setClose(e.target.value); fields.clear('bld-open', 'bld-close') }} />
         </Field>
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="bld-min" label="Min duration (minutes)" required error={errors['bld-min']}>
+        <Field id="bld-min" label={t('forms.building.minDuration')} required error={errors['bld-min']}>
           <input type="number" id="bld-min" className="inp mono" min={5} step={5} value={min} onChange={(e) => { setMin(e.target.value); fields.clear('bld-min') }} />
         </Field>
-        <Field id="bld-max" label="Max duration (hours)" required error={errors['bld-max']}>
+        <Field id="bld-max" label={t('forms.building.maxDuration')} required error={errors['bld-max']}>
           <input type="number" id="bld-max" className="inp mono" min={1} step={1} value={max} onChange={(e) => { setMax(e.target.value); fields.clear('bld-max') }} />
         </Field>
       </div>
       <div>
-        <label className="lbl">Closed every week</label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="group" aria-label="Closed every week">
-          {WEEKDAYS.map(([d, label]) => (
+        <label className="lbl">{t('forms.building.closedWeekly')}</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="group" aria-label={t('forms.building.closedWeekly')}>
+          {WEEKDAYS.map((d) => (
             <button key={d} type="button" className={`dur-chip${closedWeekdays.includes(d) ? ' active' : ''}`} aria-pressed={closedWeekdays.includes(d)}
               onClick={() => { setClosedWeekdays(closedWeekdays.includes(d) ? closedWeekdays.filter((x) => x !== d) : [...closedWeekdays, d].sort()); fields.clear('bld-weekdays') }}>
-              {label}
+              {weekdayName(d, 'short')}
             </button>
           ))}
         </div>
         {errors['bld-weekdays']
           ? <ErrorLine id="bld-weekdays-error" error={errors['bld-weekdays']} />
-          : <p className="card-sub" style={{ marginTop: 6 }}>Nobody can book any space in this building on these days, every week.</p>}
+          : <p className="card-sub" style={{ marginTop: 6 }}>{t('forms.building.closedWeeklyHint')}</p>}
       </div>
       <div>
-        <label className="lbl" htmlFor="bld-holiday">Holidays</label>
+        <label className="lbl" htmlFor="bld-holiday">{t('forms.building.holidays')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}><DatePicker id="bld-holiday" value={holidayInput} onChange={(v) => { setHolidayInput(v); fields.clear('bld-holiday') }} /></div>
-          <button type="button" className="btn btn-sm" onClick={addHoliday}>Add</button>
+          <button type="button" className="btn btn-sm" onClick={addHoliday}>{t('common.add')}</button>
         </div>
         <ErrorLine id="bld-holiday-error" error={errors['bld-holiday']} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
           {holidays.length ? holidays.map((d) => (
             <span key={d} className="tag mono">
-              {d} <button type="button" className="iconbtn" style={{ fontSize: 13, padding: '0 0 0 4px' }} onClick={() => setHolidays(holidays.filter((x) => x !== d))} aria-label={`Remove ${d}`}>×</button>
+              {d} <button type="button" className="iconbtn" style={{ fontSize: 13, padding: 0, paddingInlineStart: 4 }} onClick={() => setHolidays(holidays.filter((x) => x !== d))} aria-label={t('forms.building.removeHoliday', { date: d })}>×</button>
             </span>
-          )) : <span style={{ fontSize: 11.5, color: 'var(--slate)' }}>No holidays yet.</span>}
+          )) : <span style={{ fontSize: 11.5, color: 'var(--slate)' }}>{t('forms.building.noHolidays')}</span>}
         </div>
       </div>
       <BookableField idPrefix="bld" kind="building" value={isBookable} onChange={setIsBookable}
@@ -239,12 +253,14 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
 const FLOOR_SERVER_FIELDS = { buildingId: 'flr-building', name: 'flr-name', ...overrideServerFields('flr') }
 
 export function FloorFormModal({ editing }: { editing: Floor | null }) {
+  const { t } = useTranslation()
   const buildings = useBuildings().data ?? []
   const save = useSaveFloor()
   const fields = useFieldErrors()
   const { errors } = fields
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
-  const [name, setName] = useState(editing?.name ?? '')
+  const [name, setName] = useState(englishOf(editing?.translations)?.name ?? editing?.name ?? '')
+  const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
   const [cancelUpcoming, setCancelUpcoming] = useState(false)
   const cancelAfter = useCancelUpcomingAfterSave()
@@ -257,36 +273,34 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
 
   const submit = () => {
     const found: FieldErrors = {
-      'flr-building': b ? undefined : missing('Pick a building first.'),
-      'flr-name': name.trim() ? undefined : missing('Type a floor name or number.'),
-      ...(b ? checkOverrides('flr', ov, [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours], 'Floor', 'the building', "the building's") : {}),
+      'flr-building': b ? undefined : missing(t('forms.floor.buildingMissing')),
+      'flr-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.floor.nameMissing')),
+      ...checkTranslations('flr', drafts),
+      ...(b ? checkOverrides('flr', ov, [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours], 'floor') : {}),
     }
     if (fields.show(found) || !b) return
     const [o, c, mi, ma] = ov.map(numOrNull)
     save.mutateAsync({
       id: editing?.id,
-      body: { buildingId: b.id, name: name.trim(), isBookable, openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma },
+      body: { buildingId: b.id, name: name.trim(), translations: toTranslations(drafts), isBookable, openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma },
     }).then(async () => {
-      if (editing && cancelUpcoming && !isBookable) await cancelAfter('floor', editing.id, `${b.name} · Floor ${name.trim()}`)
-      toast('ok', editing ? 'Floor updated' : 'Floor added', `Floor ${name.trim()} in ${b.name}.`)
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('floor', editing.id, t('common.floorIn', { building: b.name, floor: name.trim() }))
+      toast('ok', editing ? t('forms.floor.updated') : t('forms.floor.added'), t('forms.floor.savedMessage', { floor: name.trim(), building: b.name }))
       modals.close()
-    }, (e) => fields.fromServer(e, FLOOR_SERVER_FIELDS))
+    }, (e) => fields.fromServer(e, { ...FLOOR_SERVER_FIELDS, ...translationServerFields('flr') }))
   }
 
   return (
-    <Modal width={460} title={editing ? 'Edit floor' : 'Add a floor'} subtitle="Inherits its building's hours and duration unless overridden below."
-      onClose={modals.close} footer={<Footer onSave={submit} label="Save floor" busy={save.isPending} />}>
-      <p className="req-note"><RequiredMark /> Required field</p>
-      <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field id="flr-building" label="Building" required error={errors['flr-building']}>
-          <Dropdown id="flr-building" value={effBuildingId} disabled={!!editing}
-            onChange={(v) => { setBuildingId(v); fields.clear('flr-building', 'flr-open', 'flr-close', 'flr-min', 'flr-max') }}
-            options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
-        </Field>
-        <Field id="flr-name" label="Floor" required error={errors['flr-name']}>
-          <input id="flr-name" className="inp mono" placeholder="e.g. 5" value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('flr-name') }} />
-        </Field>
-      </div>
+    <Modal width={460} title={editing ? t('forms.floor.editTitle') : t('forms.floor.addTitle')} subtitle={t('forms.floor.subtitle')}
+      onClose={modals.close} footer={<Footer onSave={submit} label={t('forms.floor.save')} busy={save.isPending} />}>
+      <RequiredNote />
+      <Field id="flr-building" label={t('common.building')} required error={errors['flr-building']}>
+        <Dropdown id="flr-building" value={effBuildingId} disabled={!!editing}
+          onChange={(v) => { setBuildingId(v); fields.clear('flr-building', 'flr-open', 'flr-close', 'flr-min', 'flr-max') }}
+          options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
+      </Field>
+      <LocalizedInput prefix="flr" field="name" id="flr-name" label={t('forms.floor.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.floor.namePlaceholder')} className="inp mono" autoFocus />
       <OverrideFields prefix="flr" parent="building" values={ov} errors={errors}
         onChange={(v) => { setOv(v); fields.clear('flr-open', 'flr-close', 'flr-min', 'flr-max') }}
         inherits={b ? [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours] : null} />
@@ -305,13 +319,15 @@ const SPACE_SERVER_FIELDS = {
 const SPACE_OVERRIDE_IDS = ['sp-open', 'sp-close', 'sp-min', 'sp-max']
 
 export function SpaceFormModal({ editing }: { editing: Space | null }) {
+  const { t } = useTranslation()
   const buildings = useBuildings().data ?? []
   const floors = useFloors().data ?? []
   const types = useSpaceTypes().data ?? []
   const save = useSaveSpace()
   const fields = useFieldErrors()
   const { errors } = fields
-  const [name, setName] = useState(editing?.name ?? '')
+  const [name, setName] = useState(englishOf(editing?.translations)?.name ?? editing?.name ?? '')
+  const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
   const [typeId, setTypeId] = useState(editing?.typeId ?? '')
   const [capacity, setCapacity] = useState(String(editing?.capacity ?? 0))
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
@@ -319,7 +335,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const cancelAfter = useCancelUpcomingAfterSave()
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
-  const [note, setNote] = useState(editing?.note ?? '')
+  const [note, setNote] = useState((editing ? englishOf(editing.translations)?.note ?? editing.note : null) ?? '')
   const [ov, setOv] = useState<Overrides>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),
     numText(editing?.minBookingMinutesOverride), numText(editing?.maxBookingHoursOverride),
@@ -339,13 +355,14 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const submit = () => {
     const cap = capacity.trim() === '' ? 0 : Number(capacity)
     const found: FieldErrors = {
-      'sp-name': name.trim() ? undefined : missing('Give the space a name.'),
-      'sp-type': effTypeId ? undefined : err('Pick a space type. Add one on the Space types page first.', 'validation.invalid_space_type'),
-      'sp-capacity': Number.isInteger(cap) && cap >= 0 && cap <= 999 ? undefined : err('Capacity must be a whole number from 0 to 999.', 'validation.invalid_request'),
-      'sp-building': b ? undefined : missing('Pick a building. Add one first if the list is empty.'),
-      'sp-floor': !b ? undefined : !bFloors.length ? missing(`${b.name} has no floors yet. Add a floor to it first.`) : f ? undefined : missing('Pick a floor.'),
-      'sp-note': note.trim().length > 500 ? err('Keep the description to 500 characters.', 'validation.invalid_request') : undefined,
-      ...(bounds && f ? checkOverrides('sp', ov, bounds, 'Space', 'its floor', "its floor's") : {}),
+      'sp-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.space.nameMissing')),
+      'sp-type': effTypeId ? undefined : err(t('forms.space.typeMissing'), 'validation.invalid_space_type'),
+      'sp-capacity': Number.isInteger(cap) && cap >= 0 && cap <= 999 ? undefined : err(t('forms.space.capacityRange'), 'validation.invalid_request'),
+      'sp-building': b ? undefined : missing(t('forms.space.buildingMissing')),
+      'sp-floor': !b ? undefined : !bFloors.length ? missing(t('forms.space.buildingHasNoFloors', { name: b.name })) : f ? undefined : missing(t('forms.space.floorMissing')),
+      'sp-note': note.trim().length > 500 ? err(t('forms.space.noteTooLong'), 'validation.invalid_request') : scriptProblem('en', note),
+      ...checkTranslations('sp', drafts, true),
+      ...(bounds && f ? checkOverrides('sp', ov, bounds, 'space') : {}),
     }
     if (fields.show(found) || !b || !f) return
     const [o, c, mi, ma] = ov.map(numOrNull)
@@ -353,62 +370,61 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
       id: editing?.id,
       body: {
         name: name.trim(), typeId: effTypeId, isBookable, buildingId: b.id, floorId: f.id,
-        capacity: cap, note: note.trim(),
+        capacity: cap, note: note.trim(), translations: toTranslations(drafts, true),
         openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma,
       },
     }).then(async () => {
       if (editing && cancelUpcoming && !isBookable) await cancelAfter('space', editing.id, name.trim())
-      toast('ok', editing ? 'Space updated' : 'Space added',
-        editing ? `${name.trim()} in ${b.name}, floor ${f.name}.` : `${name.trim()} is ${isBookable ? 'bookable now' : 'saved as not bookable'}.`)
+      toast('ok', editing ? t('forms.space.updated') : t('forms.space.added'),
+        editing ? t('forms.space.updatedMessage', { name: name.trim(), building: b.name, floor: f.name })
+          : isBookable ? t('forms.space.addedBookable', { name: name.trim() }) : t('forms.space.addedNotBookable', { name: name.trim() }))
       modals.close()
-    }, (e) => fields.fromServer(e, SPACE_SERVER_FIELDS))
+    }, (e) => fields.fromServer(e, { ...SPACE_SERVER_FIELDS, ...translationServerFields('sp') }))
   }
 
   return (
-    <Modal title={editing ? 'Edit space' : 'Add a space'}
-      subtitle={editing ? 'Changes apply to new bookings straight away.' : 'One record is one physical unit.'}
-      onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add space'} busy={save.isPending} />}>
-      <p className="req-note"><RequiredMark /> Required field</p>
-      <Field id="sp-name" label="Name" required error={errors['sp-name']}>
-        <input id="sp-name" className="inp" placeholder="e.g. Conference Room D" value={name} autoFocus onChange={(e) => { setName(e.target.value); fields.clear('sp-name') }} />
-      </Field>
+    <Modal title={editing ? t('forms.space.editTitle') : t('forms.space.addTitle')}
+      subtitle={editing ? t('forms.space.editSubtitle') : t('forms.space.addSubtitle')}
+      onClose={modals.close} footer={<Footer onSave={submit} label={editing ? t('common.saveChanges') : t('forms.space.save')} busy={save.isPending} />}>
+      <RequiredNote />
+      <LocalizedInput prefix="sp" field="name" id="sp-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.space.namePlaceholder')} autoFocus />
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
-        <Field id="sp-type" label="Type" required error={errors['sp-type']}>
+        <Field id="sp-type" label={t('common.type')} required error={errors['sp-type']}>
           <Dropdown id="sp-type" value={effTypeId} onChange={(v) => { setTypeId(v); fields.clear('sp-type') }} disabled={!types.length}
-            placeholder={types.length ? 'Choose a type' : 'No types yet'}
-            options={types.map((t) => ({ value: t.id, label: t.name }))} />
+            placeholder={types.length ? t('forms.space.chooseType') : t('forms.space.noTypes')}
+            options={types.map((st) => ({ value: st.id, label: st.name }))} />
         </Field>
-        <Field id="sp-capacity" label="Capacity" error={errors['sp-capacity']}>
+        <Field id="sp-capacity" label={t('common.capacity')} error={errors['sp-capacity']}>
           <input type="number" id="sp-capacity" className="inp mono" min={0} max={999} value={capacity} onChange={(e) => { setCapacity(e.target.value); fields.clear('sp-capacity') }} />
         </Field>
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 1fr', gap: 12 }}>
-        <Field id="sp-building" label="Building" required error={errors['sp-building']}>
-          <Dropdown id="sp-building" value={buildingId} placeholder="Choose a building"
+        <Field id="sp-building" label={t('common.building')} required error={errors['sp-building']}>
+          <Dropdown id="sp-building" value={buildingId} placeholder={t('common.chooseBuilding')}
             onChange={(v) => { setBuildingId(v); setFloorId(''); fields.clear('sp-building', 'sp-floor', ...SPACE_OVERRIDE_IDS) }}
             options={buildings.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
-        <Field id="sp-floor" label="Floor" required error={errors['sp-floor']}>
+        <Field id="sp-floor" label={t('common.floor')} required error={errors['sp-floor']}>
           <Dropdown id="sp-floor" value={effFloorId} onChange={(v) => { setFloorId(v); fields.clear('sp-floor', ...SPACE_OVERRIDE_IDS) }}
-            disabled={!b || !bFloors.length} placeholder={!b ? 'Building first' : bFloors.length ? 'Choose' : 'No floors'}
+            disabled={!b || !bFloors.length} placeholder={!b ? t('common.buildingFirst') : bFloors.length ? t('forms.space.choose') : t('forms.space.noFloors')}
             options={bFloors.map((x) => ({ value: x.id, label: x.name }))} />
         </Field>
         {/* A space always uses its building's time zone; it is changed on the building. */}
-        <Field id="sp-tz" label="Time zone (building)">
-          <input id="sp-tz" className="inp mono" value={b?.timeZone ?? ''} readOnly disabled title="Set on the building" />
+        <Field id="sp-tz" label={t('forms.space.timeZone')}>
+          <input id="sp-tz" className="inp mono" dir="ltr" value={b?.timeZone ?? ''} readOnly disabled title={t('forms.space.timeZoneTitle')} />
         </Field>
       </div>
       <OverrideFields prefix="sp" parent="floor" values={ov} errors={errors} inherits={bounds}
         onChange={(v) => { setOv(v); fields.clear(...SPACE_OVERRIDE_IDS) }} />
-      <Field id="sp-note" label="Description" error={errors['sp-note']}>
-        <input id="sp-note" className="inp" placeholder="Seats 8 · whiteboard wall" value={note} maxLength={500} onChange={(e) => { setNote(e.target.value); fields.clear('sp-note') }} />
-      </Field>
+      <LocalizedInput prefix="sp" field="note" id="sp-note" label={t('forms.description')} english={note} onEnglish={setNote}
+        drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.space.notePlaceholder')} maxLength={NOTE_MAX} />
       <BookableField idPrefix="sp" kind="space" value={isBookable} onChange={setIsBookable}
         existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
       {/* The space's own tick can be on while its floor or building is off: say so. */}
       {isBookable && b && (!b.isBookable || (f && !f.isBookable)) && (
         <p className="muted-box">
-          Still not bookable while {!b.isBookable ? `${b.name} is not bookable` : `floor ${f!.name} is not bookable`}.
+          {!b.isBookable ? t('forms.space.blockedByBuilding', { name: b.name }) : t('forms.space.blockedByFloor', { floor: f!.name })}
         </p>
       )}
     </Modal>
@@ -418,29 +434,29 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
 /* ─── Space type ─── */
 
 export function SpaceTypeFormModal({ editing }: { editing: SpaceType | null }) {
+  const { t } = useTranslation()
   const save = useSaveSpaceType()
   const fields = useFieldErrors()
-  const [name, setName] = useState(editing?.name ?? '')
+  const [name, setName] = useState(englishOf(editing?.translations)?.name ?? editing?.name ?? '')
+  const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
 
   const submit = () => {
-    if (fields.show({ 'st-name': name.trim() ? undefined : missing('Give the space type a name.') })) return
-    save.mutateAsync({ id: editing?.id, name: name.trim() }).then(() => {
-      toast('ok', editing ? 'Space type renamed' : 'Space type added',
-        editing ? `${editing.name} is now ${name.trim()}.` : `${name.trim()} can now be picked for any space.`)
+    if (fields.show({ 'st-name': name.trim() ? scriptProblem('en', name) : missing(t('forms.spaceType.nameMissing')), ...checkTranslations('st', drafts) })) return
+    save.mutateAsync({ id: editing?.id, name: name.trim(), translations: toTranslations(drafts) }).then(() => {
+      toast('ok', editing ? t('forms.spaceType.renamed') : t('forms.spaceType.added'),
+        editing ? t('forms.spaceType.renamedMessage', { from: editing.name, to: name.trim() }) : t('forms.spaceType.addedMessage', { name: name.trim() }))
       modals.close()
-    }, (e) => fields.fromServer(e, { name: 'st-name' }))
+    }, (e) => fields.fromServer(e, { name: 'st-name', ...translationServerFields('st') }))
   }
 
-  const used = editing ? `Used by ${plural(editing.spaceCount, 'space')}; they all show the new name.` : 'A kind of space, like "Phone booth" or "Lab".'
+  const used = editing ? t('forms.spaceType.usedBy', { count: editing.spaceCount }) : t('forms.spaceType.addSubtitle')
   return (
-    <Modal width={420} title={editing ? 'Edit space type' : 'Add a space type'} subtitle={used}
-      onClose={modals.close} footer={<Footer onSave={submit} label={editing ? 'Save changes' : 'Add type'} busy={save.isPending} />}>
-      <p className="req-note"><RequiredMark /> Required field</p>
-      <Field id="st-name" label="Name" required error={fields.errors['st-name']}>
-        <input id="st-name" className="inp" placeholder="e.g. Phone booth" value={name} autoFocus maxLength={64}
-          onChange={(e) => { setName(e.target.value); fields.clear('st-name') }}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />
-      </Field>
+    <Modal width={420} title={editing ? t('forms.spaceType.editTitle') : t('forms.spaceType.addTitle')} subtitle={used}
+      onClose={modals.close} footer={<Footer onSave={submit} label={editing ? t('common.saveChanges') : t('forms.spaceType.save')} busy={save.isPending} />}>
+      <RequiredNote />
+      <LocalizedInput prefix="st" field="name" id="st-name" label={t('forms.name')} required english={name} onEnglish={setName}
+        drafts={drafts} onDrafts={setDrafts} errors={fields.errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.spaceType.namePlaceholder')}
+        maxLength={64} autoFocus onEnter={submit} />
     </Modal>
   )
 }

@@ -1,16 +1,18 @@
 import { useAuth } from 'react-oidc-context'
+import i18n from 'i18next'
 import { useGrantedPolicies, useProfile } from '../api/hooks'
 import { DEFAULT_EMPLOYEE_POLICIES, P } from '../auth/permissions'
 import { extractRoles } from '../auth/roles'
 
 type Can = (name: string) => boolean
 
-/* Space management pages, in sidebar order, with the permission area each one manages. */
+/* Space management pages, in sidebar order, with the permission area each one manages.
+ * label is a translation key, translated where it is shown. */
 export const ESTATE_PAGES = [
-  { path: '/app/buildings', label: 'Buildings', area: P.Buildings },
-  { path: '/app/floors', label: 'Floors', area: P.Floors },
-  { path: '/app/spaces', label: 'Spaces', area: P.Spaces },
-  { path: '/app/space-types', label: 'Space types', area: P.SpaceTypes },
+  { path: '/app/buildings', label: 'nav.buildings', area: P.Buildings },
+  { path: '/app/floors', label: 'nav.floors', area: P.Floors },
+  { path: '/app/spaces', label: 'nav.spaces', area: P.Spaces },
+  { path: '/app/space-types', label: 'nav.spaceTypes', area: P.SpaceTypes },
 ] as const
 
 /* The permissions that open a management page: anyone who can change something on it. */
@@ -40,7 +42,7 @@ export function useSession() {
   const can: Can = (name) => (granted ? !!granted[name] : isAdmin || DEFAULT_EMPLOYEE_POLICIES.has(name))
   return {
     userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
-    name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? 'You',
+    name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? i18n.t('common.you'),
     isAdmin,
     roles,
     can,

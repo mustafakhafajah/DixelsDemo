@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from 'i18next'
 import { ErrorLine } from '../../components/bits'
 import { DatePicker, Dropdown } from '../../components/pickers'
 import { WEEKDAYS } from '../../lib/closedDays'
 import { RECURRENCE_SAFETY_CAP } from '../../lib/constants'
-import { addDays, dayAt, dayKey, dayName, hm } from '../../lib/dateUtils'
+import { addDays, dayAt, dayKey, formatDate, hm, weekdayName } from '../../lib/dateUtils'
 import type { RecurrenceRule, RepeatFreq } from '../../lib/recurrence'
 import type { FieldErrors } from '../../lib/useFieldErrors'
 
@@ -39,20 +41,19 @@ export function toRule(r: RecurrenceState, start: Date): RecurrenceRule | null {
   }
 }
 
-const DAYS = WEEKDAYS
 const bad = (message: string) => ({ code: 'validation.invalid_request', message })
 
 /* What is wrong with the repeat settings, keyed by field id (<prefix>-interval, -days, -count, -until). */
 export function recurrenceErrors(r: RecurrenceState, start: Date | null, idPrefix: string): FieldErrors {
   if (r.repeat === 'none') return {}
   const out: FieldErrors = {}
-  if (!Number.isInteger(r.interval) || r.interval < 1 || r.interval > 52) out[`${idPrefix}-interval`] = bad('Repeat every 1 to 52.')
-  if (r.repeat === 'weekly' && !r.byDay.length) out[`${idPrefix}-days`] = bad('Pick at least one day.')
+  if (!Number.isInteger(r.interval) || r.interval < 1 || r.interval > 52) out[`${idPrefix}-interval`] = bad(i18n.t('recurrence.intervalRange'))
+  if (r.repeat === 'weekly' && !r.byDay.length) out[`${idPrefix}-days`] = bad(i18n.t('recurrence.pickDay'))
   if (r.endMode === 'count' && (!Number.isInteger(r.count) || r.count < 1 || r.count > RECURRENCE_SAFETY_CAP))
-    out[`${idPrefix}-count`] = bad(`Choose 1 to ${RECURRENCE_SAFETY_CAP} occurrences.`)
+    out[`${idPrefix}-count`] = bad(i18n.t('recurrence.countRange', { max: RECURRENCE_SAFETY_CAP }))
   if (r.endMode === 'until') {
-    if (!r.until) out[`${idPrefix}-until`] = bad('Pick the last date.')
-    else if (start && r.until < dayKey(start)) out[`${idPrefix}-until`] = bad('The last date must be on or after the first one.')
+    if (!r.until) out[`${idPrefix}-until`] = bad(i18n.t('recurrence.untilMissing'))
+    else if (start && r.until < dayKey(start)) out[`${idPrefix}-until`] = bad(i18n.t('recurrence.untilBeforeStart'))
   }
   return out
 }
@@ -64,26 +65,28 @@ export function RecurrenceFields({ value, onChange, idPrefix, errors = {} }: {
   /* From recurrenceErrors: each message shows under its own field. */
   errors?: FieldErrors
 }) {
+  const { t } = useTranslation()
   const set = (p: Partial<RecurrenceState>) => onChange({ ...value, ...p })
-  const unit = value.repeat === 'daily' ? 'day(s)' : value.repeat === 'monthly' ? 'month(s)' : 'week(s)'
+  const unit = value.repeat === 'daily' ? t('recurrence.unit.day', { count: value.interval })
+    : value.repeat === 'monthly' ? t('recurrence.unit.month', { count: value.interval }) : t('recurrence.unit.week', { count: value.interval })
   const toggleDay = (d: number) => set({ byDay: value.byDay.includes(d) ? value.byDay.filter((x) => x !== d) : [...value.byDay, d] })
 
   return (
     <>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 150 }}>
-          <label className="lbl" htmlFor={`${idPrefix}-repeat`}>Repeats</label>
+          <label className="lbl" htmlFor={`${idPrefix}-repeat`}>{t('recurrence.repeats')}</label>
           <Dropdown id={`${idPrefix}-repeat`} value={value.repeat} onChange={(v) => set({ repeat: v as RepeatFreq })}
             options={[
-              { value: 'none', label: 'Does not repeat' },
-              { value: 'daily', label: 'Daily' },
-              { value: 'weekly', label: 'Weekly' },
-              { value: 'monthly', label: 'Monthly' },
+              { value: 'none', label: t('recurrence.none') },
+              { value: 'daily', label: t('recurrence.daily') },
+              { value: 'weekly', label: t('recurrence.weekly') },
+              { value: 'monthly', label: t('recurrence.monthly') },
             ]} />
         </div>
         {value.repeat !== 'none' && (
           <div style={{ width: 150 }}>
-            <label className="lbl" htmlFor={`${idPrefix}-interval`}>Every</label>
+            <label className="lbl" htmlFor={`${idPrefix}-interval`}>{t('recurrence.every')}</label>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input type="number" id={`${idPrefix}-interval`} className="inp mono" min={1} max={52} value={value.interval}
                 style={{ width: 64 }} onChange={(e) => set({ interval: Number(e.target.value) })} />
@@ -96,12 +99,12 @@ export function RecurrenceFields({ value, onChange, idPrefix, errors = {} }: {
 
       {value.repeat === 'weekly' && (
         <div style={{ marginTop: 10 }}>
-          <label className="lbl">On</label>
+          <label className="lbl">{t('recurrence.on')}</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            {DAYS.map(([d, label]) => (
-              <button key={d} type="button" className={`dur-chip${value.byDay.includes(d) ? ' active' : ''}`} onClick={() => toggleDay(d)}>{label}</button>
+            {WEEKDAYS.map((d) => (
+              <button key={d} type="button" className={`dur-chip${value.byDay.includes(d) ? ' active' : ''}`} onClick={() => toggleDay(d)}>{weekdayName(d, 'short')}</button>
             ))}
-            <button type="button" className="btn btn-sm" style={{ marginLeft: 6 }} onClick={() => set({ byDay: [1, 2, 3, 4, 5] })}>Weekdays</button>
+            <button type="button" className="btn btn-sm" style={{ marginInlineStart: 6 }} onClick={() => set({ byDay: [1, 2, 3, 4, 5] })}>{t('recurrence.weekdays')}</button>
           </div>
           <ErrorLine id={`${idPrefix}-days-error`} error={errors[`${idPrefix}-days`]} />
         </div>
@@ -109,21 +112,21 @@ export function RecurrenceFields({ value, onChange, idPrefix, errors = {} }: {
 
       {value.repeat !== 'none' && (
         <div style={{ marginTop: 10 }}>
-          <label className="lbl">Ends</label>
+          <label className="lbl">{t('recurrence.ends')}</label>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="seg">
-              <button type="button" className={value.endMode === 'count' ? 'active' : ''} onClick={() => set({ endMode: 'count' })}>After</button>
-              <button type="button" className={value.endMode === 'until' ? 'active' : ''} onClick={() => set({ endMode: 'until' })}>On date</button>
+              <button type="button" className={value.endMode === 'count' ? 'active' : ''} onClick={() => set({ endMode: 'count' })}>{t('recurrence.after')}</button>
+              <button type="button" className={value.endMode === 'until' ? 'active' : ''} onClick={() => set({ endMode: 'until' })}>{t('recurrence.onDate')}</button>
             </div>
             {value.endMode === 'count' ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input type="number" id={`${idPrefix}-count`} className="inp mono" min={1} max={RECURRENCE_SAFETY_CAP} value={value.count} style={{ width: 70 }}
-                  onChange={(e) => set({ count: Number(e.target.value) })} aria-label="Occurrences" />
-                <span className="mono" style={{ fontSize: 12, color: 'var(--slate)' }}>occurrences</span>
+                  onChange={(e) => set({ count: Number(e.target.value) })} aria-label={t('recurrence.occurrencesLabel')} />
+                <span className="mono" style={{ fontSize: 12, color: 'var(--slate)' }}>{t('recurrence.occurrencesUnit', { count: value.count })}</span>
               </div>
             ) : (
               <div style={{ width: 190 }}>
-                <DatePicker id={`${idPrefix}-until`} value={value.until} onChange={(v) => set({ until: v })} aria-label="Until" />
+                <DatePicker id={`${idPrefix}-until`} value={value.until} onChange={(v) => set({ until: v })} aria-label={t('common.until')} />
               </div>
             )}
           </div>
@@ -152,25 +155,28 @@ export function OccurrenceList({ rows, summary, summaryAlert, truncated, onToggl
   truncated: boolean
   onToggle: (i: number) => void
 }) {
+  const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const excluded = rows.filter((o) => o.skip).length
+  /* The closed triangle points along the reading direction; open, it points down. */
+  const rtl = i18n.dir() === 'rtl'
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
       <button type="button" className="occ-head" aria-expanded={open} onClick={() => setOpen(!open)}
         style={{ width: '100%', padding: '9px 11px', background: 'var(--surface-2)', border: 'none', borderBottom: open ? '1px solid var(--line)' : 'none',
-          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-        <span aria-hidden style={{ display: 'inline-block', width: 10, fontSize: 10, color: 'var(--slate)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>▶</span>
+          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'start' }}>
+        <span aria-hidden style={{ display: 'inline-block', width: 10, fontSize: 10, color: 'var(--slate)', transform: open ? `rotate(${rtl ? -90 : 90}deg)` : 'none', transition: 'transform .15s' }}>{rtl ? '◀' : '▶'}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>
-          {rows.length} occurrences{excluded ? ` · ${excluded} excluded` : ''}
+          {t('recurrence.occurrences', { count: rows.length })}{excluded ? ` · ${t('recurrence.excludedCount', { count: excluded })}` : ''}
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: 11.5, color: summaryAlert ? 'var(--rust)' : 'var(--slate)' }}>{summary}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent-dark)', whiteSpace: 'nowrap' }}>{open ? 'Hide' : 'Show'}</span>
+        <span style={{ marginInlineStart: 'auto', fontSize: 11.5, color: summaryAlert ? 'var(--rust)' : 'var(--slate)' }}>{summary}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent-dark)', whiteSpace: 'nowrap' }}>{open ? t('common.hide') : t('common.show')}</span>
       </button>
       {open && (
         <div style={{ maxHeight: 240, overflowY: 'auto' }}>
           {truncated && (
             <div style={{ padding: '7px 11px', fontSize: 11.5, color: 'var(--rust)', background: 'var(--rust-soft)', borderBottom: '1px solid var(--rust-line)' }}>
-              Showing the first {RECURRENCE_SAFETY_CAP} occurrences — narrow the end date or occurrence count to see fewer.
+              {t('recurrence.truncated', { max: RECURRENCE_SAFETY_CAP })}
             </div>
           )}
           {rows.map((o, i) => (
@@ -180,9 +186,9 @@ export function OccurrenceList({ rows, summary, summaryAlert, truncated, onToggl
               <span className="mono" style={{ fontSize: 12, ...(o.skip ? { color: 'var(--slate-2)', textDecoration: 'line-through' } : {}) }}>
                 {dayKey(o.start)} {hm(o.start)}–{hm(o.end)}
               </span>
-              <span style={{ color: 'var(--slate)', fontSize: 11.5 }}>{dayName(o.start).slice(0, 3)}</span>
-              {o.note ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--rust)', fontWeight: 600 }}>{o.note}</span>
-                : o.skip ? <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--slate-2)' }}>Excluded</span> : null}
+              <span style={{ color: 'var(--slate)', fontSize: 11.5 }}>{formatDate(o.start, { weekday: 'short' })}</span>
+              {o.note ? <span style={{ marginInlineStart: 'auto', fontSize: 11, color: 'var(--rust)', fontWeight: 600 }}>{o.note}</span>
+                : o.skip ? <span style={{ marginInlineStart: 'auto', fontSize: 11, color: 'var(--slate-2)' }}>{t('recurrence.excluded')}</span> : null}
             </div>
           ))}
         </div>

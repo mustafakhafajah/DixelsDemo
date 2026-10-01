@@ -24,7 +24,7 @@ function SelectTrigger({ className, size = 'default', children, ...props }: Reac
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        'tw:flex tw:w-full tw:items-center tw:justify-between tw:gap-2 tw:rounded-[9px] tw:border tw:border-solid tw:border-input tw:bg-background tw:px-3 tw:text-left tw:font-[inherit] tw:text-sm tw:text-foreground tw:whitespace-nowrap tw:shadow-[0_1px_2px_rgba(24,24,27,.04)] tw:outline-none tw:cursor-pointer',
+        'tw:flex tw:w-full tw:items-center tw:justify-between tw:gap-2 tw:rounded-[9px] tw:border tw:border-solid tw:border-input tw:bg-background tw:px-3 tw:text-start tw:font-[inherit] tw:text-sm tw:text-foreground tw:whitespace-nowrap tw:shadow-[0_1px_2px_rgba(24,24,27,.04)] tw:outline-none tw:cursor-pointer',
         'tw:data-[size=default]:h-[39px] tw:data-[size=sm]:h-[30px] tw:data-[size=sm]:rounded-lg tw:data-[size=sm]:px-2 tw:data-[size=sm]:text-xs',
         'tw:focus-visible:border-ring tw:focus-visible:outline-3 tw:focus-visible:outline-accent tw:data-[state=open]:border-ring',
         'tw:data-[placeholder]:text-muted-foreground tw:disabled:cursor-not-allowed tw:disabled:opacity-50 tw:disabled:bg-muted',
@@ -76,14 +76,14 @@ function SelectItem({ className, children, ...props }: React.ComponentProps<type
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'tw:relative tw:flex tw:w-full tw:cursor-default tw:items-center tw:gap-2 tw:rounded-md tw:py-1.5 tw:pr-8 tw:pl-2 tw:text-sm tw:outline-none tw:select-none',
+        'tw:relative tw:flex tw:w-full tw:cursor-default tw:items-center tw:gap-2 tw:rounded-md tw:py-1.5 tw:pe-8 tw:ps-2 tw:text-sm tw:outline-none tw:select-none',
         'tw:focus:bg-accent tw:focus:text-accent-foreground tw:data-[state=checked]:font-semibold tw:data-[disabled]:pointer-events-none tw:data-[disabled]:opacity-50',
         "tw:[&_svg]:pointer-events-none tw:[&_svg]:shrink-0 tw:[&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
-      <span className="tw:absolute tw:right-2 tw:flex tw:size-3.5 tw:items-center tw:justify-center">
+      <span className="tw:absolute tw:end-2 tw:flex tw:size-3.5 tw:items-center tw:justify-center">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="tw:size-4 tw:text-primary" />
         </SelectPrimitive.ItemIndicator>

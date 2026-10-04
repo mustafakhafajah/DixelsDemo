@@ -17,7 +17,8 @@ public static class SpaceQueryExtensions
             .WhereIf(code != null, s => s.Id.ToString().ToLower().StartsWith(code!))
             .WhereIf(input.BuildingId.HasValue, s => s.BuildingId == input.BuildingId)
             .WhereIf(input.FloorId.HasValue, s => s.FloorId == input.FloorId)
-            .WhereIf(!string.IsNullOrEmpty(name), s => s.Name.ToLower().Contains(name!))
+            /* A name typed in any language matches. */
+            .WhereIf(!string.IsNullOrEmpty(name), s => s.Translations.Any(t => t.Name.ToLower().Contains(name!)))
             .WhereIf(input.TypeId.HasValue, s => s.TypeId == input.TypeId);
     }
 

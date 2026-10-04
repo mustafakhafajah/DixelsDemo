@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -107,6 +108,7 @@ public class PortalWebModule : AbpModule
         var configuration = context.Services.GetConfiguration();
 
         ConfigureAuthentication(context);
+        ConfigureDataProtection(context, hostingEnvironment);
         ConfigureUrls(configuration);
         ConfigureBundles();
         ConfigureVirtualFileSystem(hostingEnvironment);
@@ -117,6 +119,19 @@ public class PortalWebModule : AbpModule
         ConfigureErrorStatusCodes();
 
         context.Services.AddMapperlyObjectMapper<PortalWebModule>();
+    }
+
+    /* Under IIS the app pool has no user profile, so ASP.NET Core kept its keys in memory: every restart or app-pool
+     * recycle made the sign-in cookies unreadable and the sign-in form failed with 400. The keys now live on disk next
+     * to the app (encrypted for this machine with DPAPI on Windows), so they survive restarts and redeploys.
+     * Development keeps the default (the developer's user profile). */
+    private static void ConfigureDataProtection(ServiceConfigurationContext context, IWebHostEnvironment hostingEnvironment)
+    {
+        if (hostingEnvironment.IsDevelopment()) return;
+        var keys = context.Services.AddDataProtection()
+            .SetApplicationName("Dixels.Portal")
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(hostingEnvironment.ContentRootPath, "App_Data", "DataProtection-Keys")));
+        if (OperatingSystem.IsWindows()) keys.ProtectKeysWithDpapi(protectToLocalMachine: true);
     }
 
     private void ConfigureErrorStatusCodes()

@@ -179,11 +179,6 @@ namespace Dixels.Portal.Migrations
                     b.Property<int>("MinBookingMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.Property<int>("OpenHour")
                         .HasColumnType("integer");
 
@@ -194,10 +189,29 @@ namespace Dixels.Portal.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.ToTable("AppBuildings", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Buildings.BuildingTranslation", b =>
+                {
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("BuildingId", "Language");
+
+                    b.HasIndex("Language", "Name")
                         .IsUnique();
 
-                    b.ToTable("AppBuildings", (string)null);
+                    b.ToTable("AppBuildingTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.Portal.Floors.Floor", b =>
@@ -262,20 +276,33 @@ namespace Dixels.Portal.Migrations
                     b.Property<int?>("MinBookingMinutesOverride")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
                     b.Property<int?>("OpenHourOverride")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BuildingId", "Name")
-                        .IsUnique();
+                    b.HasIndex("BuildingId");
 
                     b.ToTable("AppFloors", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Floors.FloorTranslation", b =>
+                {
+                    b.Property<Guid>("FloorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("FloorId", "Language");
+
+                    b.ToTable("AppFloorTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.Portal.Maintenance.MaintenanceWindow", b =>
@@ -394,17 +421,31 @@ namespace Dixels.Portal.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.HasKey("Id");
+
+                    b.ToTable("AppSpaceTypes", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.Portal.SpaceTypes.SpaceTypeTranslation", b =>
+                {
+                    b.Property<Guid>("SpaceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.HasKey("Id");
+                    b.HasKey("SpaceTypeId", "Language");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("Language", "Name")
                         .IsUnique();
 
-                    b.ToTable("AppSpaceTypes", (string)null);
+                    b.ToTable("AppSpaceTypeTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.Portal.Spaces.Space", b =>
@@ -475,15 +516,6 @@ namespace Dixels.Portal.Migrations
                     b.Property<int?>("MinBookingMinutesOverride")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<int?>("OpenHourOverride")
                         .HasColumnType("integer");
 
@@ -494,14 +526,37 @@ namespace Dixels.Portal.Migrations
 
                     b.HasIndex("FloorId");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
-
                     b.HasIndex("TypeId");
 
                     b.HasIndex("BuildingId", "FloorId");
 
                     b.ToTable("AppSpaces", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Spaces.SpaceTranslation", b =>
+                {
+                    b.Property<Guid>("SpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("SpaceId", "Language");
+
+                    b.HasIndex("Language", "Name")
+                        .IsUnique();
+
+                    b.ToTable("AppSpaceTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>
@@ -2395,6 +2450,15 @@ namespace Dixels.Portal.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dixels.Portal.Buildings.BuildingTranslation", b =>
+                {
+                    b.HasOne("Dixels.Portal.Buildings.Building", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dixels.Portal.Floors.Floor", b =>
                 {
                     b.HasOne("Dixels.Portal.Buildings.Building", null)
@@ -2404,12 +2468,30 @@ namespace Dixels.Portal.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dixels.Portal.Floors.FloorTranslation", b =>
+                {
+                    b.HasOne("Dixels.Portal.Floors.Floor", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("FloorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dixels.Portal.Maintenance.MaintenanceWindow", b =>
                 {
                     b.HasOne("Dixels.Portal.Spaces.Space", null)
                         .WithMany()
                         .HasForeignKey("SpaceId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.Portal.SpaceTypes.SpaceTypeTranslation", b =>
+                {
+                    b.HasOne("Dixels.Portal.SpaceTypes.SpaceType", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -2431,6 +2513,15 @@ namespace Dixels.Portal.Migrations
                         .WithMany()
                         .HasForeignKey("TypeId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Spaces.SpaceTranslation", b =>
+                {
+                    b.HasOne("Dixels.Portal.Spaces.Space", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -2630,6 +2721,26 @@ namespace Dixels.Portal.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Buildings.Building", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Floors.Floor", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.Portal.SpaceTypes.SpaceType", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Spaces.Space", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>

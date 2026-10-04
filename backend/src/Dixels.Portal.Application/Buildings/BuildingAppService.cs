@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Localization;
@@ -46,7 +47,7 @@ public class BuildingAppService
     [Authorize(PortalPermissions.Buildings.Create)]
     public override async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)
     {
-        var building = await _buildingManager.CreateAsync(input.Name, input.OpenHour, input.CloseHour);
+        var building = await _buildingManager.CreateAsync(input.Name, input.Translations.ToNameTranslations(), input.OpenHour, input.CloseHour);
         CopyFields(building, input);
         await Repository.InsertAsync(building, autoSave: true);
         return await MapToGetOutputDtoAsync(building);
@@ -56,8 +57,8 @@ public class BuildingAppService
     public override async Task<BuildingDto> UpdateAsync(Guid id, CreateUpdateBuildingDto input)
     {
         var building = await GetEntityByIdAsync(id);
-        await _buildingManager.ChangeNameAsync(building, input.Name);
-        BuildingManager.EnsureValidHours(input.OpenHour, input.CloseHour);
+        await _buildingManager.ChangeNamesAsync(building, input.Name, input.Translations.ToNameTranslations());
+        _buildingManager.EnsureValidHours(input.OpenHour, input.CloseHour);
         CopyFields(building, input);
         await Repository.UpdateAsync(building, autoSave: true);
         return await MapToGetOutputDtoAsync(building);
@@ -72,7 +73,8 @@ public class BuildingAppService
         return await MapToGetOutputDtoAsync(building);
     }
 
-    protected override IQueryable<Building> ApplyDefaultSorting(IQueryable<Building> query) => query.OrderBy(b => b.Name);
+    protected override IQueryable<Building> ApplyDefaultSorting(IQueryable<Building> query)
+        => query.OrderBy(LocalizedNameQuery.BuildingName(PortalLanguages.Current));
 
     protected override async Task<BuildingDto> MapToGetOutputDtoAsync(Building entity)
         => (await MapToGetListOutputDtosAsync(new List<Building> { entity }))[0];
@@ -91,20 +93,21 @@ public class BuildingAppService
         return entities.Select(b =>
         {
             var dto = ObjectMapper.Map<Building, BuildingDto>(b);
+            dto.Name = b.GetName();
+            dto.Translations = TranslationDtos.Of(b.Translations, t => new TranslationDto { Language = t.Language, Name = t.Name });
             dto.FloorCount = floorCounts.GetValueOrDefault(b.Id);
             dto.SpaceCount = spaceCounts.GetValueOrDefault(b.Id);
             return dto;
         }).ToList();
     }
 
-    private static void CopyFields(Building b, CreateUpdateBuildingDto input)
+    private void CopyFields(Building b, CreateUpdateBuildingDto input)
     {
         var tz = string.IsNullOrWhiteSpace(input.TimeZone) ? "UTC" : input.TimeZone.Trim();
         if (!BuildingCalendar.IsKnownZone(tz))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.UnknownTimeZone,
-                message: $"\"{tz}\" is not a known time zone. Use a name like Europe/Warsaw or Asia/Dubai.").ForField("timeZone");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.UnknownTimeZone, message: L["Error:UnknownTimeZone", tz]).ForField("timeZone");
         if (input.ClosedWeekdays.Any(d => d is < 0 or > 6))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidWeekday, message: "Closed days must be weekdays 0 (Sunday) to 6 (Saturday).").ForField("closedWeekdays");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidWeekday, message: L["Error:InvalidWeekday"]).ForField("closedWeekdays");
         b.TimeZone = tz;
         b.IsBookable = input.IsBookable;
         b.OpenHour = input.OpenHour;

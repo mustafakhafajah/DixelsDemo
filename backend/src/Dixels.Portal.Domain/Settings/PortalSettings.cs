@@ -4,6 +4,7 @@ public static class PortalSettings
 {
     private const string Prefix = "Portal";
 
-    //Add your own setting names here. Example:
-    //public const string MySetting1 = Prefix + ".MySetting1";
+    /* The language a user picked in the portal. Kept apart from ABP's default-language setting so ABP's own
+     * pages (sign-in and the like) are not affected by it. */
+    public const string Language = Prefix + ".Language";
 }

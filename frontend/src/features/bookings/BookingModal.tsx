@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from 'i18next'
 import { ApiError, errorText } from '../../api/client'
 import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
@@ -40,10 +42,14 @@ const FIELD_IDS = ['m-date', 'm-start', 'm-end', 'm-window', 'm-building', 'm-fl
 /* The server says exactly which level blocks it (space, floor or building). */
 function accessError(space: Space) {
   if (space.canCurrentUserBook) return null
-  return { code: 'space.not_bookable', message: space.notBookableReason ?? `${space.name} is not bookable.` }
+  return { code: 'space.not_bookable', message: space.notBookableReason ?? i18n.t('booking.notBookable', { name: space.name }) }
 }
 
+/* Why a space that was picked is no longer free for the window, shown after its name in the list. */
+type KeptReason = '' | 'booked' | 'closed' | 'hours'
+
 export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; editing: Booking | null }) {
+  const { t } = useTranslation()
   const session = useSession()
   const spacesQ = useSpaces()
   /* A new booking never starts in the past: a prefill from an earlier slot is moved up to now. */
@@ -113,24 +119,24 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const buildingId = chosenBuildingId ?? seed?.buildingId ?? ''
   const floorId = chosenFloorId ?? (seed && seed.buildingId === buildingId ? seed.floorId : '')
   const buildingOptions = uniqueBy(eligible, (s) => s.buildingId, (s) => s.buildingName)
-  const floorOptions = buildingId ? uniqueBy(eligible.filter((s) => s.buildingId === buildingId), (s) => s.floorId, (s) => `Floor ${s.floorName}`) : []
+  const floorOptions = buildingId ? uniqueBy(eligible.filter((s) => s.buildingId === buildingId), (s) => s.floorId, (s) => t('common.floorName', { name: s.floorName })) : []
 
   /* Only spaces that are eligible AND free for the entered window; the previously chosen one is
    * kept (annotated) rather than vanishing mid-edit, as in the mock. */
   const options = useMemo(() => {
     if (editing) {
       const s = spaces.find((x) => x.id === editing.spaceId)
-      return s ? [{ space: s, reason: '' }] : []
+      return s ? [{ space: s, reason: '' as KeptReason }] : []
     }
     const free = (s: Space) => !hasWindow ||
       (!findOverlap(bookings, s.id, start!, end!) && !validateWindowLocal(s.constraints, s.name, start, end, true))
     if (!floorId) return []
     const onFloor = eligible.filter((s) => s.floorId === floorId)
-    const list = onFloor.filter(free).map((space) => ({ space, reason: '' }))
+    const list = onFloor.filter(free).map((space) => ({ space, reason: '' as KeptReason }))
     const kept = onFloor.find((s) => s.id === chosenSpaceId)
     if (kept && !list.some((o) => o.space.id === kept.id)) {
-      list.unshift({ space: kept, reason: findOverlap(bookings, kept.id, start!, end!) ? ' — booked at this time'
-        : closedReason(kept.constraints, start!, end!) ? ' — closed that day' : ' — outside its hours' })
+      list.unshift({ space: kept, reason: findOverlap(bookings, kept.id, start!, end!) ? 'booked'
+        : closedReason(kept.constraints, start!, end!) ? 'closed' : 'hours' })
     }
     return list
   }, [editing, spaces, eligible, floorId, bookings, hasWindow, start, end, chosenSpaceId])
@@ -152,6 +158,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const shown: FieldErrors = { ...liveErrors, ...fields.errors }
   const edited = () => { fields.clear(...FIELD_IDS); setConflict(null) }
 
+  /* t is a dependency so the notes follow a change of language. */
   const occurrences: OccurrenceRow[] = useMemo(() => {
     if (!generated || !spaceId) return []
     return generated.occurrences.map((o) => {
@@ -163,17 +170,18 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const hit = clash ?? self
       /* The building is closed that day (holiday or weekly closed day): it can't be booked at all. */
       const closed = space ? closedReason(space.constraints, o.start, o.end) : null
-      const t = o.start.getTime()
+      const at = o.start.getTime()
       return {
         start: o.start,
         end: o.end,
         flagged: !!hit || !!closed,
-        skip: closed ? true : skipOverrides[t] ?? !!hit,
-        note: closed ? `closed ${closed}`
-          : hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.isAdmin ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
+        skip: closed ? true : skipOverrides[at] ?? !!hit,
+        note: closed ? t('booking.occurrence.closed', { when: closed })
+          : hit ? (hit.spaceId !== spaceId ? t('booking.occurrence.youHave', { space: hit.spaceName })
+            : (session.isAdmin ? t('booking.occurrence.takenBy', { name: hit.ownerName }) : t('booking.occurrence.alreadyBooked'))) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, space, session.userId, session.isAdmin, skipOverrides])
+  }, [generated, bookings, spaceId, space, session.userId, session.isAdmin, skipOverrides, t])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()
@@ -190,7 +198,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const stillBusy = suggested && findOverlap(bookings, space.id, suggested.start, suggested.end)
       setConflict({
         message: clash
-          ? `${space.name} is already booked${session.isAdmin ? ` by ${clash.ownerName}` : ''} from ${hm(clash.start)} to ${hm(clash.end)} UTC. Bookings on one space may never overlap.`
+          ? session.isAdmin
+            ? t('booking.conflict.byOwner', { space: space.name, owner: clash.ownerName, from: hm(clash.start), to: hm(clash.end) })
+            : t('booking.conflict.taken', { space: space.name, from: hm(clash.start), to: hm(clash.end) })
           : message,
         suggested: stillBusy ? null : suggested,
       })
@@ -199,29 +209,30 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
 
   const submit = async () => {
     const found: FieldErrors = {
-      'm-building': buildingId ? undefined : missing('Pick a building.'),
-      'm-floor': !buildingId || floorId ? undefined : missing('Pick a floor.'),
+      'm-building': buildingId ? undefined : missing(t('booking.pickBuilding')),
+      'm-floor': !buildingId || floorId ? undefined : missing(t('booking.pickFloor')),
       'm-space': !floorId || spaceId ? undefined
-        : missing(options.length ? 'Pick a space.' : 'No space on this floor is free then. Try another time or floor.'),
+        : missing(options.length ? t('booking.pickSpace') : t('booking.noFreeSpace')),
     }
     if (fields.show(found) || !start || !end || !space) return
     setConflict(null)
     try {
       if (editing) {
         await reschedule.mutateAsync({ id: editing.id, startUtc: start.toISOString(), endUtc: end.toISOString(), expectedVersion: editing.version })
-        toast('ok', 'Booking rescheduled', `${editing.spaceName} · now ${stampOffset(start)} → ${hm(end)}.`)
+        toast('ok', t('booking.toast.rescheduled'), t('booking.toast.rescheduledMessage', { space: editing.spaceName, start: stampOffset(start), end: hm(end) }))
         modals.close()
         return
       }
       if (rule && occurrences.length) {
         const wanted = occurrences.filter((o) => !o.skip)
-        if (!wanted.length) { fields.show({ 'm-occurrences': missing('Tick at least one occurrence.') }); return }
+        if (!wanted.length) { fields.show({ 'm-occurrences': missing(t('recurrence.tickOne')) }); return }
         const r = await createSeries.mutateAsync({
           spaceId: space.id,
           occurrences: wanted.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() })),
         })
         if (r.created.length) {
-          toast('ok', `${r.created.length} bookings confirmed`, `Series on ${space.name}${r.skipped.length ? ` · ${r.skipped.length} skipped` : ''}.`)
+          toast('ok', t('booking.toast.seriesConfirmed', { count: r.created.length }),
+            r.skipped.length ? t('booking.toast.seriesOnSkipped', { space: space.name, count: r.skipped.length }) : t('booking.toast.seriesOn', { space: space.name }))
           modals.close()
         } else if (r.skipped[0]) {
           /* Nothing could be booked: say why under the occurrence list. */
@@ -233,7 +244,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
         idempotencyKey,
       })
-      toast('ok', 'Booking confirmed', `${space.name} · ${stampOffset(start)} → ${hm(end)}.`)
+      toast('ok', t('booking.toast.confirmed'), t('booking.toast.confirmedMessage', { space: space.name, start: stampOffset(start), end: hm(end) }))
       modals.close()
     } catch (e) {
       showError(e)
@@ -243,42 +254,43 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const onBehalf = editing && editing.ownerUserId !== session.userId
   const closedDays = space ? occurrences.filter((o) => closedReason(space.constraints, o.start, o.end)).length : 0
   const clashes = occurrences.filter((o) => o.flagged).length - closedDays
+  const keptNote = (reason: KeptReason) => (reason ? ` — ${t(`booking.kept.${reason}`)}` : '')
 
   return (
     <Modal
-      title={editing ? 'Reschedule booking' : 'New booking'}
+      title={editing ? t('booking.rescheduleTitle') : t('booking.newTitle')}
       subtitle={editing
-        ? `${editing.spaceName}${onBehalf ? ` · owned by ${editing.ownerName}` : ''} · moving the window only`
-        : 'Reserve one space for one window of time.'}
+        ? onBehalf ? t('booking.rescheduleSubtitleOnBehalf', { space: editing.spaceName, owner: editing.ownerName }) : t('booking.rescheduleSubtitle', { space: editing.spaceName })
+        : t('booking.newSubtitle')}
       onClose={modals.close}
       footer={(
         <>
-          <button type="button" className="btn" onClick={modals.close}>Discard</button>
+          <button type="button" className="btn" onClick={modals.close}>{t('common.discard')}</button>
           <button type="button" className="btn btn-primary" disabled={busy || Object.keys(liveErrors).length > 0} onClick={submit}>
-            {editing ? 'Save new window' : 'Make a booking'}
+            {editing ? t('booking.saveWindow') : t('booking.make')}
           </button>
         </>
       )}
     >
-      <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> Required field</p>
+      <p className="req-note"><span className="req-mark" aria-hidden="true">*</span> {t('common.requiredField')}</p>
       <div>
-        <label className="lbl req" htmlFor="m-date">Date<RequiredMark /></label>
+        <label className="lbl req" htmlFor="m-date">{t('common.date')}<RequiredMark /></label>
         <DatePicker id="m-date" value={date} min={dayKey(earliest)} onChange={onDate} />
         <ErrorLine id="m-date-error" error={shown['m-date']} />
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Start<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
+            <span>{t('common.start')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-start" aria-label="Start" value={startTime} min={startMin} onChange={onStart} />
+          <TimePicker id="m-start" aria-label={t('common.start')} value={startTime} min={startMin} onChange={onStart} />
           <ErrorLine id="m-start-error" error={shown['m-start']} />
         </div>
         <div>
           <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>End<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
+            <span>{t('common.end')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
           </label>
-          <TimePicker id="m-end" aria-label="End" value={endTime} min={endMin} onChange={(v) => { setEndTime(v); edited() }} />
+          <TimePicker id="m-end" aria-label={t('common.end')} value={endTime} min={endMin} onChange={(v) => { setEndTime(v); edited() }} />
           <ErrorLine id="m-end-error" error={shown['m-end']} />
         </div>
       </div>
@@ -287,7 +299,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       {conflict && (
         <div style={{ background: 'var(--rust-soft)', border: '1px solid var(--rust-line)', borderRadius: 9, padding: '12px 13px', marginTop: -6 }} role="alert">
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <strong style={{ fontSize: 13, color: 'var(--rust)' }}>Slot already booked</strong>
+            <strong style={{ fontSize: 13, color: 'var(--rust)' }}>{t('booking.slotTaken')}</strong>
           </div>
           <p style={{ fontSize: 12.5, margin: '0 0 9px' }}>{conflict.message}</p>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -296,10 +308,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
                 const s = conflict.suggested!
                 setDate(dayKey(s.start)); setStartTime(hm(s.start)); setEndTime(hm(s.end)); edited()
               }}>
-                Move to {hm(conflict.suggested.start)}–{hm(conflict.suggested.end)}
+                {t('booking.moveTo', { from: hm(conflict.suggested.start), to: hm(conflict.suggested.end) })}
               </button>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => setConflict(null)}>Dismiss</button>
+            <button type="button" className="btn btn-sm" onClick={() => setConflict(null)}>{t('common.dismiss')}</button>
           </div>
         </div>
       )}
@@ -313,9 +325,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
               truncated={!!generated?.truncated}
               summaryAlert={clashes + closedDays > 0}
               summary={[
-                clashes ? `${clashes} clash with an existing booking and are excluded` : '',
-                closedDays ? `${closedDays} fall on a day the building is closed and are left out` : '',
-              ].filter(Boolean).join(' · ') || 'No clashes'}
+                clashes ? t('booking.clashes', { count: clashes }) : '',
+                closedDays ? t('booking.closedDays', { count: closedDays }) : '',
+              ].filter(Boolean).join(' · ') || t('booking.noClashes')}
               onToggle={(i) => { setSkipOverrides({ ...skipOverrides, [occurrences[i].start.getTime()]: !occurrences[i].skip }); fields.clear('m-occurrences') }}
             />
           )}
@@ -326,33 +338,33 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
         <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>
-            <label className="lbl req" htmlFor="m-building">Building<RequiredMark /></label>
-            <Dropdown id="m-building" value={buildingId} disabled={!!editing} placeholder="Choose a building"
+            <label className="lbl req" htmlFor="m-building">{t('common.building')}<RequiredMark /></label>
+            <Dropdown id="m-building" value={buildingId} disabled={!!editing} placeholder={t('common.chooseBuilding')}
               options={buildingOptions}
               onChange={(v) => { setChosenBuildingId(v); setChosenFloorId(''); setChosenSpaceId(''); edited() }} />
             <ErrorLine id="m-building-error" error={shown['m-building']} />
           </div>
           <div>
-            <label className="lbl req" htmlFor="m-floor">Floor<RequiredMark /></label>
+            <label className="lbl req" htmlFor="m-floor">{t('common.floor')}<RequiredMark /></label>
             <Dropdown id="m-floor" value={floorId} disabled={!!editing || !buildingId}
-              placeholder={buildingId ? 'Choose a floor' : 'Choose a building first'}
+              placeholder={buildingId ? t('common.chooseFloor') : t('common.chooseBuildingFirst')}
               options={floorOptions}
               onChange={(v) => { setChosenBuildingId(buildingId); setChosenFloorId(v); setChosenSpaceId(''); edited() }} />
             <ErrorLine id="m-floor-error" error={shown['m-floor']} />
           </div>
         </div>
-        <label className="lbl req" htmlFor="m-space">Space<RequiredMark /></label>
+        <label className="lbl req" htmlFor="m-space">{t('common.space')}<RequiredMark /></label>
         <Dropdown id="m-space" value={spaceId} disabled={!!editing || !floorId || !options.length}
-          placeholder={!floorId ? 'Choose a floor first' : options.length ? 'Choose a space' : 'No free spaces at this time'}
-          options={options.map(({ space: s, reason }) => ({ value: s.id, label: `${s.name}${reason}` }))}
+          placeholder={!floorId ? t('common.chooseFloorFirst') : options.length ? t('booking.chooseSpace') : t('booking.noFreeSpaces')}
+          options={options.map(({ space: s, reason }) => ({ value: s.id, label: `${s.name}${keptNote(reason)}` }))}
           onChange={(v) => { setChosenSpaceId(v); edited() }} />
         <ErrorLine id="m-space-error" error={shown['m-space']
-          ?? (spacesQ.isError ? { code: 'network.error', message: `Couldn't load the spaces: ${errorText(spacesQ.error).message}` } : undefined)} />
+          ?? (spacesQ.isError ? { code: 'network.error', message: t('booking.spacesLoadError', { message: errorText(spacesQ.error).message }) } : undefined)} />
         <p style={{ fontSize: 11.5, color: 'var(--slate)', margin: '6px 0 0' }}>
           {space
-            ? `${space.typeName} · ${space.buildingName}, floor ${space.floorName} · local zone ${space.timeZone}${space.note ? ` · ${space.note}` : ''}`
-            : spacesQ.isLoading ? 'Loading spaces…'
-              : floorId && !options.length ? 'No spaces on this floor are free for this time — try a different window or floor.' : ''}
+            ? `${t('booking.spaceInfo', { type: space.typeName, building: space.buildingName, floor: space.floorName, tz: space.timeZone })}${space.note ? ` · ${space.note}` : ''}`
+            : spacesQ.isLoading ? t('booking.loadingSpaces')
+              : floorId && !options.length ? t('booking.noFreeOnFloor') : ''}
         </p>
       </div>
     </Modal>

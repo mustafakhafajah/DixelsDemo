@@ -96,6 +96,10 @@ public class PortalDbContext :
         builder.ApplyConfiguration(new FloorConfiguration());
         builder.ApplyConfiguration(new SpaceTypeConfiguration());
         builder.ApplyConfiguration(new SpaceConfiguration());
+        builder.ApplyConfiguration(new BuildingTranslationConfiguration());
+        builder.ApplyConfiguration(new FloorTranslationConfiguration());
+        builder.ApplyConfiguration(new SpaceTypeTranslationConfiguration());
+        builder.ApplyConfiguration(new SpaceTranslationConfiguration());
         builder.ApplyConfiguration(new BookingConfiguration());
         builder.ApplyConfiguration(new MaintenanceWindowConfiguration());
     }

@@ -54,7 +54,7 @@ public class BookableTests : PortalEntityFrameworkCoreTestBase
         var dto = await _spaceService.GetAsync(e.Room.Id);
         dto.IsBookable.ShouldBeTrue();
         dto.CanCurrentUserBook.ShouldBeFalse();
-        dto.NotBookableReason!.ShouldContain(e.Building.Name);
+        dto.NotBookableReason!.ShouldContain(e.Building.GetName());
     }
 
     [Fact]

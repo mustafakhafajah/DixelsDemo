@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useBooking, useBookings, useMaintenanceWindow, useSpaces } from '../../api/hooks'
 import { lifecycleOf, type Booking, type Maintenance } from '../../api/types'
 import { useSession } from '../../app/session'
@@ -10,6 +11,7 @@ import { modals } from '../../state/modalStore'
 import { useBookingActions } from './useBookingActions'
 
 function BookingDetail({ b }: { b: Booking }) {
+  const { t } = useTranslation()
   const session = useSession()
   const spaces = useSpaces()
   const actions = useBookingActions()
@@ -22,11 +24,11 @@ function BookingDetail({ b }: { b: Booking }) {
   const [askSeries, setAskSeries] = useState(false)
 
   let note = ''
-  if (state === 'ended') note = 'This booking has ended. Ended bookings are locked and cannot be changed.'
-  else if (state === 'cancelled') note = 'Cancelled. The record is kept and the window is bookable again.'
-  else if (state === 'in_progress') note = 'This booking has already started, so it can only be cancelled or ended early.'
-  else if (!mine && session.isAdmin) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it.`
-  else if (!mine) note = 'Someone else booked this. You can only change your own bookings.'
+  if (state === 'ended') note = t('detail.note.ended')
+  else if (state === 'cancelled') note = t('detail.note.cancelled')
+  else if (state === 'in_progress') note = t('detail.note.inProgress')
+  else if (!mine && session.isAdmin) note = t('detail.note.ownedBy', { name: b.ownerName })
+  else if (!mine) note = t('detail.note.someoneElse')
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
   const showReschedule = may && session.can(P.Bookings.Edit) && state === 'scheduled'
@@ -37,36 +39,36 @@ function BookingDetail({ b }: { b: Booking }) {
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <StatusPill item={b} />
-        {b.seriesId && <span className="tag">Repeating</span>}
+        {b.seriesId && <span className="tag">{t('detail.repeating')}</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
-        <dt>Space</dt>
-        <dd>{b.spaceName}{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{space.buildingName} · Floor {space.floorName} · {space.timeZone}</div>}</dd>
-        <dt>Booked by</dt>
-        <dd>{may ? b.ownerName : 'Someone else'}</dd>
-        <dt>Start</dt><dd className="mono">{stampOffset(b.start)}</dd>
-        <dt>End</dt><dd className="mono">{stampOffset(b.end)}</dd>
-        <dt>Duration</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>
-        <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.creationTime))}</dd>
-        {b.lastModificationTime && <><dt>Updated</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.lastModificationTime))}</dd></>}
+        <dt>{t('common.space')}</dt>
+        <dd><bdi>{b.spaceName}</bdi>{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{t('detail.spacePlace', { building: space.buildingName, floor: space.floorName, tz: space.timeZone })}</div>}</dd>
+        <dt>{t('detail.bookedBy')}</dt>
+        <dd><bdi>{may ? b.ownerName : t('detail.someoneElse')}</bdi></dd>
+        <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(b.start)}</dd>
+        <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(b.end)}</dd>
+        <dt>{t('detail.duration')}</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>
+        <dt>{t('detail.created')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.creationTime))}</dd>
+        {b.lastModificationTime && <><dt>{t('detail.updated')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.lastModificationTime))}</dd></>}
       </dl>
       {note && <p className="muted-box" style={{ margin: '0 0 14px' }}>{note}</p>}
 
       {askSeries && showCancel ? (
         <div className="muted-box" style={{ marginBottom: 18 }}>
-          <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>This booking is part of a repeating series. What should be cancelled?</p>
+          <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>{t('detail.seriesQuestion')}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancel(b).then(() => setAskSeries(false))}>Only this one</button>
-            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelSeriesFrom(b).then(() => setAskSeries(false))}>This and all later ones</button>
-            <button type="button" className="btn btn-sm" onClick={() => setAskSeries(false)}>Keep it</button>
+            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancel(b).then(() => setAskSeries(false))}>{t('detail.onlyThis')}</button>
+            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelSeriesFrom(b).then(() => setAskSeries(false))}>{t('detail.thisAndLater')}</button>
+            <button type="button" className="btn btn-sm" onClick={() => setAskSeries(false)}>{t('detail.keepIt')}</button>
           </div>
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>Reschedule</button>}
-          {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>End now</button>}
-          {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>Cancel booking</button>}
-          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
+          {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>{t('schedule.reschedule')}</button>}
+          {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>{t('schedule.endNow')}</button>}
+          {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>{t('detail.cancelBooking')}</button>}
+          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
         </div>
       )}
     </>
@@ -74,47 +76,49 @@ function BookingDetail({ b }: { b: Booking }) {
 }
 
 function MaintenanceDetail({ m }: { m: Maintenance }) {
+  const { t } = useTranslation()
   const session = useSession()
   const actions = useBookingActions()
   const state = lifecycleOf(m)
-  const label = state === 'cancelled' ? 'Cancelled' : state === 'ended' ? 'Ended' : state === 'in_progress' ? 'In progress' : 'Scheduled'
+  const label = state === 'cancelled' ? t('status.cancelled') : state === 'ended' ? t('status.ended') : state === 'in_progress' ? t('status.inProgress') : t('status.scheduled')
   const cls = state === 'cancelled' ? 'pill-cancelled' : state === 'ended' ? 'pill-ended' : state === 'in_progress' ? 'pill-inprog' : 'pill-confirmed'
   return (
     <>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
         <span className={`pill ${cls}`}><span className="dot" />{label}</span>
-        <span className="tag">{m.scopeType} blocked</span>
-        {m.seriesId && <span className="tag">Repeating</span>}
+        <span className="tag">{t(`detail.scopeBlocked.${m.scopeType}`)}</span>
+        {m.seriesId && <span className="tag">{t('detail.repeating')}</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 16 }}>
-        <dt>Scope</dt><dd>{m.scopeLabel}</dd>
-        <dt>Space</dt><dd>{m.spaceName}</dd>
-        <dt>Start</dt><dd className="mono">{stampOffset(m.start)}</dd>
-        <dt>End</dt><dd className="mono">{stampOffset(m.end)}</dd>
-        <dt>Reason</dt><dd>{m.note || 'Blocked'}</dd>
-        <dt>Created</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
+        <dt>{t('detail.scope')}</dt><dd><bdi>{m.scopeLabel}</bdi></dd>
+        <dt>{t('common.space')}</dt><dd><bdi>{m.spaceName}</bdi></dd>
+        <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(m.start)}</dd>
+        <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(m.end)}</dd>
+        <dt>{t('common.reason')}</dt><dd><bdi>{m.note || t('schedule.blocked')}</bdi></dd>
+        <dt>{t('detail.created')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>
       <div style={{ display: 'flex', gap: 8 }}>
         {session.can(P.Maintenance.Delete) && m.status === 'Active' && state !== 'ended'
-          ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>Unblock this time</button>
-          : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>No actions available.</span>}
+          ? <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(m.id)}>{t('detail.unblock')}</button>
+          : <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
       </div>
     </>
   )
 }
 
 export function DetailDrawer({ entity, id }: { entity: 'booking' | 'maintenance'; id: string }) {
+  const { t } = useTranslation()
   const booking = useBooking(entity === 'booking' ? id : null)
   const maint = useMaintenanceWindow(entity === 'maintenance' ? id : null)
   const b = booking.data
   const m = maint.data
-  const title = entity === 'booking' ? 'Booking' : 'Blocked time'
-  const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `${m.note || 'Blocked'} · ${m.scopeLabel}` : ''
+  const title = entity === 'booking' ? t('detail.bookingTitle') : t('detail.blockedTitle')
+  const subtitle = b ? `${b.spaceName} · ${dayKey(b.start)}` : m ? `${m.note || t('schedule.blocked')} · ${m.scopeLabel}` : ''
   const failed = booking.error || maint.error
 
   return (
     <Drawer title={title} subtitle={subtitle} onClose={modals.close}>
-      {b ? <BookingDetail b={b} /> : m ? <MaintenanceDetail m={m} /> : failed ? <p className="muted-box">This record could not be loaded.</p> : <Loading />}
+      {b ? <BookingDetail b={b} /> : m ? <MaintenanceDetail m={m} /> : failed ? <p className="muted-box">{t('detail.loadFailed')}</p> : <Loading />}
     </Drawer>
   )
 }

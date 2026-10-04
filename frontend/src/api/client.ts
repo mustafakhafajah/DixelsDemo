@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAuth } from 'react-oidc-context'
+import i18n from 'i18next'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'https://localhost:44393'
 
@@ -56,6 +57,8 @@ export async function apiRequest<T>(token: string | undefined, method: string, p
     method,
     headers: {
       Accept: 'application/json',
+      /* The server answers in this language: names, notes and error messages. */
+      'Accept-Language': i18n.language,
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
@@ -94,5 +97,5 @@ export function useApi() {
 export function errorText(e: unknown): { code: string; message: string; field?: string } {
   if (e instanceof ApiError) return { code: e.code, message: e.message, field: e.fieldErrors[0]?.field }
   if (e instanceof Error) return { code: 'network.error', message: e.message }
-  return { code: 'unknown', message: 'Something went wrong.' }
+  return { code: 'unknown', message: i18n.t('common.somethingWrong') }
 }

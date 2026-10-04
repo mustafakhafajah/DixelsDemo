@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface RowMenuItem {
   label: string
@@ -6,6 +7,7 @@ export interface RowMenuItem {
 }
 
 export function RowMenu({ items }: { items: RowMenuItem[] }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -23,7 +25,7 @@ export function RowMenu({ items }: { items: RowMenuItem[] }) {
 
   return (
     <div className="row-menu" ref={ref}>
-      <button type="button" className="iconbtn" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open} title="Actions">
+      <button type="button" className="iconbtn" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open} title={t('common.actions')} aria-label={t('common.actions')}>
         ⋯
       </button>
       {open && (

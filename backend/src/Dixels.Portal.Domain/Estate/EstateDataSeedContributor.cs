@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Localization;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
 using Volo.Abp.Data;
@@ -41,31 +43,45 @@ public class EstateDataSeedContributor : IDataSeedContributor, ITransientDepende
             await SeedEstateAsync();
     }
 
-    /* Only adds a default type that is missing, so renaming one in the admin page survives re-seeding. */
+    /* Only adds a default type, or a language of one, that is missing, so renaming one in the admin page
+     * survives re-seeding. */
     private async Task SeedDefaultSpaceTypesAsync()
     {
-        foreach (var (id, name) in DefaultSpaceTypes.All)
-            if (await _spaceTypes.FindAsync(id) == null)
-                await _spaceTypes.InsertAsync(new SpaceType(id, name), autoSave: true);
+        foreach (var (id, names) in DefaultSpaceTypes.All)
+        {
+            var type = await _spaceTypes.FindAsync(id);
+            if (type == null)
+            {
+                type = new SpaceType(id, names[PortalLanguages.Default]);
+                foreach (var (language, name) in names) type.SetName(language, name);
+                await _spaceTypes.InsertAsync(type, autoSave: true);
+                continue;
+            }
+            var missing = names.Where(n => type.FindTranslation(n.Key) == null).ToList();
+            if (missing.Count == 0) continue;
+            foreach (var (language, name) in missing) type.SetName(language, name);
+            await _spaceTypes.UpdateAsync(type, autoSave: true);
+        }
     }
 
+    /* Sample data is in English only; admins add other languages in the edit forms. */
     private async Task SeedEstateAsync()
     {
+        const string en = PortalLanguages.Default;
         var hq = await _buildings.InsertAsync(new Building(_guids.Create(), "HQ North") { TimeZone = "UTC" }, autoSave: true);
         var annex = await _buildings.InsertAsync(new Building(_guids.Create(), "Annex") { TimeZone = "Europe/Warsaw" }, autoSave: true);
 
         var floors = new Dictionary<string, Floor>();
         foreach (var (b, name) in new[] { (hq, "2"), (hq, "3"), (hq, "4"), (annex, "1"), (annex, "2") })
-            floors[$"{b.Name}|{name}"] = await _floors.InsertAsync(new Floor(_guids.Create(), b.Id, name), autoSave: true);
+            floors[$"{b.GetName(en)}|{name}"] = await _floors.InsertAsync(new Floor(_guids.Create(), b.Id, name), autoSave: true);
 
         async Task AddSpace(string name, Guid typeId, Building b, string floor, int capacity, string note,
             bool isBookable = true)
         {
-            await _spaces.InsertAsync(new Space(_guids.Create(), name, b.Id, floors[$"{b.Name}|{floor}"].Id, typeId)
+            await _spaces.InsertAsync(new Space(_guids.Create(), name, b.Id, floors[$"{b.GetName(en)}|{floor}"].Id, typeId, note)
             {
                 IsBookable = isBookable,
                 Capacity = capacity,
-                Note = note,
             }, autoSave: true);
         }
 

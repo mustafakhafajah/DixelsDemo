@@ -9,6 +9,7 @@ import { P } from './auth/permissions'
 import { oidcConfig } from './auth/oidcConfig'
 import { BookingsPage } from './features/bookings/BookingsPage'
 import { FindSpacePage } from './features/find/FindSpacePage'
+import { MyProfilePage } from './features/profile/MyProfilePage'
 import { BuildingsPage, FloorsPage, SpacesPage, SpaceTypesPage } from './features/spaces/EstatePages'
 import { UserDirectoryPage } from './features/users/UserDirectoryPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
@@ -37,6 +38,8 @@ function App() {
               <Route path="spaces" element={<RequirePermission any={manageAny(P.Spaces)}><SpacesPage /></RequirePermission>} />
               <Route path="space-types" element={<RequirePermission any={manageAny(P.SpaceTypes)}><SpaceTypesPage /></RequirePermission>} />
               <Route path="users" element={<RequirePermission any={[P.Users.Default]}><UserDirectoryPage /></RequirePermission>} />
+              {/* Everyone signed in may see their own profile; no permission is needed. */}
+              <Route path="profile" element={<MyProfilePage />} />
               <Route path="*" element={<HomeRedirect />} />
             </Route>
           </Routes>

@@ -1,9 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, Floor, Space, SpaceType } from '../../api/types'
-import { ErrorLine, RequiredMark } from '../../components/bits'
+import { ErrorLine, Field, RequiredNote } from '../../components/bits'
 import { DatePicker, Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { isValidTimeZone, WEEKDAYS } from '../../lib/closedDays'
@@ -28,22 +28,6 @@ function Footer({ onSave, label, busy }: { onSave: () => void; label: string; bu
       <button type="button" className="btn btn-primary" disabled={busy} onClick={onSave}>{label}</button>
     </>
   )
-}
-
-/* required: bold label with a "*" after the text (styles in appShell.css). error: shown right under the input. */
-function Field({ id, label, required, error, children }: { id: string; label: string; required?: boolean; error?: FieldError; children: ReactNode }) {
-  return (
-    <div>
-      <label className={`lbl${required ? ' req' : ''}`} htmlFor={id}>{label}{required && <RequiredMark />}</label>
-      {children}
-      <ErrorLine id={`${id}-error`} error={error} />
-    </div>
-  )
-}
-
-function RequiredNote() {
-  const { t } = useTranslation()
-  return <p className="req-note"><RequiredMark /> {t('common.requiredField')}</p>
 }
 
 type Overrides = [string, string, string, string]

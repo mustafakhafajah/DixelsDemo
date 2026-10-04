@@ -20,6 +20,8 @@
     "Permission:Bookings.DeleteAll": "Cancel everyone's bookings",
     "Permission:Bookings.MultipleSpaces": "Hold several spaces at once",
 
+    "DisplayName:Address": "Address",
+
     "Weekdays:0": "Sundays",
     "Weekdays:1": "Mondays",
     "Weekdays:2": "Tuesdays",
@@ -41,6 +43,10 @@
     "BuildingFloorLabel": "{0} · Floor {1}",
 
     "Error:UnsupportedLanguage": "Pick one of the portal's languages.",
+    "Error:FirstNameMissing": "Type your first name.",
+    "Error:UserNameMissing": "Type a username.",
+    "Error:EmailMissing": "Type an email address.",
+    "Error:InvalidPhone": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
     "Error:TranslationTwice": "{0} is listed twice. Keep one.",
     "Error:TranslationNameMissing": "Type the {0} name, or remove that language.",
     "Error:NameTooLong": "Keep the name to {0} characters.",

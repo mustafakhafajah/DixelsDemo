@@ -22,6 +22,9 @@ public static class PortalDomainErrorCodes
     public const string UnsupportedLanguage = "validation.unsupported_language";
     public const string TooLong = "validation.too_long";
     public const string WrongScript = "validation.wrong_script";
+    public const string InvalidPhone = "validation.invalid_phone";
+    /* ABP Identity refused a profile change or a password (taken user name, wrong current password, password rules). */
+    public const string IdentityRejected = "validation.identity_rejected";
 
     public const string SpaceNotFound = "space.not_found";
     public const string SpaceNotBookable = "space.not_bookable";
@@ -64,6 +67,8 @@ public static class PortalDomainErrorCodes
         [UnsupportedLanguage] = HttpStatusCode.BadRequest,
         [TooLong] = HttpStatusCode.BadRequest,
         [WrongScript] = HttpStatusCode.BadRequest,
+        [InvalidPhone] = HttpStatusCode.BadRequest,
+        [IdentityRejected] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceNotBookable] = HttpStatusCode.Conflict,
         [SpaceDuplicateName] = HttpStatusCode.Conflict,

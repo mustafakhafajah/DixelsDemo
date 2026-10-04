@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { errorText } from '../api/client'
 import { lifecycleOf, type ScheduleItem } from '../api/types'
@@ -38,6 +39,23 @@ export function ErrorLine({ error, id }: { error: { code: string; message: strin
 /* The "*" after a required field's label; pair it with className="lbl req" on the label. */
 export function RequiredMark() {
   return <span className="req-mark" aria-hidden="true">*</span>
+}
+
+/* A form field: required makes a bold label with a "*" after the text (styles in appShell.css); error is shown right under the input. */
+export function Field({ id, label, required, error, children }: { id: string; label: string; required?: boolean; error?: { code: string; message: string }; children: ReactNode }) {
+  return (
+    <div>
+      <label className={`lbl${required ? ' req' : ''}`} htmlFor={id}>{label}{required && <RequiredMark />}</label>
+      {children}
+      <ErrorLine id={`${id}-error`} error={error} />
+    </div>
+  )
+}
+
+/* "* Required field", at the top of a form that has required fields. */
+export function RequiredNote() {
+  const { t } = useTranslation()
+  return <p className="req-note"><RequiredMark /> {t('common.requiredField')}</p>
 }
 
 export function Loading({ label }: { label?: string }) {

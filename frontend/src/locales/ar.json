@@ -156,7 +156,8 @@
     "spaces": "المساحات",
     "spaceTypes": "أنواع المساحات",
     "users": "المستخدمين",
-    "yourBookings": "حجوزاتك"
+    "yourBookings": "حجوزاتك",
+    "profile": "ملفك الشخصي"
   },
   "pagination": {
     "showing": "عرض {{first, number}}–{{last, number}} من أصل {{total}}",
@@ -180,6 +181,7 @@
     "administration": "الإدارة",
     "userDirectory": "دليل المستخدمين",
     "noRole": "بلا دور",
+    "myProfile": "ملفي الشخصي",
     "signOut": "تسجيل الخروج",
     "accountMenu": "قائمة الحساب لـ {{name}}",
     "openMenu": "فتح القائمة",
@@ -218,6 +220,10 @@
     "users": {
       "title": "دليل المستخدمين",
       "subtitle": "حسابات البوابة وأدوارها وصلاحياتها."
+    },
+    "profile": {
+      "title": "ملفي الشخصي",
+      "subtitle": "كل ما تحتفظ به البوابة عن حسابك."
     }
   },
   "roles": {
@@ -880,6 +886,81 @@
       "role": "الدور",
       "status": "الحالة",
       "lock": "القفل"
+    }
+  },
+  "profile": {
+    "contact": "معلومات الاتصال",
+    "account": "الحساب",
+    "activity": "النشاط",
+    "additional": "تفاصيل إضافية",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "userName": "اسم المستخدم",
+    "firstName": "الاسم الأول",
+    "surname": "اسم العائلة",
+    "roles": "الأدوار",
+    "tenant": "المستأجر",
+    "host": "المضيف (بلا مستأجر)",
+    "signInMethod": "طريقة تسجيل الدخول",
+    "password": "كلمة المرور",
+    "external": "حساب خارجي",
+    "twoFactor": "التحقق بخطوتين",
+    "on": "مفعّل",
+    "off": "غير مفعّل",
+    "memberSince": "عضو منذ",
+    "lastSignIn": "آخر تسجيل دخول",
+    "passwordChanged": "آخر تغيير لكلمة المرور",
+    "verified": "موثّق",
+    "notVerified": "غير موثّق",
+    "notProvided": "غير متوفر",
+    "never": "أبداً",
+    "edit": {
+      "title": "تعديل الملف الشخصي",
+      "subtitle": "يحدّد المسؤول أدوارك والمستأجر الذي تتبع له.",
+      "firstNameMissing": "أدخل اسمك الأول.",
+      "userNameMissing": "أدخل اسم المستخدم.",
+      "userNameInvalid": "استخدم الحروف الإنجليزية والأرقام و - . _ @ + فقط، دون مسافات.",
+      "emailMissing": "أدخل البريد الإلكتروني.",
+      "emailInvalid": "أدخل بريداً إلكترونياً مثل name@example.com.",
+      "phoneInvalid": "أدخل رقم الهاتف من 6 إلى 15 رقماً، ويمكن أن يبدأ بـ +، مثل +962790000000.",
+      "setByAdministrator": "يمكن للمسؤول فقط تغيير هذا.",
+      "reverifyNote": "يظهر البريد الإلكتروني أو رقم الهاتف الجديد غير موثّق إلى أن يتم تأكيده.",
+      "saved": "تم حفظ الملف الشخصي",
+      "savedMessage": "تم حفظ تغييراتك."
+    },
+    "changePassword": {
+      "title": "تغيير كلمة المرور",
+      "subtitle": "استخدم كلمة المرور الجديدة في المرة القادمة التي تسجّل فيها الدخول.",
+      "current": "كلمة المرور الحالية",
+      "new": "كلمة المرور الجديدة",
+      "repeat": "أعد كتابة كلمة المرور الجديدة",
+      "currentMissing": "أدخل كلمة المرور الحالية.",
+      "newMissing": "أدخل كلمة مرور جديدة.",
+      "repeatMissing": "أعد كتابة كلمة المرور الجديدة.",
+      "needs": "تحتاج كلمة المرور إلى {{list}}.",
+      "rule": {
+        "length_zero": "{{count, number}} أحرف على الأقل",
+        "length_one": "حرف واحد على الأقل",
+        "length_two": "حرفين على الأقل",
+        "length_few": "{{count, number}} أحرف على الأقل",
+        "length_many": "{{count, number}} حرفاً على الأقل",
+        "length_other": "{{count, number}} حرف على الأقل",
+        "digit": "رقم (0–9)",
+        "lowercase": "حرف إنجليزي صغير (a–z)",
+        "uppercase": "حرف إنجليزي كبير (A–Z)",
+        "symbol": "رمز مثل ! أو #",
+        "unique_zero": "{{count, number}} أحرف مختلفة على الأقل",
+        "unique_one": "حرف واحد مختلف على الأقل",
+        "unique_two": "حرفين مختلفين على الأقل",
+        "unique_few": "{{count, number}} أحرف مختلفة على الأقل",
+        "unique_many": "{{count, number}} حرفاً مختلفاً على الأقل",
+        "unique_other": "{{count, number}} حرف مختلف على الأقل"
+      },
+      "sameAsCurrent": "اختر كلمة مرور مختلفة عن كلمتك الحالية.",
+      "mismatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+      "changed": "تم تغيير كلمة المرور",
+      "changedMessage": "استخدم كلمة المرور الجديدة في المرة القادمة التي تسجّل فيها الدخول."
     }
   },
   "empty": {

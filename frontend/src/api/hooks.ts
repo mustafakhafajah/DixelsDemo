@@ -26,7 +26,7 @@ import {
 
 const ESTATE_KEYS = [['buildings'], ['floors'], ['spaces'], ['space-types']]
 
-function useEnabled() {
+export function useEnabled() {
   return !!useAuth().user?.access_token
 }
 
@@ -40,6 +40,8 @@ export const PERMISSION_KEYS = [['app-config']]
 interface ApplicationConfiguration {
   auth?: { grantedPolicies?: Record<string, boolean> }
   currentUser?: CurrentUser
+  /* The settings ABP shows to clients, by name, e.g. "Abp.Identity.Password.RequiredLength": "6". */
+  setting?: { values?: Record<string, string> }
 }
 
 function useApplicationConfiguration<T>(select: (c: ApplicationConfiguration) => T) {
@@ -57,9 +59,11 @@ function useApplicationConfiguration<T>(select: (c: ApplicationConfiguration) =>
 
 const selectPolicies = (c: ApplicationConfiguration) => c.auth?.grantedPolicies ?? {}
 const selectCurrentUser = (c: ApplicationConfiguration) => c.currentUser ?? null
+const selectSettings = (c: ApplicationConfiguration) => c.setting?.values ?? {}
 
 export const useGrantedPolicies = () => useApplicationConfiguration(selectPolicies)
 export const useCurrentUser = () => useApplicationConfiguration(selectCurrentUser)
+export const useAbpSettings = () => useApplicationConfiguration(selectSettings)
 
 /* The Schedule's person filter: ABP's own users API (needs AbpIdentity.Users). ABP's user lookup would look like the
  * natural fit, but its permission (AbpIdentity.UserLookup) can only be granted to client applications, not to people.

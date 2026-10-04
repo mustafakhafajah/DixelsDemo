@@ -23,6 +23,10 @@ interface FindState extends FindFilters {
   now: () => void
   shiftDay: (dir: 1 | -1) => void
   toggleType: (typeId: string) => void
+  /* Clear filters: every room criterion and Free only go back to "any"; the date, time and length stay.
+   * criteriaVersion counts the clears, so the filter panel can start over (e.g. close a custom capacity box). */
+  clearCriteria: () => void
+  criteriaVersion: number
 }
 
 function nowFields() {
@@ -43,6 +47,8 @@ export const useFindStore = create<FindState>((set, get) => ({
   patch: (p) => set(p),
   now: () => set(nowFields()),
   shiftDay: (dir) => set({ date: dayKey(addDays(dayAt(get().date), dir)) }),
+  criteriaVersion: 0,
+  clearCriteria: () => set({ buildingId: '', floorId: '', minCapacity: 0, types: [], query: '', freeOnly: false, criteriaVersion: get().criteriaVersion + 1 }),
   toggleType: (t) => {
     const types = get().types
     set({ types: types.includes(t) ? types.filter((x) => x !== t) : [...types, t] })

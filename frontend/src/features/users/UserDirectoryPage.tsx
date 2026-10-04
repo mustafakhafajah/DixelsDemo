@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { initials, LoadError, Loading } from '../../components/bits'
+import { EmptyState } from '../../components/EmptyState'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
@@ -79,10 +80,10 @@ export function UserDirectoryPage() {
       <div className="card" style={{ overflow: 'hidden' }}>
         <UserDirectoryFilters value={filters} onChange={changeFilters} />
         {q.isError ? <LoadError what={t('load.users')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
-          <p className="empty-note">
-            {filtered ? t('users.noMatch') : t('users.none')}
-            {filtered && <button type="button" className="btn btn-sm" style={{ marginInlineStart: 10 }} onClick={() => changeFilters(EMPTY_USER_FILTERS)}>{t('common.clearFilters')}</button>}
-          </p>
+          filtered
+            ? <EmptyState art="user" title={t('empty.usersFiltered.title')} text={t('empty.usersFiltered.text')}
+                action={{ label: t('common.clearFilters'), onClick: () => changeFilters(EMPTY_USER_FILTERS) }} />
+            : <EmptyState art="user" title={t('empty.users.title')} text={t('empty.users.text')} />
         ) : (
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>

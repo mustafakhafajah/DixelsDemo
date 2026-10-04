@@ -140,6 +140,8 @@
     "signOut": "Sign out",
     "accountMenu": "Account menu for {{name}}",
     "openMenu": "Open menu",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",
     "theme": "Theme",

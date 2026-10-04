@@ -183,6 +183,8 @@
     "signOut": "تسجيل الخروج",
     "accountMenu": "قائمة الحساب لـ {{name}}",
     "openMenu": "فتح القائمة",
+    "collapseMenu": "طيّ القائمة",
+    "expandMenu": "توسيع القائمة",
     "themeLight": "التبديل إلى المظهر الفاتح",
     "themeDark": "التبديل إلى المظهر الداكن",
     "theme": "المظهر",

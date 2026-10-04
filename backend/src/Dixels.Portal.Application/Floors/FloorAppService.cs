@@ -40,17 +40,20 @@ public class FloorAppService
     [Authorize(PortalPermissions.Floors.Delete)]
     public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
 
-    /* The whole list, ordered by building name and then floor number ("2" before "10"), which the database
-     * can't sort by, so ordering happens after mapping. */
+    /* The building filter runs in the database. The order (building name, then floor number, "2" before "10")
+     * is something the database can't sort by, so the filtered floors are ordered after mapping and then cut
+     * to the requested page. */
     [Authorize(PortalPermissions.Floors.Default)]
     public override async Task<PagedResultDto<FloorDto>> GetListAsync(GetFloorListInput input)
     {
         var floors = await AsyncExecuter.ToListAsync(await CreateFilteredQueryAsync(input));
-        var dtos = (await MapToGetListOutputDtosAsync(floors))
+        var page = (await MapToGetListOutputDtosAsync(floors))
             .OrderBy(f => f.BuildingName)
             .ThenBy(f => f.Name.PadLeft(8, '0'))
+            .Skip(Math.Max(0, input.SkipCount))
+            .Take(input.MaxResultCount)
             .ToList();
-        return new PagedResultDto<FloorDto>(dtos.Count, dtos);
+        return new PagedResultDto<FloorDto>(floors.Count, page);
     }
 
     [Authorize(PortalPermissions.Floors.Create)]

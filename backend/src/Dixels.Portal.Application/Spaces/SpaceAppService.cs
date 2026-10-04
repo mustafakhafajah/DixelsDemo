@@ -8,6 +8,7 @@ using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Localization;
+using Dixels.Portal.Maintenance;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.SpaceTypes;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ namespace Dixels.Portal.Spaces;
 /* Every action needs its Spaces permission: Default to read, Create / Edit / Delete to change. */
 [Authorize]
 public class SpaceAppService
-    : CrudAppService<Space, SpaceDto, Guid, EstateListInput, CreateUpdateSpaceDto>, ISpaceAppService
+    : CrudAppService<Space, SpaceDto, Guid, GetSpaceListInput, CreateUpdateSpaceDto>, ISpaceAppService
 {
     /* A registry page never shows more than this many rows, whatever the client asks for. */
     private const int MaxRegistryPageSize = 100;
@@ -31,10 +32,13 @@ public class SpaceAppService
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<SpaceType, Guid> _types;
     private readonly IRepository<Booking, Guid> _bookings;
+    private readonly IRepository<MaintenanceWindow, Guid> _maintenance;
+    private readonly BookingManager _bookingManager;
 
     public SpaceAppService(IRepository<Space, Guid> repository, SpaceManager spaceManager,
         IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
-        IRepository<SpaceType, Guid> types, IRepository<Booking, Guid> bookings)
+        IRepository<SpaceType, Guid> types, IRepository<Booking, Guid> bookings,
+        IRepository<MaintenanceWindow, Guid> maintenance, BookingManager bookingManager)
         : base(repository)
     {
         _spaceManager = spaceManager;
@@ -42,11 +46,13 @@ public class SpaceAppService
         _floors = floors;
         _types = types;
         _bookings = bookings;
+        _maintenance = maintenance;
+        _bookingManager = bookingManager;
         LocalizationResource = typeof(PortalResource);
     }
 
     [Authorize(PortalPermissions.Spaces.Default)]
-    public override Task<PagedResultDto<SpaceDto>> GetListAsync(EstateListInput input) => base.GetListAsync(input);
+    public override Task<PagedResultDto<SpaceDto>> GetListAsync(GetSpaceListInput input) => base.GetListAsync(input);
 
     [Authorize(PortalPermissions.Spaces.Default)]
     public override Task<SpaceDto> GetAsync(Guid id) => base.GetAsync(id);
@@ -87,7 +93,6 @@ public class SpaceAppService
     public async Task<ListResultDto<SpaceDto>> GetBookableListAsync(FindSpacesInput input)
     {
         var name = input.Name?.Trim().ToLower();
-        var floorName = input.FloorName?.Trim();
         var minCapacity = input.MinCapacity ?? 0;
         var typeIds = input.TypeIds ?? new();
 
@@ -99,23 +104,47 @@ public class SpaceAppService
             join f in await _floors.GetQueryableAsync() on s.FloorId equals f.Id into floorJoin
             from f in floorJoin.DefaultIfEmpty()
             where s.IsBookable && b.IsBookable && (f == null || f.IsBookable)
-            select new { Space = s, Floor = f };
+            select new { Space = s, Floor = f, Building = b };
 
         /* A name typed in any language matches, so people find a space by whichever name they know. */
         rows = rows
             .WhereIf(input.BuildingId.HasValue, r => r.Space.BuildingId == input.BuildingId)
-            .WhereIf(!string.IsNullOrEmpty(floorName), r => r.Floor != null && r.Floor.Translations.Any(t => t.Name == floorName))
+            .WhereIf(input.FloorId.HasValue, r => r.Space.FloorId == input.FloorId)
             .WhereIf(minCapacity > 0, r => r.Space.Capacity >= minCapacity)
             .WhereIf(typeIds.Count > 0, r => typeIds.Contains(r.Space.TypeId))
             .WhereIf(!string.IsNullOrEmpty(name), r => r.Space.Translations.Any(t => t.Name.ToLower().Contains(name!)));
 
+        var found = await AsyncExecuter.ToListAsync(rows);
+        var spaces = input.FreeFromUtc.HasValue && input.FreeToUtc.HasValue
+            ? await KeepFreeAsync(found.Select(r => new SpaceContext(r.Space, r.Floor, r.Building)).ToList(),
+                input.FreeFromUtc.Value.AsUtc(), input.FreeToUtc.Value.AsUtc())
+            : found.Select(r => r.Space).ToList();
+
         /* The whole list comes back, so it is sorted by the names in the reader's language after mapping. */
-        var spaces = await AsyncExecuter.ToListAsync(rows.Select(r => r.Space));
         var dtos = (await MapToGetListOutputDtosAsync(spaces))
             .OrderBy(d => d.BuildingName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         return new ListResultDto<SpaceDto>(dtos);
+    }
+
+    /* "Free only": the spaces that could be booked for [from, to). No confirmed booking and no active blocked time
+     * overlaps it (two queries for all the spaces), and the window fits each space's own rules - the same check a
+     * booking gets (closed days, opening hours, min / max length). Past windows count, as on the page. */
+    private async Task<List<Space>> KeepFreeAsync(List<SpaceContext> candidates, DateTime fromUtc, DateTime toUtc)
+    {
+        var ids = candidates.Select(c => c.Space.Id).ToList();
+        var booked = await AsyncExecuter.ToListAsync((await _bookings.GetQueryableAsync())
+            .Where(new OverlappingBookingsSpecification(fromUtc, toUtc).ToExpression())
+            .Where(b => ids.Contains(b.SpaceId)).Select(b => b.SpaceId).Distinct());
+        var blocked = await AsyncExecuter.ToListAsync((await _maintenance.GetQueryableAsync())
+            .Where(new OverlappingMaintenanceSpecification(fromUtc, toUtc).ToExpression())
+            .Where(m => ids.Contains(m.SpaceId)).Select(m => m.SpaceId).Distinct());
+        var taken = booked.Concat(blocked).ToHashSet();
+        return candidates
+            .Where(c => !taken.Contains(c.Space.Id) && _bookingManager.FindWindowProblem(c, fromUtc, toUtc, allowPast: true) == null)
+            .Select(c => c.Space)
+            .ToList();
     }
 
     /* One filtered page for the admin registry, with each space's upcoming-booking count. */
@@ -138,9 +167,10 @@ public class SpaceAppService
         };
     }
 
-    /* The full list (pickers) is ordered by building name, then space name. */
-    protected override async Task<IQueryable<Space>> CreateFilteredQueryAsync(EstateListInput input)
-        => OrderByNames(await base.CreateFilteredQueryAsync(input), await _buildings.GetQueryableAsync(), PortalLanguages.Current);
+    /* The picker list (optionally one building / floor) is ordered by building name, then space name. */
+    protected override async Task<IQueryable<Space>> CreateFilteredQueryAsync(GetSpaceListInput input)
+        => OrderByNames((await base.CreateFilteredQueryAsync(input)).ApplyPickerFilter(input),
+            await _buildings.GetQueryableAsync(), PortalLanguages.Current);
 
     /* Sorted in the database by each name in the given language (see LocalizedNameQuery for the fallback);
      * Id breaks ties so pages never overlap. */

@@ -6,8 +6,8 @@ using Volo.Abp.Application.Services;
 
 namespace Dixels.Portal.Spaces;
 
-/* GetListAsync (from ICrudAppService): every space, for pickers (booking modal, schedule). */
-public interface ISpaceAppService : ICrudAppService<SpaceDto, Guid, EstateListInput, CreateUpdateSpaceDto>
+/* GetListAsync (from ICrudAppService): spaces for pickers (booking modal, schedule), optionally one building / floor. */
+public interface ISpaceAppService : ICrudAppService<SpaceDto, Guid, GetSpaceListInput, CreateUpdateSpaceDto>
 {
     /* "Find a space": only bookable spaces, filtered in the database. */
     Task<ListResultDto<SpaceDto>> GetBookableListAsync(FindSpacesInput input);

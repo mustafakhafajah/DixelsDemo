@@ -12,6 +12,7 @@ import {
   type Building,
   type Floor,
   type ListResult,
+  type PagedResult,
   type Maintenance,
   type MaintenanceDto,
   type MaintenanceScopeType,
@@ -82,30 +83,69 @@ export function useBuildings() {
   })
 }
 
-export function useFloors() {
+/* Every floor, or only one building's (pickers ask for the chosen building, so each pick is a new request).
+ * Pass enabled=false to wait until a building is chosen. */
+export function useFloors(buildingId?: string, enabled = true) {
   const api = useApi()
+  const ok = useEnabled()
   return useQuery({
-    queryKey: ['floors'],
-    queryFn: async () => (await api<ListResult<Floor>>('GET', '/api/app/floor')).items,
-    enabled: useEnabled(),
+    queryKey: ['floors', { buildingId: buildingId || null }],
+    queryFn: async () => (await api<ListResult<Floor>>('GET', '/api/app/floor', undefined, { BuildingId: buildingId || undefined })).items,
+    enabled: ok && enabled,
   })
 }
 
-export function useSpaces() {
+/* Every space, or only one building's / floor's, for pickers. */
+export function useSpaces(filter: { buildingId?: string; floorId?: string } = {}, enabled = true) {
   const api = useApi()
+  const ok = useEnabled()
   return useQuery({
-    queryKey: ['spaces'],
-    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space')).items,
-    enabled: useEnabled(),
+    queryKey: ['spaces', 'list', { buildingId: filter.buildingId || null, floorId: filter.floorId || null }],
+    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space', undefined, {
+      BuildingId: filter.buildingId || undefined,
+      FloorId: filter.floorId || undefined,
+    })).items,
+    enabled: ok && enabled,
   })
 }
+
+export interface PageQuery {
+  page: number
+  pageSize: number
+}
+
+/* One page of an estate list (buildings, floors, space types), paged on the server. */
+function useEstatePage<T>(key: string, path: string, q: PageQuery, params: Record<string, string | undefined> = {}) {
+  const api = useApi()
+  return useQuery({
+    queryKey: [key, 'page', q],
+    queryFn: () => api<PagedResult<T>>('GET', path, undefined, {
+      SkipCount: String((q.page - 1) * q.pageSize),
+      MaxResultCount: String(q.pageSize),
+      ...params,
+    }),
+    enabled: useEnabled(),
+    /* Keep the current page on screen while the next one loads, instead of flashing "Loading…". */
+    placeholderData: keepPreviousData,
+  })
+}
+
+export const useBuildingsPage = (q: PageQuery) => useEstatePage<Building>('buildings', '/api/app/building', q)
+
+export const useFloorsPage = (q: PageQuery & { buildingId?: string }) =>
+  useEstatePage<Floor>('floors', '/api/app/floor', q, { BuildingId: q.buildingId || undefined })
+
+export const useSpaceTypesPage = (q: PageQuery) => useEstatePage<SpaceType>('space-types', '/api/app/space-type', q)
 
 export interface FindSpacesQuery {
   buildingId?: string
-  floorName?: string
+  floorId?: string
   minCapacity?: number
   typeIds: string[]
   name?: string
+  /* "Free only": the window the spaces must be free for. */
+  freeFrom?: Date
+  freeTo?: Date
 }
 
 /* "Find a space": the server filters and returns only bookable spaces, so the page never loads the whole estate.
@@ -113,13 +153,15 @@ export interface FindSpacesQuery {
 export function useFindSpaces(q: FindSpacesQuery) {
   const api = useApi()
   return useQuery({
-    queryKey: ['spaces', 'find', q],
+    queryKey: ['spaces', 'find', { ...q, freeFrom: q.freeFrom?.getTime(), freeTo: q.freeTo?.getTime() }],
     queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space/bookable-list', undefined, {
       BuildingId: q.buildingId,
-      FloorName: q.floorName,
+      FloorId: q.floorId,
       MinCapacity: q.minCapacity || undefined,
       TypeIds: q.typeIds,
       Name: q.name,
+      FreeFromUtc: q.freeFrom?.toISOString(),
+      FreeToUtc: q.freeTo?.toISOString(),
     })).items,
     enabled: useEnabled(),
     /* Keep the current rooms on screen while a changed filter loads, instead of flashing "Loading…". */
@@ -139,7 +181,6 @@ export function useSpaceTypes() {
 export interface SpaceRegistryQuery {
   page: number
   pageSize: number
-  code?: string
   buildingId?: string
   floorId?: string
   name?: string
@@ -154,7 +195,6 @@ export function useSpaceRegistry(q: SpaceRegistryQuery) {
     queryFn: () => api<SpaceRegistryPage>('GET', '/api/app/space/paged-list', undefined, {
       SkipCount: (q.page - 1) * q.pageSize,
       MaxResultCount: q.pageSize,
-      Code: q.code,
       BuildingId: q.buildingId,
       FloorId: q.floorId,
       Name: q.name,
@@ -194,7 +234,9 @@ const filterKey = (f: RangeFilter) => ({
   includeCancelled: !!f.includeCancelled,
 })
 
-export function useBookings(filter: RangeFilter, enabled = true) {
+/* keepPrevious: a changed filter keeps the current items on screen until the new ones arrive (the Schedule);
+ * off by default, so a form never judges a new time against the old one's bookings. */
+export function useBookings(filter: RangeFilter, enabled = true, keepPrevious = false) {
   const api = useApi()
   const ok = useEnabled()
   return useQuery({
@@ -203,6 +245,7 @@ export function useBookings(filter: RangeFilter, enabled = true) {
       (await api<ListResult<BookingDto>>('GET', '/api/app/booking', undefined, rangeQuery(filter))).items.map(toBooking),
     enabled: ok && enabled,
     refetchInterval: 60_000,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
   })
 }
 
@@ -241,7 +284,7 @@ export function useAvailability(filter: RangeFilter, who: { isAdmin: boolean; us
   }
 }
 
-export function useMaintenance(filter: RangeFilter, enabled = true) {
+export function useMaintenance(filter: RangeFilter, enabled = true, keepPrevious = false) {
   const api = useApi()
   const ok = useEnabled()
   return useQuery({
@@ -250,6 +293,7 @@ export function useMaintenance(filter: RangeFilter, enabled = true) {
       (await api<ListResult<MaintenanceDto>>('GET', '/api/app/maintenance-window', undefined, rangeQuery(filter))).items.map(toMaintenance),
     enabled: ok && enabled,
     refetchInterval: 60_000,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
   })
 }
 

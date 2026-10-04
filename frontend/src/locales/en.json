@@ -624,6 +624,7 @@
     "nextPeriod": "Next period",
     "allSpacesOnFloor": "All spaces on this floor",
     "user": "User",
+    "everyone": "Everyone",
     "userAdmin": "{{name}} (admin)",
     "hint": {
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
@@ -697,6 +698,10 @@
     "searchPlaceholder": "Room name…",
     "noRooms": "No rooms match these filters",
     "noRoomsHint": "Widen the room criteria, or pick a different building or floor.",
+    "freeOnly": "Free only",
+    "freeOnlyHint": "Show only rooms free for this time and length.",
+    "noFreeRooms": "No room is free for this time",
+    "noFreeRoomsHint": "Turn off Free only, or try another time or length.",
     "roomsFree_one": "{{rooms}} · {{count, number}} free",
     "roomsFree_other": "{{rooms}} · {{count, number}} free",
     "seats_one": "{{count, number}} seat",

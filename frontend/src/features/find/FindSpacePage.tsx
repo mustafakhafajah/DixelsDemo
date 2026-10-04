@@ -40,11 +40,9 @@ function FindFilters() {
   /* "Custom…" shows a number box; a saved value that isn't a preset reopens in custom mode. */
   const [customCapacity, setCustomCapacity] = useState(() => f.minCapacity > 0 && !CAPACITY_PRESETS.includes(f.minCapacity))
   const buildings = useBuildings().data ?? []
-  const floors = useFloors().data ?? []
+  /* Floor stays locked until a building is picked, then the server is asked for that building's floors. */
+  const floors = (useFloors(f.buildingId, !!f.buildingId).data ?? []).filter((x) => x.isBookable)
   const spaceTypes = useSpaceTypes().data ?? []
-  /* Floor stays locked until a building is picked, then lists only that building's floors. */
-  const floorNames = [...new Set(floors.filter((x) => x.isBookable && !!f.buildingId && x.buildingId === f.buildingId).map((x) => x.name))]
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   /* Only types some space actually has, as id → name. */
   const types = spaceTypes.filter((t) => t.spaceCount > 0).map((t) => [t.id, t.name] as const)
     .sort((a, b) => a[1].localeCompare(b[1]))
@@ -79,20 +77,27 @@ function FindFilters() {
               ? { code: 'validation.end_before_start', message: t('find.endAfterStart', { start: minLabel(f.time) }) } : undefined} />
           </div>
         )}
+        <label htmlFor="fv-free-only" style={{ display: 'flex', gap: 9, alignItems: 'flex-start', cursor: 'pointer', marginTop: 12 }}>
+          <input type="checkbox" id="fv-free-only" checked={f.freeOnly} onChange={(e) => f.patch({ freeOnly: e.target.checked })} style={{ marginTop: 3 }} />
+          <span>
+            <span style={{ fontWeight: 600 }}>{t('find.freeOnly')}</span>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--slate)' }}>{t('find.freeOnlyHint')}</span>
+          </span>
+        </label>
       </div>
       <div>
         <h3>{t('find.criteria')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
             <label className="lbl" htmlFor="fv-building">{t('common.building')}</label>
-            <Dropdown id="fv-building" value={f.buildingId} onChange={(v) => f.patch({ buildingId: v, floorName: '' })}
+            <Dropdown id="fv-building" value={f.buildingId} onChange={(v) => f.patch({ buildingId: v, floorId: '' })}
               options={[{ value: '', label: t('common.allBuildings') }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-floor">{t('common.floor')}</label>
-            <Dropdown id="fv-floor" value={floorNames.includes(f.floorName) ? f.floorName : ''} onChange={(v) => f.patch({ floorName: v })}
+            <Dropdown id="fv-floor" value={f.floorId} onChange={(v) => f.patch({ floorId: v })}
               disabled={!f.buildingId} placeholder={t('common.chooseBuildingFirst')}
-              options={f.buildingId ? [{ value: '', label: t('common.allFloors') }, ...floorNames.map((n) => ({ value: n, label: t('common.floorName', { name: n }) }))] : []} />
+              options={f.buildingId ? [{ value: '', label: t('common.allFloors') }, ...floors.map((x) => ({ value: x.id, label: t('common.floorName', { name: x.name }) }))] : []} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-capacity">{t('common.capacity')}</label>
@@ -143,27 +148,33 @@ export function FindSpacePage() {
   const { userId } = session
   /* Without permission to book, the timeline is read-only: no free cells to click and no drag. */
   const canBook = session.can(P.Bookings.Create)
-  /* The room criteria are filtered on the server; typing in the search box waits a moment before asking. */
+  const durMin = f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
+  const winStart = useMemo(() => dayAt(f.date, 0, f.time), [f.date, f.time])
+  const winEnd = useMemo(() => addMin(winStart, durMin), [winStart, durMin])
+
+  /* Every filter is sent to the server; typing in the search box waits a moment before asking. With "Free only"
+   * the chosen time and length go too, and the server leaves out rooms that are taken or closed then. */
   const name = useDebouncedValue(f.query.trim())
+  const buildingId = f.buildingId || undefined
+  const floorId = (f.buildingId && f.floorId) || undefined
   const findQ = useFindSpaces({
-    buildingId: f.buildingId || undefined,
-    floorName: (f.buildingId && f.floorName) || undefined,
+    buildingId,
+    floorId,
     minCapacity: f.minCapacity,
     typeIds: f.types,
     name: name || undefined,
+    freeFrom: f.freeOnly ? winStart : undefined,
+    freeTo: f.freeOnly ? winEnd : undefined,
   })
+  /* The day's bookings and blocked time, for the chosen building and floor only. */
   const dayFrom = useMemo(() => dayAt(f.date), [f.date])
   const dayTo = useMemo(() => addDays(dayAt(f.date), 1), [f.date])
-  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo }, session)
-  const maintQ = useMaintenance({ from: dayFrom, to: dayTo })
+  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo, buildingId, floorId }, session)
+  const maintQ = useMaintenance({ from: dayFrom, to: dayTo, buildingId, floorId })
 
   const items: ScheduleItem[] = useMemo(() => [...(bookingsQ.data ?? []), ...(maintQ.data ?? [])], [bookingsQ.data, maintQ.data])
 
   const candidates = findQ.data ?? []
-
-  const durMin = f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
-  const winStart = dayAt(f.date, 0, f.time)
-  const winEnd = addMin(winStart, durMin)
   const isFree = (s: Space) => !findOverlap(items, s.id, winStart, winEnd) &&
     !validateWindowLocal(s.constraints, s.name, winStart, winEnd, true)
   const freeCount = candidates.filter(isFree).length
@@ -189,8 +200,8 @@ export function FindSpacePage() {
   else if (!candidates.length) {
     body = (
       <div className="sched-empty">
-        <p>{t('find.noRooms')}</p>
-        <p>{t('find.noRoomsHint')}</p>
+        <p>{f.freeOnly ? t('find.noFreeRooms') : t('find.noRooms')}</p>
+        <p>{f.freeOnly ? t('find.noFreeRoomsHint') : t('find.noRoomsHint')}</p>
       </div>
     )
   } else {

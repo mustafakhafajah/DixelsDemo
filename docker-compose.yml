@@ -1,0 +1,96 @@
+# Runs the whole portal locally in Docker: database, migrator, API and web app. See docs/docker.md.
+#
+#   web app   http://localhost:8080
+#   API       https://localhost:8443   (sign-in pages, Swagger at /swagger)
+#   database  localhost:5433           (5432 is left to the Postgres already installed on this machine)
+#   mailbox   http://localhost:8025    (Mailpit: every email the portal sends lands here, nothing leaves the machine)
+
+name: dixels-portal
+
+x-connection-string: &connection-string "Host=db;Port=5432;Database=DixelsPortal;User ID=postgres;Password=myPassword;"
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: myPassword
+      POSTGRES_DB: DixelsPortal
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d DixelsPortal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Runs once on every `up`: applies migrations and seeds the admin user, permissions and sign-in clients, then exits.
+  migrator:
+    build:
+      context: ./backend
+      target: migrator
+    environment:
+      ConnectionStrings__Default: *connection-string
+      OpenIddict__Applications__Portal_Web__RootUrl: https://localhost:8443
+      OpenIddict__Applications__Portal_Swagger__RootUrl: https://localhost:8443
+      OpenIddict__Applications__Portal_App__RootUrl: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./backend
+      target: web
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: https://+:8443
+      # HTTPS uses this machine's ASP.NET Core development certificate, exported to docker/certs (see docs/docker.md),
+      # so the browser trusts https://localhost:8443 the same way it trusts https://localhost:44393.
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/localhost.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${DEV_CERT_PASSWORD:-dixels-dev}
+      App__SelfUrl: https://localhost:8443
+      App__ClientUrl: http://localhost:8080
+      App__CorsOrigins: http://localhost:8080
+      ConnectionStrings__Default: *connection-string
+      # Email goes to Mailpit instead of Microsoft 365: plain SMTP, no sign-in (Basic with no user name).
+      # The real server uses OAuth2 and Exchange Online; see docs/DEPLOYMENT.md.
+      Settings__ExchangeOnline.Enabled: "true"
+      Settings__ExchangeOnline.AuthType: Basic
+      Settings__ExchangeOnline.ServiceMailbox: noreply@dixels.local
+      Settings__Abp.Mailing.Smtp.Host: mailpit
+      Settings__Abp.Mailing.Smtp.Port: "1025"
+      Settings__Abp.Mailing.Smtp.EnableSsl: "false"
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./docker/certs:/https:ro
+      - api-keys:/app/App_Data/DataProtection-Keys
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+
+  # A fake mailbox: accepts any email on SMTP port 1025 and shows it at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: https://localhost:8443
+        VITE_BASE: /
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  db-data:
+  api-keys:

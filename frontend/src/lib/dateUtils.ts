@@ -1,3 +1,6 @@
+import i18n from 'i18next'
+import { intlLocale } from '../i18n/languages'
+
 /* UTC-only helpers ported from mock/js/utils.js. The whole app reasons in UTC. */
 
 export const pad = (n: number) => String(n).padStart(2, '0')
@@ -32,15 +35,33 @@ export function addDays(d: Date, n: number): Date {
 
 export const addMin = (d: Date, n: number) => new Date(d.getTime() + n * 60000)
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-export const dayName = (d: Date) => DAY_NAMES[d.getUTCDay()]
-export const monthName = (d: Date) => MONTH_NAMES[d.getUTCMonth()]
+/* Dates in words, in the chosen language (Intl decides the order, names and digits). Always the UTC day,
+ * like everything else in the app. One formatter per language and set of options. */
+const formatters = new Map<string, Intl.DateTimeFormat>()
+function dateFormat(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = intlLocale()
+  const key = `${locale}|${JSON.stringify(opts)}`
+  let f = formatters.get(key)
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, { ...opts, timeZone: 'UTC' })
+    formatters.set(key, f)
+  }
+  return f
+}
 
+export const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions) => dateFormat(opts).format(d)
+export const formatDateRange = (a: Date, b: Date, opts: Intl.DateTimeFormatOptions) => dateFormat(opts).formatRange(a, b)
+
+/* A weekday's name from its getUTCDay() number (0 = Sunday); 1 January 2023 was a Sunday. */
+export const weekdayName = (day: number, width: 'long' | 'short' = 'long') =>
+  formatDate(new Date(Date.UTC(2023, 0, 1 + day)), { weekday: width })
+
+/* "1h 30m", in the chosen language's short units. */
 export function durationLabel(mins: number): string {
   const h = Math.floor(mins / 60)
   const m = Math.round(mins % 60)
-  return (h ? `${h}h` : '') + (m ? `${h ? ' ' : ''}${m}m` : h ? '' : '0m')
+  return [h ? i18n.t('time.hoursShort', { count: h }) : '', m || !h ? i18n.t('time.minutesShort', { count: m }) : '']
+    .filter(Boolean).join(' ')
 }
 
 export function roundUp30(d: Date): Date {
@@ -54,10 +75,10 @@ export function roundUp30(d: Date): Date {
 export const overlaps = (aS: Date, aE: Date, bS: Date, bE: Date) => aS < bE && bS < aE
 
 export function relative(d: Date): string {
-  const diff = d.getTime() - Date.now()
-  const m = Math.round(Math.abs(diff) / 60000)
-  const txt = m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`
-  return diff >= 0 ? `in ${txt}` : `${txt} ago`
+  const m = Math.round((d.getTime() - Date.now()) / 60000)
+  const f = new Intl.RelativeTimeFormat(intlLocale(), { style: 'short' })
+  if (Math.abs(m) < 60) return f.format(m, 'minute')
+  return Math.abs(m) < 1440 ? f.format(Math.round(m / 60), 'hour') : f.format(Math.round(m / 1440), 'day')
 }
 
 /* Monday-first week start for a day key. */

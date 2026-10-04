@@ -21,10 +21,10 @@ public class BuildingCalendarTests
         var dubai = Rules("Asia/Dubai", holidays: [Christmas]);
 
         /* 24 Dec 21:00 UTC is already 25 Dec 01:00 in Dubai. */
-        BuildingCalendar.ClosedReason(dubai, Utc(2026, 12, 24, 21), Utc(2026, 12, 24, 22))
-            .ShouldBe("for a holiday on 2026-12-25");
+        BuildingCalendar.FindClosedDay(dubai, Utc(2026, 12, 24, 21), Utc(2026, 12, 24, 22))
+            .ShouldBe(new ClosedDay(Christmas, IsHoliday: true));
         /* 25 Dec 21:00 UTC is 26 Dec 01:00 in Dubai: the holiday is over there. */
-        BuildingCalendar.ClosedReason(dubai, Utc(2026, 12, 25, 21), Utc(2026, 12, 25, 22)).ShouldBeNull();
+        BuildingCalendar.FindClosedDay(dubai, Utc(2026, 12, 25, 21), Utc(2026, 12, 25, 22)).ShouldBeNull();
     }
 
     [Fact]
@@ -32,8 +32,8 @@ public class BuildingCalendarTests
     {
         var utc = Rules("UTC", holidays: [Christmas]);
 
-        BuildingCalendar.ClosedReason(utc, Utc(2026, 12, 24, 21), Utc(2026, 12, 24, 22)).ShouldBeNull();
-        BuildingCalendar.ClosedReason(utc, Utc(2026, 12, 25, 10), Utc(2026, 12, 25, 11)).ShouldNotBeNull();
+        BuildingCalendar.FindClosedDay(utc, Utc(2026, 12, 24, 21), Utc(2026, 12, 24, 22)).ShouldBeNull();
+        BuildingCalendar.FindClosedDay(utc, Utc(2026, 12, 25, 10), Utc(2026, 12, 25, 11)).ShouldNotBeNull();
     }
 
     [Fact]
@@ -42,9 +42,9 @@ public class BuildingCalendarTests
         var weekend = Rules("UTC", closedWeekdays: [(int)DayOfWeek.Friday, (int)DayOfWeek.Saturday]);
 
         /* 2026-10-01 is a Thursday, 2026-10-02 a Friday, 2026-10-10 a Saturday. */
-        BuildingCalendar.ClosedReason(weekend, Utc(2026, 10, 1, 10), Utc(2026, 10, 1, 11)).ShouldBeNull();
-        BuildingCalendar.ClosedReason(weekend, Utc(2026, 10, 2, 10), Utc(2026, 10, 2, 11)).ShouldBe("on Fridays");
-        BuildingCalendar.ClosedReason(weekend, Utc(2026, 10, 10, 10), Utc(2026, 10, 10, 11)).ShouldBe("on Saturdays");
+        BuildingCalendar.FindClosedDay(weekend, Utc(2026, 10, 1, 10), Utc(2026, 10, 1, 11)).ShouldBeNull();
+        BuildingCalendar.FindClosedDay(weekend, Utc(2026, 10, 2, 10), Utc(2026, 10, 2, 11)).ShouldBe(new ClosedDay(new DateOnly(2026, 10, 2), IsHoliday: false));
+        BuildingCalendar.FindClosedDay(weekend, Utc(2026, 10, 10, 10), Utc(2026, 10, 10, 11)).ShouldBe(new ClosedDay(new DateOnly(2026, 10, 10), IsHoliday: false));
     }
 
     [Fact]
@@ -53,9 +53,9 @@ public class BuildingCalendarTests
         /* Thursday 19:00-21:00 UTC is Thursday 23:00 - Friday 01:00 in Dubai. */
         var dubai = Rules("Asia/Dubai", closedWeekdays: [(int)DayOfWeek.Friday]);
 
-        BuildingCalendar.ClosedReason(dubai, Utc(2026, 10, 1, 19), Utc(2026, 10, 1, 21)).ShouldBe("on Fridays");
+        BuildingCalendar.FindClosedDay(dubai, Utc(2026, 10, 1, 19), Utc(2026, 10, 1, 21)).ShouldBe(new ClosedDay(new DateOnly(2026, 10, 2), IsHoliday: false));
         /* Ending exactly at local midnight does not touch Friday. */
-        BuildingCalendar.ClosedReason(dubai, Utc(2026, 10, 1, 18), Utc(2026, 10, 1, 20)).ShouldBeNull();
+        BuildingCalendar.FindClosedDay(dubai, Utc(2026, 10, 1, 18), Utc(2026, 10, 1, 20)).ShouldBeNull();
     }
 
     [Fact]

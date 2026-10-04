@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using Dixels.Portal.Estate;
+using Dixels.Portal.Localization;
 using Volo.Abp.Domain.Entities.Auditing;
 
 namespace Dixels.Portal.Buildings;
 
-public class Building : FullAuditedAggregateRoot<Guid>
+public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<BuildingTranslation>
 {
-    public string Name { get; set; } = null!;
+    /* The name, one row per language. */
+    public ICollection<BuildingTranslation> Translations { get; private set; } = new List<BuildingTranslation>();
     public string TimeZone { get; set; } = "UTC";
     /* Ticked = people may book it. A space is only bookable if its floor and building are too. */
     public bool IsBookable { get; set; } = true;
@@ -22,8 +24,19 @@ public class Building : FullAuditedAggregateRoot<Guid>
 
     protected Building() { }
 
+    /* name is the English name; other languages are added with SetName. */
     public Building(Guid id, string name) : base(id)
     {
-        Name = name;
+        SetName(PortalLanguages.Default, name);
+    }
+
+    /* In the reader's language, or English when it has none. */
+    public string GetName(string? language = null) => this.GetTranslation(language)?.Name ?? "";
+
+    public void SetName(string language, string name)
+    {
+        var t = this.FindTranslation(language);
+        if (t == null) Translations.Add(new BuildingTranslation(Id, language, name));
+        else t.Name = name;
     }
 }

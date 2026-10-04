@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 /* Light or dark for the signed-in app. A first visit follows the device setting; once the person
- * picks one with the top-bar button, that choice is stored and wins. index.html applies the same
+ * picks one (top-bar button or account menu), that choice is stored and wins. index.html applies the same
  * rule before React loads, so a reload never flashes the other theme. */
 export type Theme = 'light' | 'dark'
 
@@ -27,6 +27,7 @@ function applyTheme(theme: Theme) {
 interface ThemeState {
   theme: Theme
   toggle: () => void
+  setTheme: (theme: Theme) => void
 }
 
 const saved = storedTheme()
@@ -37,8 +38,9 @@ applyTheme(initial)
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: initial,
-  toggle: () => {
-    const theme: Theme = get().theme === 'dark' ? 'light' : 'dark'
+  toggle: () => get().setTheme(get().theme === 'dark' ? 'light' : 'dark'),
+  /* From the top-bar button or the account menu; either way the choice is stored and wins. */
+  setTheme: (theme) => {
     chosen = true
     try {
       localStorage.setItem(STORAGE_KEY, theme)

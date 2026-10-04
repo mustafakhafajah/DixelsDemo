@@ -1,3 +1,4 @@
+import i18n from 'i18next'
 import type { Constraints, ScheduleItem } from '../api/types'
 import { DEFAULT_CLOSE_MIN, DEFAULT_OPEN_MIN } from './constants'
 import { closedReason, withoutClosed } from './closedDays'
@@ -139,24 +140,26 @@ export function computeFree(c: Constraints, spaceId: string, items: ScheduleItem
 /* Client-side mirror of the server's window validation, for live form feedback only. */
 export function validateWindowLocal(c: Constraints | null, spaceName: string, start: Date | null, end: Date | null, allowPast = false):
   { code: string; message: string } | null {
-  if (!start || !end) return { code: 'validation.missing_field', message: 'Start and end are both required.' }
-  if (end <= start) return { code: 'validation.end_before_start', message: 'End must be after start.' }
-  if (!allowPast && start < new Date()) return { code: 'validation.start_in_past', message: 'Start must not be in the past.' }
+  if (!start || !end) return { code: 'validation.missing_field', message: i18n.t('validation.startEndRequired') }
+  if (end <= start) return { code: 'validation.end_before_start', message: i18n.t('validation.endAfterStart') }
+  if (!allowPast && start < new Date()) return { code: 'validation.start_in_past', message: i18n.t('validation.startInPast') }
   if (!c) return null
   const closed = closedReason(c, start, end)
-  if (closed) return { code: 'validation.holiday_closed', message: `${spaceName}'s building is closed ${closed}.` }
+  if (closed) return { code: 'validation.holiday_closed', message: i18n.t('validation.buildingClosed', { space: spaceName, when: closed }) }
   const sMin = minOfDay(start)
   const eMin = endMin(end)
   if (sMin < c.openMinute || eMin > c.closeMinute)
     return {
       code: 'validation.outside_hours',
-      message: `${spaceName} can only be booked between ${String(c.openMinute / 60).padStart(2, '0')}:00 and ${String(c.closeMinute / 60).padStart(2, '0')}:00.`,
+      message: i18n.t('validation.outsideHours', {
+        space: spaceName, open: `${String(c.openMinute / 60).padStart(2, '0')}:00`, close: `${String(c.closeMinute / 60).padStart(2, '0')}:00`,
+      }),
     }
   const mins = (end.getTime() - start.getTime()) / 60000
   if (mins < c.minBookingMinutes)
-    return { code: 'validation.duration_below_min', message: `Minimum booking length here is ${c.minBookingMinutes} minutes.` }
+    return { code: 'validation.duration_below_min', message: i18n.t('validation.durationBelowMin', { count: c.minBookingMinutes }) }
   if (mins > c.maxBookingHours * 60)
-    return { code: 'validation.duration_above_max', message: `Maximum booking length here is ${c.maxBookingHours} hours.` }
+    return { code: 'validation.duration_above_max', message: i18n.t('validation.durationAboveMax', { count: c.maxBookingHours }) }
   return null
 }
 

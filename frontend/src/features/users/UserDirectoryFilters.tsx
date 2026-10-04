@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Dropdown } from '../../components/pickers'
 import { useUserRoles } from './api'
 
@@ -17,6 +18,7 @@ export function UserDirectoryFilters({ value, onChange }: {
   value: UserDirectoryFilterValues
   onChange: (v: UserDirectoryFilterValues) => void
 }) {
+  const { t } = useTranslation()
   const roles = useUserRoles()
   const set = (p: Partial<UserDirectoryFilterValues>) => onChange({ ...value, ...p })
   const active = Object.values(value).some((v) => v !== '')
@@ -24,26 +26,26 @@ export function UserDirectoryFilters({ value, onChange }: {
   return (
     <div className="filter-bar">
       <div style={{ flex: 1, minWidth: 220 }}>
-        <label className="lbl" htmlFor="udf-search">Search</label>
-        <input id="udf-search" className="inp" placeholder="Search by name, username or email" value={value.search}
+        <label className="lbl" htmlFor="udf-search">{t('users.search')}</label>
+        <input id="udf-search" className="inp" dir="auto" placeholder={t('users.searchPlaceholder')} value={value.search}
           onChange={(e) => set({ search: e.target.value })} />
       </div>
       <div style={{ width: 160 }}>
-        <label className="lbl" htmlFor="udf-role-filter">Role</label>
+        <label className="lbl" htmlFor="udf-role-filter">{t('users.col.role')}</label>
         <Dropdown id="udf-role-filter" value={value.role} onChange={(v) => set({ role: v })}
-          options={[{ value: '', label: 'All roles' }, ...(roles.data ?? []).map((r) => ({ value: r.name, label: r.displayName }))]} />
+          options={[{ value: '', label: t('users.allRoles') }, ...(roles.data ?? []).map((r) => ({ value: r.name, label: r.displayName }))]} />
       </div>
       <div style={{ width: 160 }}>
-        <label className="lbl" htmlFor="udf-status">Status</label>
+        <label className="lbl" htmlFor="udf-status">{t('users.col.status')}</label>
         <Dropdown id="udf-status" value={value.status} onChange={(v) => set({ status: v })}
-          options={[{ value: '', label: 'All statuses' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
+          options={[{ value: '', label: t('users.allStatuses') }, { value: 'active', label: t('users.active') }, { value: 'inactive', label: t('users.inactive') }]} />
       </div>
       <div style={{ width: 150 }}>
-        <label className="lbl" htmlFor="udf-lock">Lock</label>
+        <label className="lbl" htmlFor="udf-lock">{t('users.col.lock')}</label>
         <Dropdown id="udf-lock" value={value.lock} onChange={(v) => set({ lock: v })}
-          options={[{ value: '', label: 'All' }, { value: 'locked', label: 'Locked' }, { value: 'unlocked', label: 'Not locked' }]} />
+          options={[{ value: '', label: t('users.all') }, { value: 'locked', label: t('users.locked') }, { value: 'unlocked', label: t('users.notLocked') }]} />
       </div>
-      <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_USER_FILTERS)}>Clear filters</button>
+      <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_USER_FILTERS)}>{t('common.clearFilters')}</button>
     </div>
   )
 }

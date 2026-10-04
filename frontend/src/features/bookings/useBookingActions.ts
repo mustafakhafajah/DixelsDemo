@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCancelBooking, useCancelBookingSeries, useCancelMaintenance, useEndBookingEarly } from '../../api/hooks'
 import { errorText } from '../../api/client'
 import type { Booking } from '../../api/types'
@@ -5,6 +6,7 @@ import { hm, stamp } from '../../lib/dateUtils'
 import { toast } from '../../state/toastStore'
 
 export function useBookingActions() {
+  const { t } = useTranslation()
   const cancel = useCancelBooking()
   const cancelSeries = useCancelBookingSeries()
   const endEarly = useEndBookingEarly()
@@ -18,16 +20,16 @@ export function useBookingActions() {
   return {
     busy: cancel.isPending || cancelSeries.isPending || endEarly.isPending || cancelMaint.isPending,
     cancel: (b: Booking) =>
-      cancel.mutateAsync(b.id).then(() => toast('ok', 'Booking cancelled', `${b.spaceName} · the slot is free again.`), fail('Cancel failed')),
+      cancel.mutateAsync(b.id).then(() => toast('ok', t('actions.cancelled'), t('actions.cancelledMessage', { space: b.spaceName })), fail(t('actions.cancelFailed'))),
     cancelSeriesFrom: (b: Booking) =>
       cancelSeries.mutateAsync(b.id).then(
-        (r) => toast('ok', `${r.cancelledCount} occurrences cancelled`, `Series from ${stamp(b.start)} onward.`),
-        fail('Cancel failed')),
+        (r) => toast('ok', t('actions.seriesCancelled', { count: r.cancelledCount }), t('actions.seriesCancelledMessage', { from: stamp(b.start) })),
+        fail(t('actions.cancelFailed'))),
     endEarly: (b: Booking) =>
       endEarly.mutateAsync(b.id).then(
-        () => toast('ok', 'Booking ended', `Ended at ${hm(new Date())} UTC. The rest of the window is free.`),
-        fail('Could not end booking')),
+        () => toast('ok', t('actions.ended'), t('actions.endedMessage', { time: hm(new Date()) })),
+        fail(t('actions.endFailed'))),
     cancelMaintenance: (id: string) =>
-      cancelMaint.mutateAsync(id).then(() => toast('ok', 'Time unblocked', 'It can be booked again.'), fail('Request rejected')),
+      cancelMaint.mutateAsync(id).then(() => toast('ok', t('actions.unblocked'), t('actions.unblockedMessage')), fail(t('common.requestRejected'))),
   }
 }

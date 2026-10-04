@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Microsoft.Extensions.Localization;
 using Shouldly;
 using Volo.Abp;
 using Xunit;
@@ -10,7 +12,15 @@ public class EstateOverrideRulesTests
     private static readonly ResolvedBounds Parent = new(OpenHour: 8, CloseHour: 20, MinBookingMinutes: 15, MaxBookingHours: 8);
 
     private static void Check(int? open = null, int? close = null, int? min = null, int? max = null)
-        => EstateOverrideRules.EnsureOnlyNarrows("Floor", "the building", "the building's", Parent, open, close, min, max);
+        => EstateOverrideRules.EnsureOnlyNarrows(new KeyLocalizer(), EstateOverrideRules.FloorLevel, Parent, open, close, min, max);
+
+    /* Hands back the key, so these tests check the rule and not its wording. */
+    private sealed class KeyLocalizer : IStringLocalizer
+    {
+        public LocalizedString this[string name] => new(name, name);
+        public LocalizedString this[string name, params object[] arguments] => new(name, name);
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
+    }
 
     [Fact]
     public void No_overrides_is_always_allowed() => Should.NotThrow(() => Check());

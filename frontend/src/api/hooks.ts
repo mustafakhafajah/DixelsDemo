@@ -19,6 +19,7 @@ import {
   type Space,
   type SpaceRegistryPage,
   type SpaceType,
+  type Translation,
   type UserLookup,
   type Window,
 } from './types'
@@ -393,6 +394,7 @@ export function useCancelMaintenance() {
 
 export interface BuildingInput {
   name: string
+  translations: Translation[]
   timeZone: string
   isBookable: boolean
   openHour: number
@@ -406,6 +408,7 @@ export interface BuildingInput {
 export interface FloorInput {
   buildingId: string
   name: string
+  translations: Translation[]
   isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
@@ -415,6 +418,7 @@ export interface FloorInput {
 
 export interface SpaceInput {
   name: string
+  translations: Translation[]
   typeId: string
   isBookable: boolean
   buildingId: string
@@ -481,8 +485,8 @@ export function useCancelUpcoming() {
 }
 
 export const useSaveSpaceType = () =>
-  useEstateMutation<{ id?: string; name: string }>((api, { id, name }) =>
-    id ? api<SpaceType>('PUT', `/api/app/space-type/${id}`, { name }) : api<SpaceType>('POST', '/api/app/space-type', { name }))
+  useEstateMutation<{ id?: string; name: string; translations: Translation[] }>((api, { id, ...body }) =>
+    id ? api<SpaceType>('PUT', `/api/app/space-type/${id}`, body) : api<SpaceType>('POST', '/api/app/space-type', body))
 
 /* Only allowed when no space uses the type; the server answers space_type.in_use otherwise. */
 export const useDeleteSpaceType = () =>

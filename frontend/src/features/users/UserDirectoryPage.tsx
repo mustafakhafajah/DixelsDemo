@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
@@ -7,6 +7,7 @@ import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { useServerPaging, useStayOnRealPage } from '../../lib/useServerPaging'
 import { useScheduleStore } from '../../state/scheduleStore'
 import { roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
 import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
@@ -46,29 +47,24 @@ export function UserDirectoryPage() {
   const { userId, isAdmin } = useSession()
   const navigate = useNavigate()
   const [filters, setFilters] = useState<UserDirectoryFilterValues>(EMPTY_USER_FILTERS)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
-  /* Only the typed search is debounced; dropdowns apply at once. */
+  const paging = useServerPaging()
+  const { page, pageSize, setPage } = paging
+  /* Only the typed search is debounced; dropdowns apply at once. Every filter and page goes to the server. */
   const search = useDebouncedValue(filters.search.trim())
 
   const roles = useUserRoles().data
 
   const q = useUserDirectory({
     page, pageSize, filter: search || undefined,
-    role: filters.role || undefined,
+    roleId: filters.role || undefined,
     isActive: filters.status ? filters.status === 'active' : undefined,
     isLocked: filters.lock ? filters.lock === 'locked' : undefined,
   })
   const total = q.data?.totalCount ?? 0
-
-  /* If the result shrinks (a filter, or accounts removed elsewhere), stay on a real page. */
-  useEffect(() => {
-    const pageCount = Math.max(1, Math.ceil(total / pageSize))
-    if (q.data && page > pageCount) setPage(pageCount)
-  }, [q.data, total, page, pageSize])
+  useStayOnRealPage(paging, q.data?.totalCount)
 
   const changeFilters = (v: UserDirectoryFilterValues) => { setFilters(v); setPage(1) }
-  const changePageSize = (s: number) => { setPageSize(s); setPage(1) }
+  const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
 
   const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin

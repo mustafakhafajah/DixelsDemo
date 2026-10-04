@@ -20,9 +20,9 @@ public class SpaceController : PortalController, ISpaceAppService
         _spaces = spaces;
     }
 
-    /* Every space, for pickers. */
+    /* Spaces for pickers; BuildingId / FloorId narrow it to one building or floor. */
     [HttpGet]
-    public Task<PagedResultDto<SpaceDto>> GetListAsync([FromQuery] EstateListInput input) => _spaces.GetListAsync(input);
+    public Task<PagedResultDto<SpaceDto>> GetListAsync([FromQuery] GetSpaceListInput input) => _spaces.GetListAsync(input);
 
     /* "Find a space": bookable spaces matching the filters. */
     [HttpGet("bookable-list")]

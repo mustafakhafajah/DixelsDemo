@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
@@ -6,14 +7,14 @@ using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
+using Microsoft.Extensions.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Bookings;
 
 /* Booking business rules, ported from the mock's api.js rules engine. */
-public class BookingManager : DomainService
+public class BookingManager : PortalDomainService
 {
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IRepository<Floor, Guid> _floors;
@@ -53,7 +54,7 @@ public class BookingManager : DomainService
     public async Task<SpaceContext> GetSpaceContextAsync(Guid spaceId)
     {
         var space = await _spaces.FindAsync(spaceId)
-            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "No space with that ID.").ForField("spaceId");
+            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: L["Error:SpaceNotFound"]).ForField("spaceId");
         var building = await _buildings.GetAsync(space.BuildingId);
         var floor = await _floors.FindAsync(space.FloorId);
         return new SpaceContext(space, floor, building);
@@ -61,59 +62,73 @@ public class BookingManager : DomainService
 
     public void ValidateWindow(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
     {
+        var problem = FindWindowProblem(ctx, startUtc, endUtc, allowPast);
+        if (problem != null) throw problem;
+    }
+
+    /* The first rule the window breaks (missing or reversed times, past start, closed day, opening hours,
+     * min / max length), or null when it fits. ValidateWindow throws it; "Find a space" uses it to keep only
+     * spaces that are free for a window without throwing per space. */
+    public BusinessException? FindWindowProblem(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
+    {
         if (startUtc == default || endUtc == default)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Start and end are both required.").ForField("start");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:StartEndRequired"]).ForField("start");
         if (endUtc <= startUtc)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: "End must be after start.").ForField("end");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: L["Error:EndBeforeStart"]).ForField("end");
         if (!allowPast && startUtc < Clock.Now)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: "Start must not be in the past.").ForField("start");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: L["Error:StartInPast"]).ForField("start");
 
         var c = ctx.Constraints;
-        var closed = BuildingCalendar.ClosedReason(c, startUtc, endUtc);
+        var closed = BuildingCalendar.FindClosedDay(c, startUtc, endUtc);
         if (closed != null)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message:
-                $"{ctx.Space.Name}'s building is closed {closed}.").ForField("date");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message: closed.IsHoliday
+                ? L["Error:ClosedForHoliday", ctx.Space.GetName(), closed.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)]
+                : L["Error:ClosedOnWeekday", ctx.Space.GetName(), L[$"Weekdays:{(int)closed.Day.DayOfWeek}"]]).ForField("date");
 
         var sMin = startUtc.Hour * 60 + startUtc.Minute;
         var eMin = endUtc.Hour * 60 + endUtc.Minute;
         if (eMin == 0) eMin = 1440;
         if (sMin < c.OpenMinute || eMin > c.CloseMinute || endUtc.Date > startUtc.Date && eMin != 1440)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
-                $"{ctx.Space.Name} can only be booked between {c.OpenMinute / 60:00}:00 and {c.CloseMinute / 60:00}:00.").ForField("window");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
+                L["Error:OutsideHours", ctx.Space.GetName(), $"{c.OpenMinute / 60:00}:00", $"{c.CloseMinute / 60:00}:00"]).ForField("window");
 
         var mins = (endUtc - startUtc).TotalMinutes;
         if (mins < c.MinBookingMinutes)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
-                $"Minimum booking length here is {c.MinBookingMinutes} minutes.").ForField("window");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
+                L["Error:DurationBelowMin", c.MinBookingMinutes]).ForField("window");
         if (mins > c.MaxBookingHours * 60)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
-                $"Maximum booking length here is {c.MaxBookingHours} hours.").ForField("window");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
+                L["Error:DurationAboveMax", c.MaxBookingHours]).ForField("window");
+        return null;
     }
 
     public void EnsureBookable(SpaceContext ctx)
     {
-        var blocker = FindBookingBlocker(ctx);
+        var blocker = FindBookingBlocker(ctx, L);
         if (blocker != null) throw blocker;
     }
 
-    public static bool CanBook(SpaceContext ctx) => FindBookingBlocker(ctx) == null;
+    public static bool CanBook(SpaceContext ctx)
+        => ctx.Building.IsBookable && ctx.Floor is not { IsBookable: false } && ctx.Space.IsBookable;
 
-    /* The sentence the UI shows next to a space that can't be booked, e.g. "HQ North is not bookable". */
-    public static string? FindNotBookableReason(SpaceContext ctx) => FindBookingBlocker(ctx)?.Message;
+    /* The sentence the UI shows next to a space that can't be booked, e.g. "HQ North is not bookable",
+     * in the language of the given localizer. */
+    public static string? FindNotBookableReason(SpaceContext ctx, IStringLocalizer l) => FindBookingBlocker(ctx, l)?.Message;
 
-    /* The one list of reasons a space can't be booked, shared by the yes/no check, the reason text and the
-     * throwing check. The building is checked first, so the message names the level that actually blocks it. */
-    private static BusinessException? FindBookingBlocker(SpaceContext ctx)
+    /* The one list of reasons a space can't be booked, shared by the reason text and the throwing check
+     * (CanBook asks the same three questions). The building is checked first, so the message names the level
+     * that actually blocks it. */
+    private static BusinessException? FindBookingBlocker(SpaceContext ctx, IStringLocalizer l)
     {
         if (!ctx.Building.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.BuildingNotBookable, message:
-                $"{ctx.Building.Name} is not bookable, so none of its spaces can be booked.").ForField("spaceId");
+                l["Error:BuildingNotBookable", ctx.Building.GetName()]).ForField("spaceId");
         if (ctx.Floor != null && !ctx.Floor.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.FloorNotBookable, message:
-                $"{ctx.Building.Name} · Floor {ctx.Floor.Name} is not bookable, so none of its spaces can be booked.").ForField("spaceId");
+                l["Error:FloorNotBookable", ctx.Building.GetName(), ctx.Floor.GetName()]).ForField("spaceId");
         if (!ctx.Space.IsBookable)
             return new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotBookable, message:
-                $"{ctx.Space.Name} is not bookable.").ForField("spaceId");
+                l["Error:SpaceNotBookable", ctx.Space.GetName()]).ForField("spaceId");
         return null;
     }
 
@@ -123,7 +138,7 @@ public class BookingManager : DomainService
             .ToExpression().And(x => x.SpaceId == ctx.Space.Id));
         if (m != null)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceUnderMaintenance, message:
-                    $"{ctx.Space.Name} is blocked ({m.Note ?? "blocked time"}) from {Stamp(m.StartUtc, m.EndUtc)} and can't be booked then.")
+                    L["Error:SpaceUnderMaintenance", ctx.Space.GetName(), m.Note ?? L["BlockedTime"], Stamp(m.StartUtc, m.EndUtc)])
                 .WithData("maintenanceId", m.Id)
                 .WithData("scope", m.ScopeType.ToString())
                 .WithData(ErrorFieldExtensions.FieldKey, "window");
@@ -135,7 +150,7 @@ public class BookingManager : DomainService
             .ToExpression().And(b => b.SpaceId == spaceId && b.Id != excludeId));
         if (c != null)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingConflict, message:
-                    "The space is already booked for part of that window.")
+                    L["Error:BookingConflict"])
                 .WithData("conflictingBookingId", c.Id)
                 .WithData("conflictStart", c.StartUtc.ToString("o"))
                 .WithData("conflictEnd", c.EndUtc.ToString("o"))
@@ -151,7 +166,7 @@ public class BookingManager : DomainService
         {
             var other = await _spaces.FindAsync(so.SpaceId);
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingSelfOverlap, message:
-                    $"You already have {other?.Name ?? "another space"} booked from {Hm(so.StartUtc)} to {Hm(so.EndUtc)}.")
+                    L["Error:BookingSelfOverlap", other?.GetName() ?? L["AnotherSpace"], Hm(so.StartUtc), Hm(so.EndUtc)])
                 .WithData("conflictingBookingId", so.Id)
                 .WithData("conflictingSpace", so.SpaceId)
                 .WithData(ErrorFieldExtensions.FieldKey, "window");
@@ -170,10 +185,10 @@ public class BookingManager : DomainService
             await EnsureNoSelfOverlapAsync(ownerId, ctx.Space.Id, startUtc, endUtc, null);
     }
 
-    private static string Hm(DateTime d) => d.ToString("HH:mm");
+    private static string Hm(DateTime d) => d.ToString("HH:mm", CultureInfo.InvariantCulture);
 
     /* "09:00 to 11:00" on one day, "2026-10-01 09:00 to 2026-10-21 18:00" across days (blocked time can be long). */
-    private static string Stamp(DateTime s, DateTime e) => s.Date == e.Date
-        ? $"{Hm(s)} to {Hm(e)}"
-        : $"{s:yyyy-MM-dd HH:mm} to {e:yyyy-MM-dd HH:mm}";
+    private string Stamp(DateTime s, DateTime e) => s.Date == e.Date
+        ? L["TimeRange", Hm(s), Hm(e)]
+        : L["TimeRange", s.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), e.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)];
 }

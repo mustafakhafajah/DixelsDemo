@@ -1,4 +1,6 @@
-import { dayAt, dayKey } from './dateUtils'
+import i18n from 'i18next'
+import { intlLocale } from '../i18n/languages'
+import { dayAt, dayKey, weekdayName } from './dateUtils'
 import type { MinuteWindow } from './laneLayout'
 
 /* A building's closed days (holiday dates and weekly closed days). They are days in the building's own time
@@ -9,9 +11,9 @@ export interface ClosedRules {
   timeZone: string
 }
 
-/* Weekday toggles, Monday first; the numbers are JS getDay() (0 = Sunday), as the server stores them. */
-export const WEEKDAYS: [number, string][] = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']]
-const WEEKDAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
+/* Weekday toggles, Monday first; the numbers are JS getDay() (0 = Sunday), as the server stores them.
+ * Their names come from weekdayName(), in the chosen language. */
+export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0]
 
 export function isValidTimeZone(tz: string): boolean {
   try {
@@ -53,9 +55,9 @@ export function closedReason(r: ClosedRules, start: Date, end: Date): string | n
   const first = localDayKey(start, r.timeZone)
   const last = localDayKey(new Date(Math.max(start.getTime(), end.getTime() - 1)), r.timeZone)
   for (let k = first; k <= last; k = dayKey(new Date(dayAt(k).getTime() + 86400000))) {
-    if (r.holidays.includes(k)) return `for a holiday on ${k}`
+    if (r.holidays.includes(k)) return i18n.t('closed.onHoliday', { date: k })
     const wd = dayAt(k).getUTCDay()
-    if (r.closedWeekdays.includes(wd)) return `on ${WEEKDAY_NAMES[wd]}`
+    if (r.closedWeekdays.includes(wd)) return i18n.t('closed.onWeekday', { day: weekdayName(wd) })
   }
   return null
 }
@@ -89,6 +91,6 @@ export function withoutClosed(r: ClosedRules, key: string, windows: MinuteWindow
 
 /* "Closed Fri, Sat" for a building's list line; empty when it has no weekly closed days. */
 export function closedWeekdaysLabel(days: number[]): string {
-  const names = WEEKDAYS.filter(([d]) => days.includes(d)).map(([, n]) => n)
-  return names.length ? `Closed ${names.join(', ')}` : ''
+  const names = WEEKDAYS.filter((d) => days.includes(d)).map((d) => weekdayName(d, 'short'))
+  return names.length ? i18n.t('closed.weekdays', { days: new Intl.ListFormat(intlLocale(), { style: 'short', type: 'unit' }).format(names) }) : ''
 }

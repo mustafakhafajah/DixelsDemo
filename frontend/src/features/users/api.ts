@@ -1,20 +1,19 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import i18n from 'i18next'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from '../../api/client'
 
-/* The directory reads ABP's own Identity API (/api/identity/...): no Dixels service of its own.
- * ABP only searches and pages, so the page loads every account once (up to MAX_USERS) with each one's
- * roles, and searches, filters and pages them here. Fine for a company-sized list. */
+/* Users are managed in ABP's own Users page; the directory only reads them. Each filter and page change is one
+ * request to /api/app/user-directory, which runs the search and the role / status / lock filters in the
+ * database through ABP's user repository (ABP's public /api/identity/users only takes a search text). */
 
 /* A role's name, e.g. 'admin' or 'employee'; any role the server has. */
 export type UserRole = string
 
 export interface UserDirectoryRole {
+  id: string
   name: UserRole
   displayName: string
-  /* ABP's admin role. */
-  isAdmin: boolean
 }
 
 export interface UserDirectoryItem {
@@ -22,11 +21,11 @@ export interface UserDirectoryItem {
   name: string
   userName: string
   email: string
-  /* The main role (admin wins), or null when the user has none. */
+  /* The first role by name, or null when the user has none. */
   role: UserRole | null
   roles: UserRole[]
   isActive: boolean
-  /* UTC ISO instant, or null when the account has no lockout. */
+  /* UTC ISO instant, or null when the account is not locked. */
   lockoutEnd: string | null
   isLocked: boolean
 }
@@ -35,102 +34,81 @@ export interface UserDirectoryQuery {
   page: number
   pageSize: number
   filter?: string
-  role?: UserRole
+  roleId?: string
   isActive?: boolean
   isLocked?: boolean
 }
 
-/* The parts of ABP's IdentityUserDto / IdentityRoleDto the page uses. */
-interface AbpUser {
+/* What /api/app/user-directory and ABP's /api/identity/roles/all send. */
+interface UserDirectoryDto {
   id: string
+  name: string
   userName: string
-  name: string | null
-  surname: string | null
   email: string
   isActive: boolean
-  lockoutEnabled: boolean
+  isLocked: boolean
   lockoutEnd: string | null
+  roles: string[]
 }
-interface AbpRole { name: string }
+interface AbpRole { id: string; name: string }
 interface ListResult<T> { items: T[] }
-
-/* ABP's default cap on one page of results. */
-const MAX_USERS = 1000
-const ADMIN_ROLE = 'admin'
+interface PagedResult<T> extends ListResult<T> { totalCount: number }
 
 function useEnabled() {
   return !!useAuth().user?.access_token
 }
 
-/* Admin first, then by name. */
-const byRole = (a: string, b: string) =>
-  (a.toLowerCase() === ADMIN_ROLE ? -1 : b.toLowerCase() === ADMIN_ROLE ? 1 : a.localeCompare(b))
+/* Roles by name; no role is special. */
+const byRole = (a: string, b: string) => a.localeCompare(b)
 
-/* Every account with its roles, from ABP. */
-function useAllUsers() {
+/* One page of the directory, searched and filtered on the server. */
+export function useUserDirectory(q: UserDirectoryQuery) {
   const api = useApi()
   return useQuery({
-    queryKey: ['users', 'directory', 'all'],
-    queryFn: async (): Promise<UserDirectoryItem[]> => {
-      const users = (await api<ListResult<AbpUser>>('GET', '/api/identity/users', undefined,
-        { Sorting: 'userName', MaxResultCount: MAX_USERS })).items
-      const now = Date.now()
-      return Promise.all(users.map(async (u) => {
-        const roles = (await api<ListResult<AbpRole>>('GET', `/api/identity/users/${u.id}/roles`)).items
-          .map((r) => r.name).sort(byRole)
-        const locked = u.lockoutEnabled && !!u.lockoutEnd && new Date(u.lockoutEnd).getTime() > now
-        return {
-          id: u.id,
-          name: [u.name, u.surname].filter(Boolean).join(' ') || u.userName,
-          userName: u.userName,
-          email: u.email,
-          role: roles[0] ?? null,
-          roles,
-          isActive: u.isActive,
-          lockoutEnd: locked ? u.lockoutEnd : null,
-          isLocked: locked,
-        }
-      }))
+    queryKey: ['users', 'directory', q],
+    queryFn: async () => {
+      const page = await api<PagedResult<UserDirectoryDto>>('GET', '/api/app/user-directory', undefined, {
+        Filter: q.filter,
+        RoleId: q.roleId,
+        IsActive: q.isActive === undefined ? undefined : String(q.isActive),
+        IsLocked: q.isLocked === undefined ? undefined : String(q.isLocked),
+        SkipCount: String((q.page - 1) * q.pageSize),
+        MaxResultCount: String(q.pageSize),
+      })
+      return {
+        totalCount: page.totalCount,
+        items: page.items.map((u): UserDirectoryItem => {
+          const roles = [...u.roles].sort(byRole)
+          return { ...u, name: u.name || u.userName, role: roles[0] ?? null, roles }
+        }),
+      }
     },
     enabled: useEnabled(),
+    /* Keep the current page on screen while a changed filter or page loads, instead of flashing "Loading…". */
+    placeholderData: keepPreviousData,
   })
 }
 
-/* One page of the directory, searched and filtered in the browser (ABP's API can't filter by role,
- * status or lock). Shaped like a query so the page can treat it as one. */
-export function useUserDirectory(q: UserDirectoryQuery) {
-  const all = useAllUsers()
-  const data = useMemo(() => {
-    if (!all.data) return undefined
-    const text = q.filter?.toLowerCase()
-    const role = q.role?.toLowerCase()
-    const matches = all.data
-      .filter((u) => !text || [u.name, u.userName, u.email].some((v) => v.toLowerCase().includes(text)))
-      .filter((u) => !role || u.roles.some((r) => r.toLowerCase() === role))
-      .filter((u) => q.isActive === undefined || u.isActive === q.isActive)
-      .filter((u) => q.isLocked === undefined || u.isLocked === q.isLocked)
-      .sort((a, b) => a.name.localeCompare(b.name))
-    const start = (q.page - 1) * q.pageSize
-    return { totalCount: matches.length, items: matches.slice(start, start + q.pageSize) }
-  }, [all.data, q.filter, q.role, q.isActive, q.isLocked, q.page, q.pageSize])
-  return { data, isError: all.isError, error: all.error, refetch: all.refetch, isPlaceholderData: false }
-}
-
-/* Every role, admin first, from ABP. */
+/* Every role, by name, from ABP. */
 export function useUserRoles() {
   const api = useApi()
   return useQuery({
     queryKey: ['users', 'roles'],
     queryFn: async (): Promise<UserDirectoryRole[]> =>
       (await api<ListResult<AbpRole>>('GET', '/api/identity/roles/all')).items
-        .map((r) => r.name).sort(byRole)
-        .map((name) => ({ name, displayName: roleLabel(name), isAdmin: name.toLowerCase() === ADMIN_ROLE })),
+        .sort((a, b) => byRole(a.name, b.name))
+        .map((r) => ({ id: r.id, name: r.name, displayName: roleLabel(r.name) })),
     enabled: useEnabled(),
   })
 }
 
+/* The roles the portal seeds get a translated name; any other role is shown as the server names it. */
+const ROLE_KEYS = { admin: 'roles.admin', employee: 'roles.employee' } as const
+
 /* "front_desk" -> "Front desk": a readable label for a role name. */
 export function roleLabel(role: UserRole, roles?: UserDirectoryRole[]) {
+  const key = ROLE_KEYS[role.toLowerCase() as keyof typeof ROLE_KEYS]
+  if (key) return i18n.t(key)
   const known = roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())
   if (known) return known.displayName
   const words = role.replace(/[_-]/g, ' ').trim()

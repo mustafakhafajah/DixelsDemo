@@ -23,7 +23,8 @@ function App() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        {/* Under /portal/ on the shared server; "/" in development. */}
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Routes>
             <Route path="/" element={<LoginPage />} />
             <Route path="/callback" element={<AuthCallbackPage />} />

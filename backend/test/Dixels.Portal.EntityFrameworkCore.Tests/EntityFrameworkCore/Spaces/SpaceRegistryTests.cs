@@ -81,31 +81,18 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
         studios.Items.Single().Id.ShouldBe(e.Floor2Spaces[0].Id);
     }
 
-    [Theory]
-    [InlineData("SP-{0}")]      // exactly as the UI shows it
-    [InlineData("sp-{0}")]      // lower-case
-    [InlineData("{0}")]         // without the prefix
-    public async Task Finds_a_space_by_its_displayed_id(string pattern)
-    {
-        var e = await CreateEstateAsync(spacesPerFloor: 2);
-        var target = e.Floor1Spaces[1];
-        var shortId = target.Id.ToString("N")[..8].ToUpperInvariant();
-
-        var page = await _service.GetPagedListAsync(new GetSpacesInput { Code = string.Format(pattern, shortId) });
-
-        page.Items.Select(s => s.Id).ShouldContain(target.Id);
-        page.Items.ShouldAllBe(s => s.Id.ToString().StartsWith(shortId.ToLowerInvariant()));
-    }
-
+    /* The picker list (Schedule and booking-form dropdowns) asks the server for one building or floor. */
     [Fact]
-    public async Task Finds_a_space_by_its_full_guid()
+    public async Task Picker_list_is_narrowed_to_a_building_or_floor_on_the_server()
     {
-        var e = await CreateEstateAsync(spacesPerFloor: 2);
-        var target = e.Floor1Spaces[0];
+        var e = await CreateEstateAsync(spacesPerFloor: 3);
 
-        var page = await _service.GetPagedListAsync(new GetSpacesInput { Code = target.Id.ToString().ToUpperInvariant() });
+        var floor2 = await _service.GetListAsync(new GetSpaceListInput { FloorId = e.Floor2.Id });
+        var building = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id });
 
-        page.Items.Single().Id.ShouldBe(target.Id);
+        floor2.Items.Select(s => s.Id).ShouldBe(e.Floor2Spaces.Select(s => s.Id), ignoreOrder: true);
+        floor2.TotalCount.ShouldBe(3);
+        building.TotalCount.ShouldBe(6);
     }
 
     [Fact]
@@ -131,17 +118,16 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public void The_id_filter_also_translates_for_PostgreSQL()
+    public void The_name_filter_also_translates_for_PostgreSQL()
     {
         /* Production runs on Postgres, tests on SQLite: build the query for Npgsql (no connection needed). */
         using var db = new PortalDbContext(new DbContextOptionsBuilder<PortalDbContext>()
             .UseNpgsql("Host=localhost;Database=translation-check").Options);
 
         /* IgnoreQueryFilters: ABP's soft-delete filter needs ABP's services, which a hand-made context lacks. */
-        var sql = db.Set<Space>().IgnoreQueryFilters().ApplyRegistryFilter(new GetSpacesInput { Code = "SP-3F2A", Name = "room" }).ToQueryString();
+        var sql = db.Set<Space>().IgnoreQueryFilters().ApplyRegistryFilter(new GetSpacesInput { Name = "room" }).ToQueryString();
 
-        sql.ShouldContain("::text");
-        sql.ShouldContain("LIKE");
+        sql.ShouldContain("lower(");
     }
 
     private Task<Booking> BookAsync(Space space, double fromHours, double toHours)
@@ -166,7 +152,7 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
                 var list = new List<Space>();
                 for (var i = 0; i < n; i++)
                     list.Add(await _spaces.InsertAsync(
-                        new Space(Guid.NewGuid(), $"Room {f.Name}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
+                        new Space(Guid.NewGuid(), $"Room {f.GetName()}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
                         autoSave: true));
                 return list;
             }

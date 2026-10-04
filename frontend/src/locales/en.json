@@ -1,0 +1,769 @@
+{
+  "app": {
+    "title": "Dixels — Booking Management Service"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "common": {
+    "actions": "Actions",
+    "add": "Add",
+    "allBuildings": "All buildings",
+    "allFloors": "All floors",
+    "allTypes": "All types",
+    "building": "Building",
+    "buildingFirst": "Building first",
+    "cancel": "Cancel",
+    "capacity": "Capacity",
+    "chooseBuilding": "Choose a building",
+    "chooseBuildingFirst": "Choose a building first",
+    "chooseFloor": "Choose a floor",
+    "chooseFloorFirst": "Choose a floor first",
+    "clearFilters": "Clear filters",
+    "close": "Close",
+    "date": "Date",
+    "delete": "Delete",
+    "description": "Description",
+    "discard": "Discard",
+    "dismiss": "Dismiss",
+    "edit": "Edit",
+    "end": "End",
+    "endTime": "End time",
+    "floor": "Floor",
+    "floorIn": "{{building}} · Floor {{floor}}",
+    "floorName": "Floor {{name}}",
+    "from": "From",
+    "hide": "Hide",
+    "listSeparator": ", ",
+    "loading": "Loading…",
+    "name": "Name",
+    "now": "Now",
+    "pickDate": "Pick a date",
+    "reason": "Reason",
+    "requestRejected": "Request rejected",
+    "requiredField": "Required field",
+    "saveChanges": "Save changes",
+    "select": "Select…",
+    "show": "Show",
+    "somethingWrong": "Something went wrong.",
+    "space": "Space",
+    "start": "Start",
+    "startTime": "Start time",
+    "time": "Time",
+    "to": "To",
+    "today": "Today",
+    "tryAgain": "Try again",
+    "type": "Type",
+    "until": "Until",
+    "you": "You"
+  },
+  "time": {
+    "hoursShort_one": "{{count}}h",
+    "hoursShort_other": "{{count}}h",
+    "minutesShort_one": "{{count}}m",
+    "minutesShort_other": "{{count}}m"
+  },
+  "closed": {
+    "onHoliday": "for a holiday on {{date}}",
+    "onWeekday": "on {{day}}s",
+    "weekdays": "Closed {{days}}"
+  },
+  "validation": {
+    "startEndRequired": "Start and end are both required.",
+    "endAfterStart": "End must be after start.",
+    "startInPast": "Start must not be in the past.",
+    "buildingClosed": "{{space}}'s building is closed {{when}}.",
+    "outsideHours": "{{space}} can only be booked between {{open}} and {{close}}.",
+    "durationBelowMin_one": "Minimum booking length here is {{count}} minute.",
+    "durationBelowMin_other": "Minimum booking length here is {{count}} minutes.",
+    "durationAboveMax_one": "Maximum booking length here is {{count}} hour.",
+    "durationAboveMax_other": "Maximum booking length here is {{count}} hours."
+  },
+  "status": {
+    "bookable": "Bookable",
+    "cancelled": "Cancelled",
+    "confirmed": "Confirmed",
+    "ended": "Ended",
+    "inProgress": "In progress",
+    "notBookable": "Not bookable",
+    "scheduled": "Scheduled"
+  },
+  "count": {
+    "building_one": "{{count, number}} building",
+    "building_other": "{{count, number}} buildings",
+    "floor_one": "{{count, number}} floor",
+    "floor_other": "{{count, number}} floors",
+    "holiday_zero": "No holidays",
+    "holiday_one": "{{count, number}} holiday",
+    "holiday_other": "{{count, number}} holidays",
+    "room_one": "{{count, number}} room",
+    "room_other": "{{count, number}} rooms",
+    "space_one": "{{count, number}} space",
+    "space_other": "{{count, number}} spaces",
+    "spaceType_one": "{{count, number}} space type",
+    "spaceType_other": "{{count, number}} space types",
+    "user_one": "{{count, number}} user",
+    "user_other": "{{count, number}} users"
+  },
+  "load": {
+    "failed": "Couldn't load {{what}}.",
+    "buildings": "the buildings",
+    "floors": "the floors",
+    "rooms": "the rooms",
+    "spaces": "the spaces",
+    "spaceTypes": "the space types",
+    "users": "the users",
+    "yourBookings": "your bookings"
+  },
+  "pagination": {
+    "showing": "Showing {{first, number}}–{{last, number}} of {{total}}",
+    "pages": "Pages",
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page",
+    "rows": "Rows",
+    "rowsPerPage": "Rows per page"
+  },
+  "nav": {
+    "schedule": "Schedule",
+    "mySchedule": "My Schedule",
+    "findSpace": "Find a space",
+    "spaceManagement": "Space management",
+    "buildings": "Buildings",
+    "floors": "Floors",
+    "spaces": "Spaces",
+    "spaceTypes": "Space types",
+    "administration": "Administration",
+    "userDirectory": "User directory",
+    "noRole": "No role",
+    "signOut": "Sign out",
+    "accountMenu": "Account menu for {{name}}",
+    "openMenu": "Open menu",
+    "themeLight": "Switch to light theme",
+    "themeDark": "Switch to dark theme",
+    "theme": "Theme",
+    "themeLightName": "Light",
+    "themeDarkName": "Dark",
+    "newBooking": "New booking"
+  },
+  "pages": {
+    "find": {
+      "title": "Find a space",
+      "subtitle": "See every room at a glance, or search a specific time. No approval step."
+    },
+    "bookings": {
+      "title": "Bookings",
+      "subtitle": "A calendar view of your bookings."
+    },
+    "buildings": {
+      "title": "Buildings",
+      "subtitle": "The estate every floor and space belongs to. A building's time zone applies to every floor and space in it."
+    },
+    "floors": {
+      "title": "Floors",
+      "subtitle": "Every floor across every building. A floor uses its building's time zone."
+    },
+    "spaces": {
+      "title": "Spaces",
+      "subtitle": "The units people can book. One row is one physical unit; a space uses its building's time zone."
+    },
+    "spaceTypes": {
+      "title": "Space types",
+      "subtitle": "The kinds of space an admin can give a space. Renaming a type updates every space that uses it."
+    },
+    "users": {
+      "title": "User directory",
+      "subtitle": "Portal accounts, their roles and access."
+    }
+  },
+  "roles": {
+    "admin": "Admin",
+    "employee": "Employee"
+  },
+  "login": {
+    "live": "Live availability · {{date}}",
+    "eyebrow": "Rooms · kits · one shared calendar",
+    "headline": "Every room and every kit,\nbooked once and only once.",
+    "pitch": "Reserve shared spaces across the company. If the space is free and your window fits the rules, it is yours straight away. No approval, no waiting.",
+    "board": {
+      "today": "Today",
+      "count": "{{booked}} of {{total}} spaces",
+      "legend": {
+        "booked": "Booked",
+        "yours": "Yours",
+        "free": "Free"
+      },
+      "now": "Now {{time}}",
+      "rooms": {
+        "atlas": {
+          "name": "Atlas",
+          "meta": "Boardroom · 12"
+        },
+        "harbor": {
+          "name": "Harbor",
+          "meta": "Meeting room · 6"
+        },
+        "studioKit": {
+          "name": "Studio kit A",
+          "meta": "Camera + lights"
+        },
+        "podcastKit": {
+          "name": "Podcast kit 02",
+          "meta": "2 mics · recorder"
+        },
+        "focusPod": {
+          "name": "Focus pod 3",
+          "meta": "1 seat"
+        }
+      },
+      "bookings": {
+        "leadership": "Leadership",
+        "interview": "Interview",
+        "designCrit": "Design crit",
+        "sprintPlanning": "Sprint planning",
+        "sprintReview": "Sprint review",
+        "productShoot": "Product shoot",
+        "bookNow": "+ Book now",
+        "workshop": "Workshop",
+        "recording": "Recording",
+        "editSession": "Edit session",
+        "focus": "Focus",
+        "deepWork": "Deep work"
+      }
+    },
+    "principles": {
+      "instant": {
+        "title": "Instant",
+        "desc": "Free slot plus valid window means it is booked."
+      },
+      "exclusive": {
+        "title": "Exclusive",
+        "desc": "One booking per slot. Never double booked."
+      },
+      "roleAware": {
+        "title": "Role-aware",
+        "desc": "Rules follow your account role automatically."
+      }
+    },
+    "welcome": "Welcome",
+    "subtitle": "Sign in with your email and password. What you can book comes from your account role.",
+    "button": "Sign in with email",
+    "companyOnly": "Company accounts only",
+    "footer": {
+      "copyright": "© {{year}} Dixels",
+      "noAccount": "No account? Ask your workspace admin."
+    },
+    "signingIn": "Signing you in",
+    "failed": "Sign-in failed",
+    "back": "Back to sign in"
+  },
+  "splash": {
+    "wait": "Please wait…"
+  },
+  "estate": {
+    "addBuilding": "Add a building",
+    "addFloor": "Add a floor",
+    "addSpace": "Add a space",
+    "addSpaceType": "Add a space type",
+    "blockTime": "Block time",
+    "makeBookable": "Make bookable",
+    "makeNotBookable": "Make not bookable",
+    "noDescription": "No description",
+    "spaceName": "Space name",
+    "ownRules": "own rules",
+    "fromBuilding": "from building",
+    "notBookableName": "{{name}} is not bookable",
+    "blockedByParent": "blocked by its floor or building",
+    "upcoming_one": "{{count, number}} upcoming",
+    "upcoming_other": "{{count, number}} upcoming",
+    "lengthRange": "{{min}}m–{{max}}h",
+    "confirmDeleteType": "Delete the space type \"{{name}}\"?",
+    "col": {
+      "building": "Building",
+      "floor": "Floor",
+      "space": "Space",
+      "type": "Type",
+      "location": "Location",
+      "timeZone": "Time zone",
+      "hoursUtc": "Hours (UTC)",
+      "bookingLength": "Booking length",
+      "floorsSpaces": "Floors · Spaces",
+      "spaces": "Spaces",
+      "spacesUsingIt": "Spaces using it",
+      "bookable": "Bookable"
+    },
+    "toast": {
+      "bookable": "{{name}} is bookable",
+      "bookableAgain": "People can book it again.",
+      "typeInUse": "{{name}} is still in use",
+      "typeInUseMessage_one": "{{count, number}} space uses this type. Give it another type first.",
+      "typeInUseMessage_other": "{{count, number}} spaces use this type. Give them another type first.",
+      "typeDeleted": "Space type deleted"
+    }
+  },
+  "bookable": {
+    "checking": "Checking upcoming bookings…",
+    "nobodyAffected": "No upcoming bookings here, so nobody is affected.",
+    "upcomingKept_one": "<b>{{count, number}} upcoming booking</b> is already made here. It is kept unless you cancel it.",
+    "upcomingKept_other": "<b>{{count, number}} upcoming bookings</b> are already made here. They are kept unless you cancel them.",
+    "alsoCancel_one": "Also cancel this booking",
+    "alsoCancel_other": "Also cancel these {{count, number}} bookings",
+    "peopleCanBook": "People can book it.",
+    "noNewBookings": "Nobody can make new bookings.",
+    "nobodyWillBook": "Nobody will be able to make new bookings here.",
+    "keepBookable": "Keep bookable",
+    "blockedToo": {
+      "building": "Every floor and space in it is blocked too.",
+      "floor": "Every space on it is blocked too.",
+      "space": "It is blocked too."
+    },
+    "cantTake": {
+      "building": "Every floor and space in it can't take new bookings.",
+      "floor": "Every space on it can't take new bookings.",
+      "space": "It can't take new bookings."
+    },
+    "toast": {
+      "cancelled_one": "{{count, number}} booking cancelled",
+      "cancelled_other": "{{count, number}} bookings cancelled",
+      "cancelledIn": "Upcoming bookings in {{name}}.",
+      "notCancelled": "Bookings were not cancelled",
+      "notBookable": "{{name}} is not bookable"
+    }
+  },
+  "forms": {
+    "name": "Name",
+    "description": "Description",
+    "translations": {
+      "language": "Language",
+      "optional": "Optional. People who use the portal in {{language}} see this; everyone else sees the English one.",
+      "filled": "{{language}} ✓",
+      "needsFix": "{{language}} · needs a fix",
+      "show": "Show",
+      "wrongScript": {
+        "latin": "Use English letters (A–Z) only.",
+        "arabic": "Use Arabic letters. Latin codes such as VIP may stay."
+      },
+      "nameMissing": "Type the {{language}} name as well, or clear the {{language}} description."
+    },
+    "closeAfterOpen": "Close hour must be after open hour.",
+    "number": {
+      "enter": {
+        "open": "Enter the open hour.",
+        "close": "Enter the close hour.",
+        "min": "Enter the minimum duration.",
+        "max": "Enter the maximum duration."
+      },
+      "range": {
+        "open": "The open hour must be a whole number from {{lo}} to {{hi}}.",
+        "close": "The close hour must be a whole number from {{lo}} to {{hi}}.",
+        "min": "The minimum duration must be a whole number from {{lo}} to {{hi}} minutes.",
+        "max": "The maximum duration must be a whole number from {{lo}} to {{hi}} hours."
+      }
+    },
+    "override": {
+      "open": "Open hour override",
+      "close": "Close hour override",
+      "min": "Min duration override (minutes)",
+      "max": "Max duration override (hours)",
+      "range": "min {{min}} · max {{max}}",
+      "inherit": {
+        "building": "Leave a field empty to use the building's value: open {{open}}:00–{{close}}:00, bookings {{min}} min to {{max}} h.",
+        "floor": "Leave a field empty to use the floor's value: open {{open}}:00–{{close}}:00, bookings {{min}} min to {{max}} h."
+      },
+      "openEarlier": {
+        "floor": "Floor cannot open earlier ({{value}}) than the building ({{limit}}).",
+        "space": "Space cannot open earlier ({{value}}) than its floor ({{limit}})."
+      },
+      "closeLater": {
+        "floor": "Floor cannot close later ({{value}}) than the building ({{limit}}).",
+        "space": "Space cannot close later ({{value}}) than its floor ({{limit}})."
+      },
+      "minBelow": {
+        "floor": "Floor's minimum duration cannot be less than the building's ({{limit}}m).",
+        "space": "Space's minimum duration cannot be less than its floor's ({{limit}}m)."
+      },
+      "maxAbove": {
+        "floor": "Floor's maximum duration cannot exceed the building's ({{limit}}h).",
+        "space": "Space's maximum duration cannot exceed its floor's ({{limit}}h)."
+      }
+    },
+    "building": {
+      "addTitle": "Add a building",
+      "editTitle": "Edit building",
+      "subtitle": "One record is one physical building.",
+      "save": "Save building",
+      "namePlaceholder": "e.g. Riverside Studio",
+      "nameMissing": "Give the building a name.",
+      "timeZone": "Local timezone",
+      "tzHint": "Holidays and closed days follow this time zone, e.g. Europe/Warsaw or Asia/Dubai.",
+      "tzUnknown": "\"{{tz}}\" is not a known time zone. Use a name like Europe/Warsaw or Asia/Dubai.",
+      "openHour": "Open hour (UTC)",
+      "closeHour": "Close hour (UTC)",
+      "minDuration": "Min duration (minutes)",
+      "maxDuration": "Max duration (hours)",
+      "closedWeekly": "Closed every week",
+      "closedWeeklyHint": "Nobody can book any space in this building on these days, every week.",
+      "holidays": "Holidays",
+      "holidayMissing": "Pick a date, then press Add.",
+      "removeHoliday": "Remove {{date}}",
+      "noHolidays": "No holidays yet.",
+      "added": "Building added",
+      "updated": "Building updated"
+    },
+    "floor": {
+      "addTitle": "Add a floor",
+      "name": "Floor",
+      "editTitle": "Edit floor",
+      "subtitle": "Inherits its building's hours and duration unless overridden below.",
+      "save": "Save floor",
+      "namePlaceholder": "e.g. 5",
+      "nameMissing": "Type a floor name or number.",
+      "buildingMissing": "Pick a building first.",
+      "added": "Floor added",
+      "updated": "Floor updated",
+      "savedMessage": "Floor {{floor}} in {{building}}."
+    },
+    "space": {
+      "addTitle": "Add a space",
+      "editTitle": "Edit space",
+      "addSubtitle": "One record is one physical unit.",
+      "editSubtitle": "Changes apply to new bookings straight away.",
+      "save": "Add space",
+      "namePlaceholder": "e.g. Conference Room D",
+      "nameMissing": "Give the space a name.",
+      "chooseType": "Choose a type",
+      "noTypes": "No types yet",
+      "typeMissing": "Pick a space type. Add one on the Space types page first.",
+      "capacityRange": "Capacity must be a whole number from 0 to 999.",
+      "buildingMissing": "Pick a building. Add one first if the list is empty.",
+      "buildingHasNoFloors": "{{name}} has no floors yet. Add a floor to it first.",
+      "floorMissing": "Pick a floor.",
+      "choose": "Choose",
+      "noFloors": "No floors",
+      "timeZone": "Time zone (building)",
+      "timeZoneTitle": "Set on the building",
+      "notePlaceholder": "Seats 8 · whiteboard wall",
+      "noteTooLong": "Keep the description to 500 characters.",
+      "blockedByBuilding": "Still not bookable while {{name}} is not bookable.",
+      "blockedByFloor": "Still not bookable while floor {{floor}} is not bookable.",
+      "added": "Space added",
+      "updated": "Space updated",
+      "updatedMessage": "{{name}} in {{building}}, floor {{floor}}.",
+      "addedBookable": "{{name}} is bookable now.",
+      "addedNotBookable": "{{name}} is saved as not bookable."
+    },
+    "spaceType": {
+      "addTitle": "Add a space type",
+      "editTitle": "Edit space type",
+      "addSubtitle": "A kind of space, like \"Phone booth\" or \"Lab\".",
+      "usedBy_one": "Used by {{count, number}} space; it shows the new name.",
+      "usedBy_other": "Used by {{count, number}} spaces; they all show the new name.",
+      "save": "Add type",
+      "namePlaceholder": "e.g. Phone booth",
+      "nameMissing": "Give the space type a name.",
+      "added": "Space type added",
+      "addedMessage": "{{name}} can now be picked for any space.",
+      "renamed": "Space type renamed",
+      "renamedMessage": "{{from}} is now {{to}}."
+    }
+  },
+  "maintenance": {
+    "title": "Block time",
+    "subtitle": "No new bookings in {{label}} during this time",
+    "describe": "Describe it",
+    "otherPlaceholder": "e.g. Fire drill",
+    "otherMissing": "Type the reason for blocking this time.",
+    "endAfterStart": "The end must be after the start.",
+    "reasons": {
+      "cleaning": "Cleaning",
+      "renovation": "Renovation",
+      "outOfService": "Out of service",
+      "privateEvent": "Private event",
+      "other": "Other"
+    },
+    "affected_one": "{{count, number}} booking affected",
+    "affected_other": "{{count, number}} bookings affected",
+    "overlapCount_one": "{{count, number}} existing booking overlaps",
+    "overlapCount_other": "{{count, number}} existing bookings overlap",
+    "noOverlap": "No existing bookings overlap",
+    "overlapKept_one": "<b>{{count, number}} existing booking</b> overlaps this time. It is kept unless you cancel it.",
+    "overlapKept_other": "<b>{{count, number}} existing bookings</b> overlap this time. They are kept unless you cancel them.",
+    "alsoCancel_one": "Also cancel this booking (one already in progress is kept)",
+    "alsoCancel_other": "Also cancel these {{count, number}} bookings (ones already in progress are kept)",
+    "toast": {
+      "blocked": "Time blocked ({{reason}})",
+      "plain": "{{label}}.",
+      "withCancelled_one": "{{label}} · {{count, number}} booking cancelled.",
+      "withCancelled_other": "{{label}} · {{count, number}} bookings cancelled.",
+      "withKept_one": "{{label}} · {{count, number}} existing booking kept.",
+      "withKept_other": "{{label}} · {{count, number}} existing bookings kept.",
+      "nothingBlocked": "Nothing blocked"
+    }
+  },
+  "recurrence": {
+    "repeats": "Repeats",
+    "none": "Does not repeat",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "every": "Every",
+    "unit": {
+      "day_one": "day",
+      "day_other": "days",
+      "week_one": "week",
+      "week_other": "weeks",
+      "month_one": "month",
+      "month_other": "months"
+    },
+    "on": "On",
+    "weekdays": "Weekdays",
+    "ends": "Ends",
+    "after": "After",
+    "onDate": "On date",
+    "occurrencesLabel": "Occurrences",
+    "occurrencesUnit_one": "occurrence",
+    "occurrencesUnit_other": "occurrences",
+    "occurrences_one": "{{count, number}} occurrence",
+    "occurrences_other": "{{count, number}} occurrences",
+    "excludedCount_one": "{{count, number}} excluded",
+    "excludedCount_other": "{{count, number}} excluded",
+    "excluded": "Excluded",
+    "truncated": "Showing the first {{max}} occurrences — narrow the end date or occurrence count to see fewer.",
+    "intervalRange": "Repeat every 1 to 52.",
+    "pickDay": "Pick at least one day.",
+    "countRange": "Choose 1 to {{max}} occurrences.",
+    "untilMissing": "Pick the last date.",
+    "untilBeforeStart": "The last date must be on or after the first one.",
+    "tickOne": "Tick at least one occurrence."
+  },
+  "booking": {
+    "newTitle": "New booking",
+    "newSubtitle": "Reserve one space for one window of time.",
+    "rescheduleTitle": "Reschedule booking",
+    "rescheduleSubtitle": "{{space}} · moving the window only",
+    "rescheduleSubtitleOnBehalf": "{{space}} · owned by {{owner}} · moving the window only",
+    "make": "Make a booking",
+    "saveWindow": "Save new window",
+    "chooseSpace": "Choose a space",
+    "noFreeSpaces": "No free spaces at this time",
+    "pickBuilding": "Pick a building.",
+    "pickFloor": "Pick a floor.",
+    "pickSpace": "Pick a space.",
+    "noFreeSpace": "No space on this floor is free then. Try another time or floor.",
+    "notBookable": "{{name}} is not bookable.",
+    "spaceInfo": "{{type}} · {{building}}, floor {{floor}} · local zone {{tz}}",
+    "loadingSpaces": "Loading spaces…",
+    "noFreeOnFloor": "No spaces on this floor are free for this time — try a different window or floor.",
+    "spacesLoadError": "Couldn't load the spaces: {{message}}",
+    "slotTaken": "Slot already booked",
+    "moveTo": "Move to {{from}}–{{to}}",
+    "clashes_one": "{{count, number}} clashes with an existing booking and is excluded",
+    "clashes_other": "{{count, number}} clash with an existing booking and are excluded",
+    "closedDays_one": "{{count, number}} falls on a day the building is closed and is left out",
+    "closedDays_other": "{{count, number}} fall on a day the building is closed and are left out",
+    "noClashes": "No clashes",
+    "kept": {
+      "booked": "booked at this time",
+      "closed": "closed that day",
+      "hours": "outside its hours"
+    },
+    "occurrence": {
+      "closed": "closed {{when}}",
+      "youHave": "you have {{space}} then",
+      "takenBy": "taken by {{name}}",
+      "alreadyBooked": "already booked"
+    },
+    "conflict": {
+      "byOwner": "{{space}} is already booked by {{owner}} from {{from}} to {{to}} UTC. Bookings on one space may never overlap.",
+      "taken": "{{space}} is already booked from {{from}} to {{to}} UTC. Bookings on one space may never overlap."
+    },
+    "toast": {
+      "confirmed": "Booking confirmed",
+      "confirmedMessage": "{{space}} · {{start}} → {{end}}.",
+      "rescheduled": "Booking rescheduled",
+      "rescheduledMessage": "{{space}} · now {{start}} → {{end}}.",
+      "seriesConfirmed_one": "{{count, number}} booking confirmed",
+      "seriesConfirmed_other": "{{count, number}} bookings confirmed",
+      "seriesOn": "Series on {{space}}.",
+      "seriesOnSkipped_one": "Series on {{space}} · {{count, number}} skipped.",
+      "seriesOnSkipped_other": "Series on {{space}} · {{count, number}} skipped."
+    }
+  },
+  "schedule": {
+    "busy": "Busy",
+    "blocked": "Blocked",
+    "closed": "Closed",
+    "reschedule": "Reschedule",
+    "endNow": "End now",
+    "more_one": "+{{count, number}} more",
+    "more_other": "+{{count, number}} more",
+    "buildingClosedDay": "The building is closed this day.",
+    "openDay": "Open the full day",
+    "slotTitle": "Book from {{time}}, or drag to choose the time",
+    "freeWindows": "Free windows",
+    "fullyBooked": "Fully booked between {{from}} and {{to}}.",
+    "pickOneSpace": "Pick one specific space to see its free windows here.",
+    "acrossSpaces": "Across all your spaces",
+    "nothingBooked": "Nothing booked this day.",
+    "newBookingOnDay": "New booking on this day",
+    "loadingBookings": "Loading bookings…",
+    "viewLabel": "Schedule view",
+    "view": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
+    "previousPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "allSpacesOnFloor": "All spaces on this floor",
+    "user": "User",
+    "everyone": "Everyone",
+    "userWithRoles": "{{name}} · {{roles}}",
+    "hint": {
+      "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
+      "notBookable": "This space cannot be booked, so slots are inert",
+      "noPermission": "You do not have permission to book",
+      "rest": "click a block for its detail · click a date for the whole day. All times UTC."
+    }
+  },
+  "detail": {
+    "bookingTitle": "Booking",
+    "blockedTitle": "Blocked time",
+    "loadFailed": "This record could not be loaded.",
+    "repeating": "Repeating",
+    "spacePlace": "{{building}} · Floor {{floor}} · {{tz}}",
+    "bookedBy": "Booked by",
+    "someoneElse": "Someone else",
+    "duration": "Duration",
+    "created": "Created",
+    "updated": "Updated",
+    "scope": "Scope",
+    "scopeBlocked": {
+      "Space": "Space blocked",
+      "Floor": "Floor blocked",
+      "Building": "Building blocked"
+    },
+    "note": {
+      "ended": "This booking has ended. Ended bookings are locked and cannot be changed.",
+      "cancelled": "Cancelled. The record is kept and the window is bookable again.",
+      "inProgress": "This booking has already started, so it can only be cancelled or ended early.",
+      "ownedBy": "Owned by {{name}}. As the space administrator you can reschedule or cancel it.",
+      "someoneElse": "Someone else booked this. You can only change your own bookings."
+    },
+    "seriesQuestion": "This booking is part of a repeating series. What should be cancelled?",
+    "onlyThis": "Only this one",
+    "thisAndLater": "This and all later ones",
+    "keepIt": "Keep it",
+    "cancelBooking": "Cancel booking",
+    "unblock": "Unblock this time",
+    "noActions": "No actions available."
+  },
+  "actions": {
+    "cancelled": "Booking cancelled",
+    "cancelledMessage": "{{space}} · the slot is free again.",
+    "cancelFailed": "Cancel failed",
+    "seriesCancelled_one": "{{count, number}} occurrence cancelled",
+    "seriesCancelled_other": "{{count, number}} occurrences cancelled",
+    "seriesCancelledMessage": "Series from {{from}} onward.",
+    "ended": "Booking ended",
+    "endedMessage": "Ended at {{time}} UTC. The rest of the window is free.",
+    "endFailed": "Could not end booking",
+    "unblocked": "Time unblocked",
+    "unblockedMessage": "It can be booked again."
+  },
+  "find": {
+    "when": "When",
+    "custom": "Custom",
+    "minutes_one": "{{count, number}} min",
+    "minutes_other": "{{count, number}} min",
+    "endAfterStart": "The end must be after the start ({{start}}).",
+    "criteria": "Room criteria",
+    "anyCapacity": "Any capacity",
+    "atLeast_one": "{{count, number}}+",
+    "atLeast_other": "{{count, number}}+",
+    "customCapacity": "Custom…",
+    "seatsPlaceholder": "e.g. 10",
+    "minSeats": "Minimum seats",
+    "seatsOrMore_one": "seat or more",
+    "seatsOrMore_other": "seats or more",
+    "spaceType": "Space type",
+    "search": "Search rooms",
+    "searchPlaceholder": "Room name…",
+    "freeOnly": "Free only",
+    "freeOnlyHint": "Show only rooms free for this time and length.",
+    "roomsFree_one": "{{rooms}} · {{count, number}} free",
+    "roomsFree_other": "{{rooms}} · {{count, number}} free",
+    "seats_one": "{{count, number}} seat",
+    "seats_other": "{{count, number}} seats",
+    "bookCell": "Book {{name}} {{from}}–{{to}}",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "stats": "{{free, number}} of {{rooms}} free {{from}}–{{to}} · grouped by building and floor."
+  },
+  "users": {
+    "search": "Search",
+    "searchPlaceholder": "Search by name, username or email",
+    "allRoles": "All roles",
+    "allStatuses": "All statuses",
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "locked": "Locked",
+    "notLocked": "Not locked",
+    "lockedUntil": "Locked until {{date}}",
+    "untilUnlocked": "Until someone unlocks it",
+    "timeInUtc": "Time in UTC",
+    "youMark": "(you)",
+    "viewBookings": "View bookings",
+    "col": {
+      "user": "User",
+      "userName": "Username",
+      "role": "Role",
+      "status": "Status",
+      "lock": "Lock"
+    }
+  },
+  "empty": {
+    "buildings": {
+      "title": "No buildings yet",
+      "text": "Buildings hold every floor and space people can book. Add the first one to get started."
+    },
+    "floors": {
+      "title": "No floors yet",
+      "text": "Floors sit inside a building and hold its spaces. Add the first floor to start placing spaces."
+    },
+    "buildingFloors": {
+      "title": "{{building}} has no floors yet",
+      "text": "Pick another building, or clear the filter to see every floor."
+    },
+    "spaces": {
+      "title": "No spaces yet",
+      "text": "Spaces are the rooms, desks and kit people book. Add the first one and it can be booked straight away."
+    },
+    "spacesFiltered": {
+      "title": "No spaces match these filters",
+      "text": "Try a different name, building, floor or type, or clear the filters to see every space."
+    },
+    "spaceTypes": {
+      "title": "No space types yet",
+      "text": "Types like Meeting room or Desk describe what a space is. Add the first one, then use it when you add spaces."
+    },
+    "users": {
+      "title": "No users yet",
+      "text": "People appear here once they have an account. Accounts are managed in the administration site."
+    },
+    "usersFiltered": {
+      "title": "No users match these filters",
+      "text": "Try a different name, role, status or lock, or clear the filters to see everyone."
+    },
+    "rooms": {
+      "title": "No rooms match these filters",
+      "text": "Try a different building, floor, capacity or type, or clear the filters to see every room."
+    },
+    "roomsFree": {
+      "title": "No room is free at this time",
+      "text": "Try another time or length, or clear the filters to see every room."
+    }
+  }
+}

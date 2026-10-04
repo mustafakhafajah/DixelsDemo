@@ -265,3 +265,6 @@ src/Dixels.Portal.Blazor.Server.Tiered/Logs/*
 
 # Use abp install-libs to restore.
 **/wwwroot/libs/*
+
+# Data-protection keys written by the app at runtime
+**/App_Data/

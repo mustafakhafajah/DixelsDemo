@@ -1,18 +1,30 @@
+import i18n from 'i18next'
 import { parseUtc } from '../lib/dateUtils'
 
 export type MaintenanceScopeType = 'Space' | 'Floor' | 'Building'
 export type Lifecycle = 'scheduled' | 'in_progress' | 'ended' | 'cancelled'
 
+/* A record's words in one language. English ("en") is always there; the others are optional extras.
+ * note is only used by spaces. */
+export interface Translation {
+  language: string
+  name: string
+  note?: string | null
+}
+
 /* An admin-managed kind of space ("Meeting room", "Desk", ...). */
 export interface SpaceType {
   id: string
   name: string
+  /* name is in the reader's language, or English. translations has every language, English first, for the edit form. */
+  translations: Translation[]
   spaceCount: number
 }
 
 export interface Building {
   id: string
   name: string
+  translations: Translation[]
   timeZone: string
   /* Ticked = bookable. Unticking blocks every floor and space in it. */
   isBookable: boolean
@@ -32,6 +44,7 @@ export interface Floor {
   buildingId: string
   buildingName: string
   name: string
+  translations: Translation[]
   isBookable: boolean
   openHourOverride: number | null
   closeHourOverride: number | null
@@ -54,6 +67,7 @@ export interface Constraints {
 export interface Space {
   id: string
   name: string
+  translations: Translation[]
   typeId: string
   typeName: string
   /* Its own tick; it can still be blocked by its floor or building (see notBookableReason). */
@@ -136,7 +150,6 @@ export interface Profile {
   id: string
   name: string
   email: string | null
-  isAdmin: boolean
   /* Role names from the identity database, e.g. ["admin"]. */
   roles: string[]
 }
@@ -144,7 +157,8 @@ export interface Profile {
 export interface UserLookup {
   id: string
   name: string
-  isAdmin: boolean
+  /* Role names, shown next to the name in the person filter; never used as a permission. */
+  roles: string[]
 }
 
 export interface ListResult<T> {
@@ -168,7 +182,7 @@ export interface Window {
 /* A busy window shaped like a booking, so free-time and overlap checks treat it the same way. */
 export const toBusy = (d: BusyWindowDto): Booking => ({
   kind: 'booking', busy: true, id: `busy:${d.spaceId}:${d.startUtc}`, spaceId: d.spaceId, spaceName: '',
-  ownerUserId: '', ownerName: 'Busy', status: 'Confirmed', version: 0, seriesId: null,
+  ownerUserId: '', ownerName: i18n.t('schedule.busy'), status: 'Confirmed', version: 0, seriesId: null,
   creationTime: d.startUtc, lastModificationTime: null, start: parseUtc(d.startUtc), end: parseUtc(d.endUtc),
 })
 

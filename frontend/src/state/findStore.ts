@@ -9,7 +9,9 @@ export interface FindFilters {
   duration: FindDuration
   customEnd: number | null
   buildingId: string
-  floorName: string
+  floorId: string
+  /* "Free only": list only the rooms free for the chosen time and duration (asked of the server). */
+  freeOnly: boolean
   minCapacity: number
   /* Space type ids. */
   types: string[]
@@ -21,6 +23,10 @@ interface FindState extends FindFilters {
   now: () => void
   shiftDay: (dir: 1 | -1) => void
   toggleType: (typeId: string) => void
+  /* Clear filters: every room criterion and Free only go back to "any"; the date, time and length stay.
+   * criteriaVersion counts the clears, so the filter panel can start over (e.g. close a custom capacity box). */
+  clearCriteria: () => void
+  criteriaVersion: number
 }
 
 function nowFields() {
@@ -33,13 +39,16 @@ export const useFindStore = create<FindState>((set, get) => ({
   duration: 60,
   customEnd: null,
   buildingId: '',
-  floorName: '',
+  floorId: '',
+  freeOnly: false,
   minCapacity: 0,
   types: [],
   query: '',
   patch: (p) => set(p),
   now: () => set(nowFields()),
   shiftDay: (dir) => set({ date: dayKey(addDays(dayAt(get().date), dir)) }),
+  criteriaVersion: 0,
+  clearCriteria: () => set({ buildingId: '', floorId: '', minCapacity: 0, types: [], query: '', freeOnly: false, criteriaVersion: get().criteriaVersion + 1 }),
   toggleType: (t) => {
     const types = get().types
     set({ types: types.includes(t) ? types.filter((x) => x !== t) : [...types, t] })

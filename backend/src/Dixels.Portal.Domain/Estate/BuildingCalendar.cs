@@ -27,9 +27,9 @@ public static class BuildingCalendar
     public static DateOnly LocalDay(DateTime utc, TimeZoneInfo zone)
         => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone));
 
-    /* Why the window can't be booked, e.g. "on Fridays" or "for a holiday on 2026-12-25", or null when it can.
+    /* The first closed local day the window touches (a holiday, or a weekly closed day), or null when it is open.
      * Checks every local day the window touches: its start day and the day of its last minute. */
-    public static string? ClosedReason(ResolvedConstraints c, DateTime startUtc, DateTime endUtc)
+    public static ClosedDay? FindClosedDay(ResolvedConstraints c, DateTime startUtc, DateTime endUtc)
     {
         if (c.Holidays.Count == 0 && c.ClosedWeekdays.Count == 0) return null;
         var zone = Zone(c.TimeZone);
@@ -37,8 +37,8 @@ public static class BuildingCalendar
         var last = LocalDay(endUtc > startUtc ? endUtc.AddTicks(-1) : startUtc, zone);
         for (var day = first; day <= last; day = day.AddDays(1))
         {
-            if (c.Holidays.Contains(day)) return $"for a holiday on {day:yyyy-MM-dd}";
-            if (c.ClosedWeekdays.Contains((int)day.DayOfWeek)) return $"on {day.DayOfWeek}s";
+            if (c.Holidays.Contains(day)) return new ClosedDay(day, IsHoliday: true);
+            if (c.ClosedWeekdays.Contains((int)day.DayOfWeek)) return new ClosedDay(day, IsHoliday: false);
         }
         return null;
     }
@@ -46,3 +46,6 @@ public static class BuildingCalendar
     public static bool IsClosedOn(ResolvedConstraints c, DateOnly localDay)
         => c.Holidays.Contains(localDay) || c.ClosedWeekdays.Any(d => d == (int)localDay.DayOfWeek);
 }
+
+/* A local day a building is closed: a one-off holiday, or one of its weekly closed days. */
+public record ClosedDay(DateOnly Day, bool IsHoliday);

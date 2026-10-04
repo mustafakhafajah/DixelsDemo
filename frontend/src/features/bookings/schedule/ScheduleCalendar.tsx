@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { lifecycleOf, type ScheduleItem } from '../../../api/types'
 import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
 import { isClosedAt, isClosedDay } from '../../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, PX_PER_HOUR, SLOT_MIN } from '../../../lib/constants'
-import { addDays, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, pad, todayKey } from '../../../lib/dateUtils'
+import { WEEKDAYS } from '../../../lib/closedDays'
+import { addDays, dayAt, dayKey, formatDate, hm, minLabel, minOfDay, pad, todayKey, weekdayName } from '../../../lib/dateUtils'
 import { computeFree, daySegment, gridBounds, layoutLanes, type DaySegment } from '../../../lib/laneLayout'
 import { modals, type ScheduleId } from '../../../state/modalStore'
 import type { ScheduleData } from './useScheduleData'
@@ -25,7 +27,8 @@ export const openItem = (i: ScheduleItem) => {
 }
 
 function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
-  const { cfg, items, multiSpace, closed } = data
+  const { t } = useTranslation()
+  const { cfg, items, multiSpace, everyone, closed } = data
   const { userId } = useSession()
   const byDay = useMemo(() => {
     const m: Record<string, ScheduleItem[]> = {}
@@ -41,8 +44,11 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const today = todayKey()
 
   const label = (i: ScheduleItem) => i.kind === 'maintenance'
-    ? multiSpace ? `${i.note || 'Blocked'} · ${i.spaceName}` : i.note || 'Blocked'
-    : multiSpace ? i.spaceName : i.ownerUserId === userId ? 'You' : i.ownerName
+    ? multiSpace ? `${i.note || t('schedule.blocked')} · ${i.spaceName}` : i.note || t('schedule.blocked')
+    : multiSpace
+      /* With everyone's bookings shown, each one says whose it is too. */
+      ? everyone ? `${i.ownerUserId === userId ? t('common.you') : i.ownerName} · ${i.spaceName}` : i.spaceName
+      : i.ownerUserId === userId ? t('common.you') : i.ownerName
 
   return (
     <div className="month-wrap">
@@ -54,9 +60,9 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
         const trail = (7 - ((firstDow + daysInMonth) % 7)) % 7
         return (
           <div key={m.getTime()} className="month-block">
-            <div className="month-head">{monthName(m)} {y}</div>
+            <div className="month-head">{formatDate(m, { month: 'long', year: 'numeric' })}</div>
             <div className="month-grid">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => <div key={d} className="wk-label">{d}</div>)}
+              {WEEKDAYS.map((d) => <div key={d} className="wk-label">{weekdayName(d, 'short')}</div>)}
               {Array.from({ length: firstDow }, (_, i) => <div key={`lead${i}`} className="day-cell out" />)}
               {Array.from({ length: daysInMonth }, (_, i) => {
                 const key = `${y}-${pad(mo + 1)}-${pad(i + 1)}`
@@ -68,14 +74,14 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                    * before it was closed still open their detail. */
                   <div key={key} className={`day-cell${inRange ? '' : ' out'}${shut ? ' closed' : ''}${key === today ? ' today' : ''}`}
                     onClick={inRange && !shut ? () => modals.day(key, id) : undefined}
-                    title={shut ? 'The building is closed this day' : undefined}>
+                    title={shut ? t('schedule.buildingClosedDay') : undefined}>
                     <span className="day-num">{i + 1}</span>
-                    {shut && <span className="closed-label">Closed</span>}
+                    {shut && <span className="closed-label">{t('schedule.closed')}</span>}
                     {list.slice(0, 2).map((it) => (
                       <div key={it.id} className={`chip ${itemClass(it, userId)}`}
-                        onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}>{hm(it.start)} {label(it)}</div>
+                        onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}>{hm(it.start)} <bdi>{label(it)}</bdi></div>
                     ))}
-                    {list.length > 2 && <div className="more-link">+{list.length - 2} more</div>}
+                    {list.length > 2 && <div className="more-link">{t('schedule.more', { count: list.length - 2 })}</div>}
                   </div>
                 )
               })}
@@ -91,7 +97,8 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
 interface SlotDrag { key: string; a: number; b: number }
 
 function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
-  const { cfg, items, multiSpace, single, shownSpaces, busyOnSpace, closed } = data
+  const { t } = useTranslation()
+  const { cfg, items, multiSpace, everyone, single, shownSpaces, busyOnSpace, closed } = data
   const { userId, can } = useSession()
   const canBook = can(P.Bookings.Create)
   const scroller = useRef<HTMLDivElement>(null)
@@ -205,9 +212,9 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
             const shut = !!closed && isClosedDay(closed, k)
             return (
               <button key={k} type="button" className={`tg-colhead${k === today ? ' today' : ''}${shut ? ' closed' : ''}`}
-                title={shut ? 'The building is closed this day' : 'Open the full day'} disabled={shut}
+                title={shut ? t('schedule.buildingClosedDay') : t('schedule.openDay')} disabled={shut}
                 onClick={() => modals.day(k, id)}>
-                <small>{dayName(d).slice(0, 3).toUpperCase()}</small>{d.getUTCDate()} {monthName(d).slice(0, 3)}
+                <small>{formatDate(d, { weekday: 'short' }).toUpperCase()}</small>{formatDate(d, { day: 'numeric', month: 'short' })}
               </button>
             )
           })}
@@ -232,7 +239,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                     moveDrag({ key: k, a: m, b: m })
                   }}
                   onClick={inert ? undefined : () => { if (!pressedWithMouse.current) slotPrefill(k, m) }}
-                  title={inert || dragging ? undefined : `Book from ${minLabel(m)}, or drag to choose the time`} />
+                  title={inert || dragging ? undefined : t('schedule.slotTitle', { time: minLabel(m) })} />
               )
             })
             const sel = drag?.key === k ? { lo: Math.min(drag.a, drag.b), hi: Math.max(drag.a, drag.b) + SLOT_MIN } : null
@@ -246,24 +253,26 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                 )}
                 {segs.map((g) => {
                   const it = g.item
-                  const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.ownerName
+                  const who = it.kind === 'maintenance' ? it.note || t('schedule.blocked') : it.ownerName
                   const label = it.kind === 'maintenance'
                     ? multiSpace ? `${who} · ${it.spaceName}` : who
-                    : multiSpace ? it.spaceName : it.ownerUserId === userId ? 'You' : who
+                    : multiSpace
+                      ? everyone ? `${it.ownerUserId === userId ? t('common.you') : who} · ${it.spaceName}` : it.spaceName
+                      : it.ownerUserId === userId ? t('common.you') : who
                   const w = 100 / g.lanes
                   const h = Math.max(17, ((g.e - g.s) / 60) * pph - 1)
                   return (
                     <div key={`${it.id}-${k}`} className={`tg-block ${itemClass(it, userId)}${h < 30 ? ' compact' : ''}`}
                       onClick={() => openItem(it)}
-                      style={{ top: ((g.s - open) / 60) * pph, height: h, left: `calc(${w * g.lane}% + 2px)`, width: `calc(${w}% - 4px)` }}
+                      style={{ top: ((g.s - open) / 60) * pph, height: h, insetInlineStart: `calc(${w * g.lane}% + 2px)`, width: `calc(${w}% - 4px)` }}
                       title={`${hm(it.start)}–${hm(it.end)} UTC · ${it.spaceName} · ${who}`}>
                       <b>{g.clipStart ? '↥ ' : ''}{hm(it.start)}–{hm(it.end)}{g.clipEnd ? ' ↧' : ''}</b>
-                      <span>{label}</span>
+                      <span><bdi>{label}</bdi></span>
                     </div>
                   )
                 })}
                 {k === today && nowMin >= open && nowMin <= close && (
-                  <div className="tg-now" style={{ top: ((nowMin - open) / 60) * pph }} title="Now" />
+                  <div className="tg-now" style={{ top: ((nowMin - open) / 60) * pph }} title={t('common.now')} />
                 )}
               </div>
             )
@@ -271,7 +280,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
         </div>
       </div>
       <p className="tg-hint">
-        {bookable ? 'Click an empty slot to book it, or drag over empty slots to choose the time' : canBook ? 'This space cannot be booked, so slots are inert' : 'You do not have permission to book'} · click a block for its detail · click a date for the whole day. All times UTC.
+        {bookable ? t('schedule.hint.bookable') : canBook ? t('schedule.hint.notBookable') : t('schedule.hint.noPermission')} · {t('schedule.hint.rest')}
       </p>
     </div>
   )

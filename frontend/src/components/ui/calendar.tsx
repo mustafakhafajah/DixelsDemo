@@ -1,16 +1,27 @@
 import * as React from 'react'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { DayPicker, getDefaultClassNames } from 'react-day-picker'
+import { DayPicker, getDefaultClassNames, type Numerals } from 'react-day-picker'
+import { useTranslation } from 'react-i18next'
 
+import { languageOf } from '@/i18n/languages'
 import { cn } from '@/lib/utils'
 
-/* shadcn/ui Calendar (react-day-picker), without the library's stylesheet: every part is styled here. */
+/* The digits Intl uses for the language, so the calendar matches the date written in its field. */
+const numeralsOf = (locale: string) => new Intl.NumberFormat(locale).resolvedOptions().numberingSystem as Numerals
+
+/* shadcn/ui Calendar (react-day-picker), without the library's stylesheet: every part is styled here.
+ * Month and weekday names, digits and direction follow the chosen language. */
 function Calendar({ className, classNames, showOutsideDays = true, components, ...props }: React.ComponentProps<typeof DayPicker>) {
   const d = getDefaultClassNames()
+  const { i18n } = useTranslation()
+  const language = languageOf(i18n.language)
   const navBtn = 'tw:inline-flex tw:size-8 tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-0 tw:text-foreground tw:cursor-pointer tw:hover:bg-accent tw:hover:text-accent-foreground tw:disabled:opacity-40 tw:disabled:cursor-default'
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      locale={language.calendar}
+      numerals={numeralsOf(language.locale)}
+      dir={i18n.dir()}
       className={cn('tw:w-fit tw:select-none', className)}
       classNames={{
         root: cn('tw:w-fit', d.root),
@@ -39,8 +50,9 @@ function Calendar({ className, classNames, showOutsideDays = true, components, .
         ...classNames,
       }}
       components={{
+        /* Previous / next always ask for left / right; in right-to-left languages they point the other way. */
         Chevron: ({ orientation, className: c }) =>
-          orientation === 'left' ? <ChevronLeftIcon className={cn('tw:size-4', c)} /> : <ChevronRightIcon className={cn('tw:size-4', c)} />,
+          orientation === 'left' ? <ChevronLeftIcon className={cn('tw:size-4 flip-rtl', c)} /> : <ChevronRightIcon className={cn('tw:size-4 flip-rtl', c)} />,
         ...components,
       }}
       {...props}

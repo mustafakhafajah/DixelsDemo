@@ -250,12 +250,6 @@
     "subtitle": "Sign in with your email and password. What you can book comes from your account role.",
     "button": "Sign in with email",
     "companyOnly": "Company accounts only",
-    "after": {
-      "title": "After you sign in",
-      "find": "Find a free room or kit for your window",
-      "pick": "Pick a slot and it is confirmed instantly",
-      "release": "Release it anytime so others can book"
-    },
     "footer": {
       "copyright": "© {{year}} Dixels",
       "noAccount": "No account? Ask your workspace admin."

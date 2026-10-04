@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import {
-  ArrowRightIcon, CalendarCheck2Icon, CalendarX2Icon, LockIcon, MailIcon, MousePointerClickIcon, SearchIcon, ShieldCheckIcon,
+  ArrowRightIcon, CalendarCheck2Icon, LockIcon, MailIcon, ShieldCheckIcon,
   UserCheckIcon, ZapIcon,
 } from 'lucide-react'
 import '@fontsource-variable/inter-tight'
@@ -38,12 +38,6 @@ const PRINCIPLES = [
   { key: 'instant', Icon: ZapIcon },
   { key: 'exclusive', Icon: ShieldCheckIcon },
   { key: 'roleAware', Icon: UserCheckIcon },
-] as const
-
-const STEPS = [
-  { key: 'find', Icon: SearchIcon },
-  { key: 'pick', Icon: MousePointerClickIcon },
-  { key: 'release', Icon: CalendarX2Icon },
 ] as const
 
 /* The current time, refreshed every minute, for the live chip and the NOW line. */
@@ -187,12 +181,6 @@ function LoginPage() {
                 <ArrowRightIcon className="flip-rtl" aria-hidden="true" />
               </button>
               <p className="signin-note"><LockIcon aria-hidden="true" />{t('login.companyOnly')}</p>
-            </div>
-            <div className="next-up">
-              <p className="next-label">{t('login.after.title')}</p>
-              {STEPS.map(({ key, Icon }) => (
-                <div key={key} className="step"><span className="step-icon"><Icon aria-hidden="true" /></span>{t(`login.after.${key}`)}</div>
-              ))}
             </div>
           </div>
         </div>

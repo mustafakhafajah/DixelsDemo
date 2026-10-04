@@ -155,10 +155,6 @@
 .app-shell .iconbtn { border: none; background: none; color: var(--slate); font-size: 19px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 5px; font-family: inherit; }
 .app-shell .iconbtn:hover { background: var(--surface-2); color: var(--ink); }
 
-.app-shell .row-menu { position: relative; }
-.app-shell .row-menu-list { position: absolute; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-menu); z-index: 10; min-width: 150px; overflow: hidden; }
-.app-shell .row-menu-item { display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 12.5px; font-family: inherit; background: none; border: none; cursor: pointer; color: var(--ink); }
-.app-shell .row-menu-item:hover { background: var(--surface-2); }
 
 .app-shell pre.json { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.55; background: var(--code-bg); color: var(--code-ink); padding: 11px 13px; border-radius: 7px; overflow-x: auto; margin: 0; white-space: pre; }
 

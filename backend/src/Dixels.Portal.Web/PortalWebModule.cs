@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Dixels.Portal.Emailing;
 using Dixels.Portal.EntityFrameworkCore;
 using Dixels.Portal.Localization;
 using Dixels.Portal.MultiTenancy;
@@ -52,6 +53,7 @@ namespace Dixels.Portal.Web;
     typeof(PortalHttpApiModule),
     typeof(PortalApplicationModule),
     typeof(PortalEntityFrameworkCoreModule),
+    typeof(PortalInfrastructureModule),
     typeof(AbpAutofacModule),
     typeof(AbpIdentityWebModule),
     typeof(AbpSettingManagementWebModule),
@@ -161,7 +163,10 @@ public class PortalWebModule : AbpModule
     {
         Configure<AppUrlOptions>(options =>
         {
-            options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
+            options.Applications[PortalAppUrls.Mvc].RootUrl = configuration["App:SelfUrl"];
+            /* The portal (SPA) address, for the links in booking and welcome emails; no links when it isn't set. */
+            if (!string.IsNullOrWhiteSpace(configuration["App:ClientUrl"]))
+                options.Applications[PortalAppUrls.Spa].RootUrl = configuration["App:ClientUrl"];
         });
     }
 

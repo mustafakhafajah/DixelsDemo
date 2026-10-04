@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Maintenance;
+using Dixels.Portal.Notifications;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,15 +28,17 @@ public class BookingAppService : PortalAppService, IBookingAppService
     private readonly IIdentityUserRepository _users;
     private readonly BookingManager _manager;
     private readonly MaintenanceScopeResolver _scopes;
+    private readonly BookingNotifier _notifier;
 
     public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces,
-        IIdentityUserRepository users, BookingManager manager, MaintenanceScopeResolver scopes)
+        IIdentityUserRepository users, BookingManager manager, MaintenanceScopeResolver scopes, BookingNotifier notifier)
     {
         _bookings = bookings;
         _spaces = spaces;
         _users = users;
         _manager = manager;
         _scopes = scopes;
+        _notifier = notifier;
     }
 
     /* With Bookings.ViewAll you list anyone's bookings; everyone else only ever gets their own,
@@ -106,7 +109,9 @@ public class BookingAppService : PortalAppService, IBookingAppService
             if (existing != null) return await MapAsync(existing);
         }
 
-        return await MapAsync(await CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key));
+        var booking = await CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key);
+        await _notifier.BookingsCreatedAsync([booking]);
+        return await MapAsync(booking);
     }
 
     /* The client expands the recurrence rule; each surviving occurrence is created under one series.
@@ -133,6 +138,9 @@ public class BookingAppService : PortalAppService, IBookingAppService
                 });
             }
         }
+
+        /* One confirmation listing every date that was booked. */
+        await _notifier.BookingsCreatedAsync(created);
 
         return new CreateBookingSeriesResultDto
         {
@@ -171,10 +179,12 @@ public class BookingAppService : PortalAppService, IBookingAppService
         if (!(b.OwnerUserId == CurrentUser.Id && await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.MultipleSpaces)))
             await _manager.EnsureNoSelfOverlapAsync(b.OwnerUserId, b.SpaceId, start, end, b.Id);
 
+        var (oldStart, oldEnd) = (b.StartUtc, b.EndUtc);
         b.StartUtc = start;
         b.EndUtc = end;
         b.Version++;
         await BookingOverlap.Translate(() => _bookings.UpdateAsync(b, autoSave: true));
+        await _notifier.BookingRescheduledAsync(b, oldStart, oldEnd);
         return await MapAsync(b);
     }
 
@@ -182,7 +192,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<BookingDto> CancelAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
-        await CancelOneAsync(b);
+        if (await CancelOneAsync(b)) await _notifier.BookingsCancelledAsync([b]);
         return await MapAsync(b);
     }
 
@@ -220,14 +230,15 @@ public class BookingAppService : PortalAppService, IBookingAppService
         await EnsureCanActAsync(series[0], PortalPermissions.Bookings.DeleteAll, L["Error:OnlyOwnCancel"]);
 
         var from = input.FromUtc.AsUtc();
-        var count = 0;
+        var cancelled = new List<Booking>();
         foreach (var b in series.Where(b => b.Status == BookingStatus.Confirmed && b.StartUtc >= from
                                             && b.GetLifecycle(Clock.Now) != TimeWindowState.Ended))
         {
-            await CancelOneAsync(b);
-            count++;
+            if (await CancelOneAsync(b)) cancelled.Add(b);
         }
-        return new CancelSeriesResultDto { SeriesId = seriesId, CancelledCount = count };
+        /* One email listing every cancelled date. */
+        await _notifier.BookingsCancelledAsync(cancelled);
+        return new CancelSeriesResultDto { SeriesId = seriesId, CancelledCount = cancelled.Count };
     }
 
     /* Frees the space now: the booking's end moves to the current time. */
@@ -257,6 +268,8 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var upcoming = await AsyncExecuter.ToListAsync(await UpcomingInScopeAsync(input));
         foreach (var b in upcoming) b.Cancel();
         await _bookings.UpdateManyAsync(upcoming, autoSave: true);
+        /* Each person gets one email listing their cancelled bookings. */
+        await _notifier.BookingsCancelledAsync(upcoming);
         return new CancelUpcomingResultDto { CancelledCount = upcoming.Count };
     }
 
@@ -281,15 +294,17 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return booking;
     }
 
-    private async Task CancelOneAsync(Booking b)
+    /* False when it was already cancelled (nothing changed, so no email). */
+    private async Task<bool> CancelOneAsync(Booking b)
     {
         await EnsureCanActAsync(b, PortalPermissions.Bookings.DeleteAll, L["Error:OnlyOwnCancel"]);
         var state = b.GetLifecycle(Clock.Now);
         if (state == TimeWindowState.Ended)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L["Error:EndedCannotCancel"]);
-        if (state == TimeWindowState.Cancelled) return;
+        if (state == TimeWindowState.Cancelled) return false;
         b.Cancel();
         await _bookings.UpdateAsync(b, autoSave: true);
+        return true;
     }
 
     /* "Upcoming" = confirmed and not started yet; a meeting already in progress is never cut off. */

@@ -1,1 +1,5 @@
 backend/Logs/
+
+# Docker: the exported HTTPS certificate and local overrides (docs/docker.md)
+docker/certs/
+.env

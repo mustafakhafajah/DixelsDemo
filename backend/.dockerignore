@@ -1,0 +1,16 @@
+# Build output and local tooling
+**/bin/
+**/obj/
+**/node_modules/
+**/Logs/
+**/.vs/
+**/*.user
+test/
+
+# Generated inside the image instead
+**/wwwroot/libs/
+
+# Machine-specific config and secrets: never baked into an image
+**/appsettings.secrets.json
+**/*.pfx
+**/App_Data/

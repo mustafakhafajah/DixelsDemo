@@ -6,12 +6,12 @@ import { P } from '../../../auth/permissions'
 import type { ClosedRules } from '../../../lib/closedDays'
 import { addDays, dayAt } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
-import { EVERYONE, useScheduleStore } from '../../../state/scheduleStore'
+import { EVERYONE, useScheduleConfig } from '../../../state/scheduleStore'
 
 /* Items a schedule instance shows (mock: scopeBookings). With Bookings.ViewAll: everyone's bookings (or one person's)
  * plus the blocked time in the chosen building / floor / space. Without it: your own bookings plus blocked time on those spaces. */
 export function useScheduleData(id: ScheduleId) {
-  const cfg = useScheduleStore((s) => s.configs[id])
+  const [cfg] = useScheduleConfig(id)
   const session = useSession()
   const spacesQ = useSpaces()
   const buildingsQ = useBuildings()

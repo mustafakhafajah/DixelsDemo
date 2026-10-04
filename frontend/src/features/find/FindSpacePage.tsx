@@ -1,4 +1,4 @@
-import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
@@ -10,10 +10,10 @@ import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
-import { useDebouncedValue } from '../../lib/useDebouncedValue'
-import { findToday, useFindStore, type FindDuration } from '../../state/findStore'
+import { useDropUnknown, useUrlSearchBox } from '../../lib/useUrlState'
 import { modals } from '../../state/modalStore'
 import { itemClass, openItem } from '../bookings/schedule/ScheduleCalendar'
+import { useFindFilters, type FindDuration } from './useFindFilters'
 
 const px = (min: number) => (min / 60) * RT_PX_PER_HOUR
 
@@ -37,7 +37,7 @@ interface DragState {
 
 function FindFilters() {
   const { t } = useTranslation()
-  const f = useFindStore()
+  const f = useFindFilters()
   /* "Custom…" shows a number box; a saved value that isn't a preset reopens in custom mode. */
   const [customCapacity, setCustomCapacity] = useState(() => f.minCapacity > 0 && !CAPACITY_PRESETS.includes(f.minCapacity))
   const buildings = useBuildings().data ?? []
@@ -48,6 +48,17 @@ function FindFilters() {
   const types = spaceTypes.filter((t) => t.spaceCount > 0).map((t) => [t.id, t.name] as const)
     .sort((a, b) => a[1].localeCompare(b[1]))
   const endMin = (((f.customEnd ?? f.time + 60) % 1440) + 1440) % 1440
+  /* The search box answers every key; the address (and the search) follow once typing pauses. */
+  const [queryText, setQueryText] = useUrlSearchBox(f.query, (query) => f.patch({ query }))
+  /* A shared link with a building, floor or type this viewer can't pick falls back to "all". */
+  useDropUnknown(f.buildingId, useBuildings().data?.map((b) => b.id), () => f.patch({ buildingId: '', floorId: '' }))
+  const floorsQ = useFloors(f.buildingId, !!f.buildingId)
+  useDropUnknown(f.floorId, f.buildingId ? floorsQ.data?.filter((x) => x.isBookable).map((x) => x.id) : [], () => f.patch({ floorId: '' }))
+  const knownTypes = useSpaceTypes().data?.map((x) => x.id)
+  const strayTypes = !!knownTypes && f.types.some((id) => !knownTypes.includes(id))
+  useEffect(() => {
+    if (strayTypes) f.patch({ types: f.types.filter((id) => knownTypes!.includes(id)) })
+  }, [strayTypes, f, knownTypes])
   const setDur = (d: FindDuration) => f.patch({ duration: d, customEnd: d === 'custom' && f.customEnd == null ? f.time + 60 : f.customEnd })
 
   return (
@@ -134,7 +145,7 @@ function FindFilters() {
           </div>
           <div>
             <label className="lbl" htmlFor="fv-query">{t('find.search')}</label>
-            <input id="fv-query" className="inp" dir="auto" placeholder={t('find.searchPlaceholder')} value={f.query} onChange={(e) => f.patch({ query: e.target.value })} />
+            <input id="fv-query" className="inp" dir="auto" placeholder={t('find.searchPlaceholder')} value={queryText} onChange={(e) => setQueryText(e.target.value)} />
           </div>
         </div>
       </div>
@@ -144,7 +155,7 @@ function FindFilters() {
 
 export function FindSpacePage() {
   const { t, i18n } = useTranslation()
-  const f = useFindStore()
+  const f = useFindFilters()
   const session = useSession()
   const { userId } = session
   /* Without permission to book, the timeline is read-only: no free cells to click and no drag. */
@@ -153,9 +164,9 @@ export function FindSpacePage() {
   const winStart = useMemo(() => dayAt(f.date, 0, f.time), [f.date, f.time])
   const winEnd = useMemo(() => addMin(winStart, durMin), [winStart, durMin])
 
-  /* Every filter is sent to the server; typing in the search box waits a moment before asking. With "Free only"
+  /* Every filter is sent to the server; the search text is already the paused one from the address. With "Free only"
    * the chosen time and length go too, and the server leaves out rooms that are taken or closed then. */
-  const name = useDebouncedValue(f.query.trim())
+  const name = f.query
   const buildingId = f.buildingId || undefined
   const floorId = (f.buildingId && f.floorId) || undefined
   const findQ = useFindSpaces({
@@ -332,7 +343,7 @@ export function FindSpacePage() {
         <section className="card" style={{ overflow: 'hidden' }}>
           {/* Today at the start, the date with its arrows in the middle (the empty third column keeps it centred). */}
           <div className="find-header">
-            <button type="button" className="btn btn-sm find-today" onClick={findToday}>{t('common.today')}</button>
+            <button type="button" className="btn btn-sm find-today" onClick={f.today}>{t('common.today')}</button>
             <div className="find-date-nav">
               <button type="button" className="iconbtn" onClick={() => f.shiftDay(-1)} aria-label={t('find.previousDay')} title={t('find.previousDay')}>‹</button>
               <span className="mono period-label" style={{ minWidth: 190 }}>

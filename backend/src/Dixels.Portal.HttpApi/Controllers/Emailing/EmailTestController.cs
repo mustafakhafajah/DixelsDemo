@@ -7,7 +7,7 @@ namespace Dixels.Portal.Controllers.Emailing;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/email-test")]
+[Route("api/app/test-emails")]
 public class EmailTestController : PortalController, IEmailTestAppService
 {
     private readonly IEmailTestAppService _emailTest;

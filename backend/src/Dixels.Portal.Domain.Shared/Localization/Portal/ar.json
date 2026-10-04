@@ -22,6 +22,8 @@
     "Permission:Emailing": "البريد الإلكتروني",
     "Permission:Emailing.SendTest": "إرسال بريد تجريبي",
 
+    "DisplayName:Address": "العنوان",
+
     "Weekdays:0": "أيام الأحد",
     "Weekdays:1": "أيام الاثنين",
     "Weekdays:2": "أيام الثلاثاء",
@@ -43,6 +45,10 @@
     "BuildingFloorLabel": "{0} · الطابق {1}",
 
     "Error:UnsupportedLanguage": "اختر إحدى لغات البوابة.",
+    "Error:FirstNameMissing": "أدخل اسمك الأول.",
+    "Error:UserNameMissing": "أدخل اسم المستخدم.",
+    "Error:EmailMissing": "أدخل البريد الإلكتروني.",
+    "Error:InvalidPhone": "أدخل رقم الهاتف من 6 إلى 15 رقماً، ويمكن أن يبدأ بـ +، مثل +962790000000.",
     "Error:TranslationTwice": "اللغة {0} مُضافة مرتين. أبقِ واحدة فقط.",
     "Error:TranslationNameMissing": "أدخل الاسم باللغة {0}، أو احذف هذه اللغة.",
     "Error:NameTooLong": "يجب ألا يتجاوز الاسم {0} حرفاً.",

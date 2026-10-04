@@ -12,8 +12,10 @@ function AuthCallbackPage() {
 
   useEffect(() => {
     if (auth.isLoading || auth.error || !auth.isAuthenticated || !auth.user) return
-    /* /app sends each user on to the first page their permissions let them see. */
-    navigate('/app', { replace: true })
+    /* Back to the page that sent them to sign in (e.g. a shared link with its filters); otherwise /app, which
+     * sends each user on to the first page their permissions let them see. */
+    const returnTo = (auth.user.state as { returnTo?: string } | undefined)?.returnTo
+    navigate(returnTo?.startsWith('/app') ? returnTo : '/app', { replace: true })
   }, [auth.isLoading, auth.isAuthenticated, auth.error, auth.user, navigate])
 
   if (auth.error) {

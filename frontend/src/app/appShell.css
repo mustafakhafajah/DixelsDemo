@@ -80,6 +80,7 @@
   background: var(--surface); color: var(--ink); border-inline-end: 1px solid var(--line); display: flex; flex-direction: column; gap: 20px; padding: 18px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .app-shell .nav-group-title { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: var(--slate); padding: 0 10px; margin: 0 0 6px; }
+.app-shell .nav-group-title.with-icon { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .app-shell .nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer; border: none; background: none; width: 100%; text-align: start; font-family: inherit; text-decoration: none; }
 .app-shell .nav-link:hover { background: var(--surface-3); color: var(--ink); }
 .app-shell .nav-link.active { background: var(--accent-soft); color: var(--accent-dark); font-weight: 600; }
@@ -430,3 +431,36 @@
 /* Top bar: the page's own main buttons (PageActions), next to New booking. */
 .app-shell .page-actions { display: flex; gap: 8px; align-items: center; }
 .app-shell .page-actions:empty { display: none; }
+
+/* ── COLLAPSIBLE SIDEBAR ── The button next to the logo shrinks the sidebar to a strip of icons and back
+ * (remembered per device, sidebarStore). Laptops and up only: phones and tablets use the slide-in menu. */
+.app-shell .sidebar-head { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.app-shell .sidebar-toggle { margin-inline-start: auto; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; border: none; border-radius: 8px; background: none; color: var(--slate); cursor: pointer; }
+.app-shell .sidebar-toggle:hover { background: var(--surface-3); color: var(--ink); }
+.app-shell .sidebar-toggle:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 0; }
+.app-shell .logo-rail, .app-shell .nav-rail-icon { display: none; }
+@media (max-width: 1023.98px) {
+  .app-shell .sidebar-toggle { display: none; }
+}
+@media (min-width: 1024px) {
+  .app-shell { transition: grid-template-columns .2s ease; }
+  .app-shell.collapsed { grid-template-columns: 64px 1fr; }
+  .app-shell.collapsed .sidebar { padding: 18px 10px; overflow-x: hidden; }
+  .app-shell.collapsed .sidebar-head { flex-direction: column; gap: 12px; }
+  .app-shell.collapsed .sidebar-toggle { margin-inline-start: 0; }
+  .app-shell.collapsed .sidebar-logo { display: none; }
+  .app-shell.collapsed .logo-rail { display: flex; }
+  /* Headings give way to a thin rule between the groups. */
+  .app-shell.collapsed .nav-group-title { display: none; }
+  .app-shell.collapsed .nav-sub { margin: 8px 0 0; padding: 8px 0 0; border-inline-start: none; border-top: 1px solid var(--line); }
+  .app-shell.collapsed .nav-link { justify-content: center; padding: 9px 0; }
+  .app-shell.collapsed .nav-rail-icon { display: block; }
+  .app-shell.collapsed .nav-count { display: none; }
+  /* Names are hidden from view but still read out by screen readers (and shown on hover). */
+  .app-shell.collapsed .nav-label, .app-shell.collapsed .user-chip-text { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .app-shell.collapsed .user-chip { justify-content: center; padding: 6px 0; }
+  .app-shell.collapsed .user-chip > svg { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell { transition: none; }
+}

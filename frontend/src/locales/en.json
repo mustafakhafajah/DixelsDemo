@@ -113,7 +113,8 @@
     "spaces": "the spaces",
     "spaceTypes": "the space types",
     "users": "the users",
-    "yourBookings": "your bookings"
+    "yourBookings": "your bookings",
+    "profile": "your profile"
   },
   "pagination": {
     "showing": "Showing {{first, number}}–{{last, number}} of {{total}}",
@@ -137,9 +138,12 @@
     "administration": "Administration",
     "userDirectory": "User directory",
     "noRole": "No role",
+    "myProfile": "My Profile",
     "signOut": "Sign out",
     "accountMenu": "Account menu for {{name}}",
     "openMenu": "Open menu",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
     "themeLight": "Switch to light theme",
     "themeDark": "Switch to dark theme",
     "theme": "Theme",
@@ -175,6 +179,10 @@
     "users": {
       "title": "User directory",
       "subtitle": "Portal accounts, their roles and access."
+    },
+    "profile": {
+      "title": "My Profile",
+      "subtitle": "Everything the portal holds about your account."
     }
   },
   "roles": {
@@ -721,6 +729,73 @@
       "role": "Role",
       "status": "Status",
       "lock": "Lock"
+    }
+  },
+  "profile": {
+    "contact": "Contact",
+    "account": "Account",
+    "activity": "Activity",
+    "additional": "Additional details",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "userName": "Username",
+    "firstName": "First name",
+    "surname": "Surname",
+    "roles": "Roles",
+    "tenant": "Tenant",
+    "host": "Host (no tenant)",
+    "signInMethod": "Sign-in method",
+    "password": "Password",
+    "external": "External account",
+    "twoFactor": "Two-step verification",
+    "on": "On",
+    "off": "Off",
+    "memberSince": "Member since",
+    "lastSignIn": "Last sign-in",
+    "passwordChanged": "Password last changed",
+    "verified": "Verified",
+    "notVerified": "Not verified",
+    "notProvided": "Not provided",
+    "never": "Never",
+    "edit": {
+      "title": "Edit profile",
+      "subtitle": "Your roles and tenant are set by an administrator.",
+      "firstNameMissing": "Type your first name.",
+      "userNameMissing": "Type a username.",
+      "userNameInvalid": "Use only English letters, digits and - . _ @ +, with no spaces.",
+      "emailMissing": "Type an email address.",
+      "emailInvalid": "Type an email address like name@example.com.",
+      "phoneInvalid": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
+      "setByAdministrator": "Only an administrator can change this.",
+      "reverifyNote": "A new email address or phone number shows as not verified until it is confirmed.",
+      "saved": "Profile saved",
+      "savedMessage": "Your changes are saved."
+    },
+    "changePassword": {
+      "title": "Change password",
+      "subtitle": "Use the new password the next time you sign in.",
+      "current": "Current password",
+      "new": "New password",
+      "repeat": "Repeat new password",
+      "currentMissing": "Type your current password.",
+      "newMissing": "Type a new password.",
+      "repeatMissing": "Type the new password again.",
+      "needs": "The password needs {{list}}.",
+      "rule": {
+        "length_one": "at least {{count}} character",
+        "length_other": "at least {{count}} characters",
+        "digit": "a digit (0–9)",
+        "lowercase": "a lowercase letter (a–z)",
+        "uppercase": "an uppercase letter (A–Z)",
+        "symbol": "a symbol, such as ! or #",
+        "unique_one": "at least {{count}} different character",
+        "unique_other": "at least {{count}} different characters"
+      },
+      "sameAsCurrent": "Choose a password different from your current one.",
+      "mismatch": "The two new passwords don't match.",
+      "changed": "Password changed",
+      "changedMessage": "Use the new password the next time you sign in."
     }
   },
   "empty": {

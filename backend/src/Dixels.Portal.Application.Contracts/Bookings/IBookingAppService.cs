@@ -14,9 +14,12 @@ public interface IBookingAppService : IApplicationService
     Task<ListResultDto<BusyWindowDto>> GetBusyListAsync(BusyListFilterDto input);
     Task<BookingDto> CreateAsync(CreateBookingDto input);
     Task<CreateBookingSeriesResultDto> CreateSeriesAsync(CreateBookingSeriesDto input);
+    /* PATCH: a new time, or a new lifecycle state ("cancelled" / "ended"); each goes to the matching action below. */
+    Task<BookingDto> UpdateAsync(Guid id, UpdateBookingDto input);
     Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input);
     Task<BookingDto> CancelAsync(Guid id);
-    Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id);
+    /* Cancels the series' bookings that start at or after input.FromUtc; ended occurrences are left alone. */
+    Task<CancelSeriesResultDto> CancelSeriesAsync(Guid seriesId, CancelBookingSeriesDto input);
     Task<BookingDto> EndEarlyAsync(Guid id);
     /* Admin: bookings in a space, floor or building that have not started yet (confirmed only). */
     Task<int> GetUpcomingCountAsync(EstateScopeDto input);

@@ -90,6 +90,22 @@ public class BookingEmailTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task Cancelling_a_series_is_one_email_listing_every_date()
+    {
+        var room = await CreateRoomAsync();
+        var result = await _bookingService.CreateSeriesAsync(new CreateBookingSeriesDto
+        {
+            SpaceId = room.Id,
+            Occurrences = Enumerable.Range(0, 3).Select(w => new TimeWindowDto { StartUtc = Ten.AddDays(7 * w), EndUtc = Ten.AddDays(7 * w).AddHours(1) }).ToList(),
+        });
+
+        await _bookingService.CancelSeriesAsync(result.SeriesId!.Value, new CancelBookingSeriesDto { Lifecycle = CancellationDto.Cancelled, FromUtc = Ten });
+
+        (await EmailsAboutAsync(room)).Where(e => e.Subject.Contains("cancelled")).ShouldHaveSingleItem()
+            .Subject.ShouldBe("3 bookings cancelled");
+    }
+
+    [Fact]
     public async Task A_booking_starting_within_10_minutes_gets_no_reminder()
     {
         var room = await CreateRoomAsync();

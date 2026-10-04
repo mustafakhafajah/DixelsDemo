@@ -51,7 +51,7 @@ permissions and sign-in clients, then exits. The API starts only after it finish
 - Sign-in cookie keys are kept in a Docker volume, so you stay signed in after a restart. Rebuilding the API image
   makes a new token-signing certificate, so you may need to sign in again after a rebuild.
 - Email: the API sends to the `mailpit` container (plain SMTP on port 1025, no sign-in) instead of Microsoft 365.
-  To try it, sign in to Swagger as admin, call `POST /api/app/email-test` with `{ "to": "anyone@example.com" }`, and
+  To try it, sign in to Swagger as admin, call `POST /api/app/test-emails` with `{ "to": "anyone@example.com" }`, and
   open http://localhost:8025. Setting up real Microsoft 365 sending is in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Troubleshooting

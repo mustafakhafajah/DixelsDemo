@@ -42,7 +42,7 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
     {
         var e = await CreateEstateAsync();
 
-        var names = await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id });
+        var names = await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id });
 
         names.ShouldBe(new[] { $"Big {e.Tag}", $"Small {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
         names.ShouldNotContain($"Closed {e.Tag}");        // the space itself is not bookable
@@ -54,15 +54,15 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
     {
         var e = await CreateEstateAsync();
 
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, MinCapacity = 8 }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, MinCapacity = 8 }))
             .ShouldBe(new[] { $"Big {e.Tag}" });
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, TypeIds = new List<Guid> { DefaultSpaceTypes.Studio } }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, TypeIds = new List<Guid> { DefaultSpaceTypes.Studio } }))
             .ShouldBe(new[] { $"Studio {e.Tag}" });
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, Name = "SMALL" }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, Name = "SMALL" }))
             .ShouldBe(new[] { $"Small {e.Tag}" });
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FloorId = e.Floor1.Id }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FloorId = e.Floor1.Id }))
             .ShouldBe(new[] { $"Big {e.Tag}", $"Small {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FloorId = e.Floor2.Id }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FloorId = e.Floor2.Id }))
             .ShouldBeEmpty();                               // floor 2 exists but is not bookable
     }
 
@@ -79,13 +79,13 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
             await _maintenance.InsertAsync(new MaintenanceWindow(Guid.NewGuid(), e.Small.Id, ten.AddMinutes(30), ten.AddHours(2)), autoSave: true);
         });
 
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten, FreeToUtc = ten.AddHours(1) }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FreeFromUtc = ten, FreeToUtc = ten.AddHours(1) }))
             .ShouldBe(new[] { $"Studio {e.Tag}" });
         /* Touching is not overlapping: Big is free again from 11:00, Small is still blocked until 12:00. */
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(1), FreeToUtc = ten.AddHours(2) }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(1), FreeToUtc = ten.AddHours(2) }))
             .ShouldBe(new[] { $"Big {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
         /* 03:00-04:00 is outside every space's opening hours. */
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(-7), FreeToUtc = ten.AddHours(-6) }))
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(-7), FreeToUtc = ten.AddHours(-6) }))
             .ShouldBeEmpty();
     }
 
@@ -100,11 +100,29 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
             await _buildings.UpdateAsync(b, autoSave: true);
         });
 
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id })).ShouldBeEmpty();
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id })).ShouldBeEmpty();
     }
 
-    private async Task<List<string>> FindNamesAsync(FindSpacesInput input)
-        => (await _service.GetBookableListAsync(input)).Items.Select(s => s.Name).ToList();
+    /* The same collection without the bookable filter is the registry: every space, bookable or not. */
+    [Fact]
+    public async Task Bookable_false_returns_only_the_spaces_that_cannot_be_booked()
+    {
+        var e = await CreateEstateAsync();
+
+        var notBookable = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id, Bookable = false });
+        var every = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id });
+
+        /* Closed is switched off itself; Upstairs is on a floor that is switched off. */
+        notBookable.Items.Select(s => s.Name).ShouldBe(new[] { $"Closed {e.Tag}", $"Upstairs {e.Tag}" }, ignoreOrder: true);
+        every.TotalCount.ShouldBe(5);
+    }
+
+    /* "Find a space" asks the space collection for bookable spaces only. */
+    private async Task<List<string>> FindNamesAsync(GetSpaceListInput input)
+    {
+        input.Bookable = true;
+        return (await _service.GetListAsync(input)).Items.Select(s => s.Name).ToList();
+    }
 
     private record Estate(string Tag, Building Building, Floor Floor1, Floor Floor2, Space Big, Space Small);
 

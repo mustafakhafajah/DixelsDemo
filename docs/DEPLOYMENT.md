@@ -114,7 +114,7 @@ survives redeploys.
 ## 6. Check it works
 
 1. Sign in to Swagger (`https://<server>/server/swagger`) as an admin.
-2. `POST /api/app/email-test` with `{ "to": "you@dixels.io" }`. Optionally add `"replyTo"`.
+2. `POST /api/app/test-emails` with `{ "to": "you@dixels.io" }`. Optionally add `"replyTo"`.
 3. The reply shows `succeeded`, the server's exact answer (`serverResponse`), the codes, and a plain-words `hint`.
    `"succeeded": true` with `serverResponse` like `2.0.0 OK …` means it works.
 

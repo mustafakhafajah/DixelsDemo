@@ -10,7 +10,7 @@ namespace Dixels.Portal.Controllers.Floors;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/floor")]
+[Route("api/app/floors")]
 public class FloorController : PortalController, IFloorAppService
 {
     private readonly IFloorAppService _floors;
@@ -32,7 +32,8 @@ public class FloorController : PortalController, IFloorAppService
     [HttpPut("{id}")]
     public Task<FloorDto> UpdateAsync(Guid id, [FromBody] CreateUpdateFloorDto input) => _floors.UpdateAsync(id, input);
 
-    [HttpPost("{id}/set-bookable")]
+    /* Partial update; the only field that can change this way is isBookable. */
+    [HttpPatch("{id}")]
     public Task<FloorDto> SetBookableAsync(Guid id, [FromBody] SetBookableDto input) => _floors.SetBookableAsync(id, input);
 
     /* Deleting a floor isn't offered: it would leave spaces and bookings behind. */

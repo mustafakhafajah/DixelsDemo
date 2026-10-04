@@ -5,6 +5,7 @@ import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { ErrorLine, LoadError, Loading } from '../../components/bits'
+import { EmptyState } from '../../components/EmptyState'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
@@ -198,11 +199,10 @@ export function FindSpacePage() {
   if (failed) body = <LoadError what={t('load.rooms')} error={failed.error} onRetry={() => { findQ.refetch(); bookingsQ.refetch(); maintQ.refetch() }} />
   else if (!findQ.data) body = <Loading />
   else if (!candidates.length) {
+    const empty = f.freeOnly ? 'roomsFree' : 'rooms'
     body = (
-      <div className="sched-empty">
-        <p>{f.freeOnly ? t('find.noFreeRooms') : t('find.noRooms')}</p>
-        <p>{f.freeOnly ? t('find.noFreeRoomsHint') : t('find.noRoomsHint')}</p>
-      </div>
+      <EmptyState art="room" title={t(`empty.${empty}.title`)} text={t(`empty.${empty}.text`)}
+        action={{ label: t('common.clearFilters'), onClick: f.clearCriteria }} />
     )
   } else {
     const { start: open, end: close } = candidatesDayBounds(candidates, items, f.date)
@@ -328,7 +328,7 @@ export function FindSpacePage() {
   return (
     <section>
       <div className="find-layout">
-        <FindFilters />
+        <FindFilters key={f.criteriaVersion} />
         <section className="card" style={{ overflow: 'hidden' }}>
           {/* Today at the start, the date with its arrows in the middle (the empty third column keeps it centred). */}
           <div className="find-header">

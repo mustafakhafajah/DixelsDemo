@@ -12,6 +12,7 @@ import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { BookablePill, LoadError, Loading } from '../../components/bits'
 import { Dropdown } from '../../components/pickers'
+import { EmptyState } from '../../components/EmptyState'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { closedWeekdaysLabel } from '../../lib/closedDays'
@@ -52,8 +53,6 @@ function RegistryCard({ addLabel, onAdd, children }: { addLabel: string; onAdd?:
 }
 
 const muted = { fontSize: 11, color: 'var(--slate)' } as const
-/* Space between an empty list's sentence and its buttons. */
-const gap = { marginInlineStart: 10 } as const
 
 function Actions({ children }: { children: ReactNode }) {
   return <td style={{ textAlign: 'end' }}><div style={{ display: 'inline-block' }}>{children}</div></td>
@@ -71,7 +70,10 @@ export function BuildingsPage() {
   return (
     <section>
       <RegistryCard addLabel={t('estate.addBuilding')} onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
-        {q.isError ? <LoadError what={t('load.buildings')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? <p className="empty-note">{t('estate.noBuildings')}{can(P.Buildings.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.building()}>{t('estate.addBuilding')}</button>}</p> : (
+        {q.isError ? <LoadError what={t('load.buildings')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? (
+          <EmptyState art="building" title={t('empty.buildings.title')} text={t('empty.buildings.text')}
+            action={can(P.Buildings.Create) ? { label: t('estate.addBuilding'), onClick: () => modals.building() } : undefined} />
+        ) : (
           <>
             <div className="table-scroll">
               <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
@@ -134,14 +136,13 @@ export function FloorsPage() {
             <Dropdown id="ff-building" value={buildingId} onChange={pickBuilding}
               options={[{ value: '', label: t('common.allBuildings') }, ...(buildings.data ?? []).map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
-          <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => pickBuilding('')}>{t('common.clearFilters')}</button>
         </div>
-        {q.isError ? <LoadError what={t('load.floors')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount && !buildingId ? <p className="empty-note">{t('estate.noFloors')}{can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.floor()}>{t('estate.addFloor')}</button>}</p> : !q.data.totalCount ? (
-          <p className="empty-note">
-            {t('estate.buildingHasNoFloors')}
-            <button type="button" className="btn btn-sm" style={gap} onClick={() => pickBuilding('')}>{t('common.clearFilters')}</button>
-            {can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.floor()}>{t('estate.addFloor')}</button>}
-          </p>
+        {q.isError ? <LoadError what={t('load.floors')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount && !buildingId ? (
+          <EmptyState art="floor" title={t('empty.floors.title')} text={t('empty.floors.text')}
+            action={can(P.Floors.Create) ? { label: t('estate.addFloor'), onClick: () => modals.floor() } : undefined} />
+        ) : !q.data.totalCount ? (
+          <EmptyState art="floor" title={t('empty.buildingFloors.title', { building: byId[buildingId]?.name ?? '' })}
+            text={t('empty.buildingFloors.text')} action={{ label: t('common.clearFilters'), onClick: () => pickBuilding('') }} />
         ) : (
           <>
             <div className="table-scroll">
@@ -227,11 +228,11 @@ export function SpacesPage() {
         <SpaceRegistryFilters value={filters} onChange={changeFilters}
           buildings={buildings.data ?? []} floors={floors.data ?? []} types={types.data ?? []} />
         {q.isError ? <LoadError what={t('load.spaces')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
-          <p className="empty-note">
-            {filtered ? t('estate.noSpacesMatch') : t('estate.noSpaces')}
-            {filtered && <button type="button" className="btn btn-sm" style={gap} onClick={() => changeFilters(EMPTY_SPACE_FILTERS)}>{t('common.clearFilters')}</button>}
-            {can(P.Spaces.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.space()}>{t('estate.addSpace')}</button>}
-          </p>
+          filtered
+            ? <EmptyState art="space" title={t('empty.spacesFiltered.title')} text={t('empty.spacesFiltered.text')}
+                action={{ label: t('common.clearFilters'), onClick: () => changeFilters(EMPTY_SPACE_FILTERS) }} />
+            : <EmptyState art="space" title={t('empty.spaces.title')} text={t('empty.spaces.text')}
+                action={can(P.Spaces.Create) ? { label: t('estate.addSpace'), onClick: () => modals.space() } : undefined} />
         ) : (
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
@@ -295,7 +296,10 @@ export function SpaceTypesPage() {
   return (
     <section>
       <RegistryCard addLabel={t('estate.addSpaceType')} onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
-        {q.isError ? <LoadError what={t('load.spaceTypes')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? <p className="empty-note">{t('estate.noSpaceTypes')}{can(P.SpaceTypes.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.spaceType()}>{t('estate.addSpaceType')}</button>}</p> : (
+        {q.isError ? <LoadError what={t('load.spaceTypes')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? (
+          <EmptyState art="spaceType" title={t('empty.spaceTypes.title')} text={t('empty.spaceTypes.text')}
+            action={can(P.SpaceTypes.Create) ? { label: t('estate.addSpaceType'), onClick: () => modals.spaceType() } : undefined} />
+        ) : (
           <>
             <div className="table-scroll">
               <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>

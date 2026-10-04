@@ -9,7 +9,9 @@ export interface FindFilters {
   duration: FindDuration
   customEnd: number | null
   buildingId: string
-  floorName: string
+  floorId: string
+  /* "Free only": list only the rooms free for the chosen time and duration (asked of the server). */
+  freeOnly: boolean
   minCapacity: number
   /* Space type ids. */
   types: string[]
@@ -33,7 +35,8 @@ export const useFindStore = create<FindState>((set, get) => ({
   duration: 60,
   customEnd: null,
   buildingId: '',
-  floorName: '',
+  floorId: '',
+  freeOnly: false,
   minCapacity: 0,
   types: [],
   query: '',

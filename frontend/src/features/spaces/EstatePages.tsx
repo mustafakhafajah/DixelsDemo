@@ -1,8 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
 import { errorText } from '../../api/client'
-import { useBuildings, useDeleteSpaceType, useFloors, useSetBookable, useSpaceRegistry, useSpaceTypes, type EstateKind } from '../../api/hooks'
+import {
+  useBuildings, useBuildingsPage, useDeleteSpaceType, useFloors, useFloorsPage, useSetBookable, useSpaceRegistry, useSpaceTypes,
+  useSpaceTypesPage, type EstateKind,
+} from '../../api/hooks'
 import type { SpaceType } from '../../api/types'
 import { PageActions } from '../../app/pageActions'
 import { useSession } from '../../app/session'
@@ -13,7 +16,7 @@ import { Pagination } from '../../components/Pagination'
 import { RowMenu } from '../../components/RowMenu'
 import { closedWeekdaysLabel } from '../../lib/closedDays'
 import { pad } from '../../lib/dateUtils'
-import { useClientPaging } from '../../lib/useClientPaging'
+import { useServerPaging, useStayOnRealPage } from '../../lib/useServerPaging'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { modals } from '../../state/modalStore'
 import { useFilteredNavCount } from '../../state/navCountStore'
@@ -60,22 +63,23 @@ function Actions({ children }: { children: ReactNode }) {
 
 export function BuildingsPage() {
   const { t } = useTranslation()
-  const q = useBuildings()
+  const paging = useServerPaging()
+  const q = useBuildingsPage({ page: paging.page, pageSize: paging.pageSize })
+  useStayOnRealPage(paging, q.data?.totalCount)
   const { can } = useSession()
   const bookableItem = useBookableMenuItem()
-  const paging = useClientPaging(q.data ?? [])
   return (
     <section>
       <RegistryCard addLabel={t('estate.addBuilding')} onAdd={can(P.Buildings.Create) ? () => modals.building() : undefined}>
-        {q.isError ? <LoadError what={t('load.buildings')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">{t('estate.noBuildings')}{can(P.Buildings.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.building()}>{t('estate.addBuilding')}</button>}</p> : (
+        {q.isError ? <LoadError what={t('load.buildings')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? <p className="empty-note">{t('estate.noBuildings')}{can(P.Buildings.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.building()}>{t('estate.addBuilding')}</button>}</p> : (
           <>
             <div className="table-scroll">
-              <table className="grid">
+              <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
                 <thead>
                   <tr><th>{t('estate.col.building')}</th><th>{t('estate.col.timeZone')}</th><th>{t('estate.col.hoursUtc')}</th><th>{t('estate.col.bookingLength')}</th><th>{t('estate.col.floorsSpaces')}</th><th>{t('estate.col.bookable')}</th><th style={{ textAlign: 'end' }}>{t('common.actions')}</th></tr>
                 </thead>
                 <tbody>
-                  {paging.rows.map((b) => (
+                  {q.data.items.map((b) => (
                     <tr key={b.id}>
                       <td>
                         <div style={{ fontWeight: 600 }}><bdi>{b.name}</bdi></div>
@@ -98,7 +102,7 @@ export function BuildingsPage() {
                 </tbody>
               </table>
             </div>
-            <Pagination page={paging.page} pageSize={paging.pageSize} total={paging.total} noun="building" onPage={paging.setPage} onPageSize={paging.setPageSize} />
+            <Pagination page={paging.page} pageSize={paging.pageSize} total={q.data.totalCount} noun="building" onPage={paging.setPage} onPageSize={paging.setPageSize} />
           </>
         )}
       </RegistryCard>
@@ -110,14 +114,16 @@ export function BuildingsPage() {
 
 export function FloorsPage() {
   const { t } = useTranslation()
-  const q = useFloors()
   const buildings = useBuildings()
   const { can } = useSession()
   const bookableItem = useBookableMenuItem()
   const [buildingId, setBuildingId] = useState('')
-  const shown = (q.data ?? []).filter((f) => !buildingId || f.buildingId === buildingId)
-  const paging = useClientPaging(shown)
-  useFilteredNavCount('floors', buildingId ? shown.length : undefined)
+  /* The building filter and the page are both sent to the server, so each change is a new request. */
+  const paging = useServerPaging()
+  const q = useFloorsPage({ page: paging.page, pageSize: paging.pageSize, buildingId: buildingId || undefined })
+  useStayOnRealPage(paging, q.data?.totalCount)
+  useFilteredNavCount('floors', buildingId && q.data ? q.data.totalCount : undefined)
+  const pickBuilding = (v: string) => { setBuildingId(v); paging.setPage(1) }
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
     <section>
@@ -125,26 +131,26 @@ export function FloorsPage() {
         <div className="filter-bar">
           <div style={{ width: 220 }}>
             <label className="lbl" htmlFor="ff-building">{t('common.building')}</label>
-            <Dropdown id="ff-building" value={buildingId} onChange={(v) => { setBuildingId(v); paging.setPage(1) }}
+            <Dropdown id="ff-building" value={buildingId} onChange={pickBuilding}
               options={[{ value: '', label: t('common.allBuildings') }, ...(buildings.data ?? []).map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
-          <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => setBuildingId('')}>{t('common.clearFilters')}</button>
+          <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => pickBuilding('')}>{t('common.clearFilters')}</button>
         </div>
-        {q.isError ? <LoadError what={t('load.floors')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">{t('estate.noFloors')}{can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.floor()}>{t('estate.addFloor')}</button>}</p> : !shown.length ? (
+        {q.isError ? <LoadError what={t('load.floors')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount && !buildingId ? <p className="empty-note">{t('estate.noFloors')}{can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.floor()}>{t('estate.addFloor')}</button>}</p> : !q.data.totalCount ? (
           <p className="empty-note">
             {t('estate.buildingHasNoFloors')}
-            <button type="button" className="btn btn-sm" style={gap} onClick={() => setBuildingId('')}>{t('common.clearFilters')}</button>
+            <button type="button" className="btn btn-sm" style={gap} onClick={() => pickBuilding('')}>{t('common.clearFilters')}</button>
             {can(P.Floors.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.floor()}>{t('estate.addFloor')}</button>}
           </p>
         ) : (
           <>
             <div className="table-scroll">
-              <table className="grid">
+              <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
                 <thead>
                   <tr><th>{t('estate.col.floor')}</th><th>{t('estate.col.building')}</th><th>{t('estate.col.timeZone')}</th><th>{t('estate.col.hoursUtc')}</th><th>{t('estate.col.bookingLength')}</th><th>{t('estate.col.spaces')}</th><th>{t('estate.col.bookable')}</th><th style={{ textAlign: 'end' }}>{t('common.actions')}</th></tr>
                 </thead>
                 <tbody>
-                  {paging.rows.map((f) => {
+                  {q.data.items.map((f) => {
                     const b = byId[f.buildingId]
                     const overridden = [f.openHourOverride, f.closeHourOverride, f.minBookingMinutesOverride, f.maxBookingHoursOverride].some((v) => v != null)
                     const label = t('common.floorIn', { building: f.buildingName, floor: f.name })
@@ -178,7 +184,7 @@ export function FloorsPage() {
                 </tbody>
               </table>
             </div>
-            <Pagination page={paging.page} pageSize={paging.pageSize} total={paging.total} noun="floor" onPage={paging.setPage} onPageSize={paging.setPageSize} />
+            <Pagination page={paging.page} pageSize={paging.pageSize} total={q.data.totalCount} noun="floor" onPage={paging.setPage} onPageSize={paging.setPageSize} />
           </>
         )}
       </RegistryCard>
@@ -191,13 +197,14 @@ export function FloorsPage() {
 export function SpacesPage() {
   const { t } = useTranslation()
   const buildings = useBuildings()
-  const floors = useFloors()
   const types = useSpaceTypes()
   const { can } = useSession()
   const bookableItem = useBookableMenuItem()
   const [filters, setFilters] = useState<SpaceRegistryFilterValues>(EMPTY_SPACE_FILTERS)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
+  /* The floor list is asked for the chosen building. */
+  const floors = useFloors(filters.buildingId, !!filters.buildingId)
+  const paging = useServerPaging()
+  const { page, pageSize, setPage } = paging
   /* Only the typed fields are debounced; dropdowns apply at once. */
   const name = useDebouncedValue(filters.name.trim())
 
@@ -206,15 +213,10 @@ export function SpacesPage() {
     buildingId: filters.buildingId || undefined, floorId: filters.floorId || undefined, typeId: filters.typeId || undefined,
   })
   const total = q.data?.totalCount ?? 0
-
-  /* If the result shrinks (a filter, or the last row of the last page was changed), stay on a real page. */
-  useEffect(() => {
-    const pageCount = Math.max(1, Math.ceil(total / pageSize))
-    if (q.data && page > pageCount) setPage(pageCount)
-  }, [q.data, total, page, pageSize])
+  useStayOnRealPage(paging, q.data?.totalCount)
 
   const changeFilters = (v: SpaceRegistryFilterValues) => { setFilters(v); setPage(1) }
-  const changePageSize = (s: number) => { setPageSize(s); setPage(1) }
+  const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
   useFilteredNavCount('spaces', filtered && q.data ? total : undefined)
 
@@ -273,10 +275,11 @@ export function SpacesPage() {
 
 export function SpaceTypesPage() {
   const { t } = useTranslation()
-  const q = useSpaceTypes()
+  const paging = useServerPaging()
+  const q = useSpaceTypesPage({ page: paging.page, pageSize: paging.pageSize })
+  useStayOnRealPage(paging, q.data?.totalCount)
   const { can } = useSession()
   const del = useDeleteSpaceType()
-  const paging = useClientPaging(q.data ?? [])
 
   const remove = (st: SpaceType) => {
     if (st.spaceCount > 0) {
@@ -292,15 +295,15 @@ export function SpaceTypesPage() {
   return (
     <section>
       <RegistryCard addLabel={t('estate.addSpaceType')} onAdd={can(P.SpaceTypes.Create) ? () => modals.spaceType() : undefined}>
-        {q.isError ? <LoadError what={t('load.spaceTypes')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.length ? <p className="empty-note">{t('estate.noSpaceTypes')}{can(P.SpaceTypes.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.spaceType()}>{t('estate.addSpaceType')}</button>}</p> : (
+        {q.isError ? <LoadError what={t('load.spaceTypes')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount ? <p className="empty-note">{t('estate.noSpaceTypes')}{can(P.SpaceTypes.Create) && <button type="button" className="btn btn-primary btn-sm" style={gap} onClick={() => modals.spaceType()}>{t('estate.addSpaceType')}</button>}</p> : (
           <>
             <div className="table-scroll">
-              <table className="grid">
+              <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
                 <thead>
                   <tr><th>{t('estate.col.type')}</th><th>{t('estate.col.spacesUsingIt')}</th><th style={{ textAlign: 'end' }}>{t('common.actions')}</th></tr>
                 </thead>
                 <tbody>
-                  {paging.rows.map((st) => (
+                  {q.data.items.map((st) => (
                     <tr key={st.id}>
                       <td style={{ fontWeight: 600 }}><bdi>{st.name}</bdi></td>
                       <td>{t('count.space', { count: st.spaceCount })}</td>
@@ -315,7 +318,7 @@ export function SpaceTypesPage() {
                 </tbody>
               </table>
             </div>
-            <Pagination page={paging.page} pageSize={paging.pageSize} total={paging.total} noun="spaceType" onPage={paging.setPage} onPageSize={paging.setPageSize} />
+            <Pagination page={paging.page} pageSize={paging.pageSize} total={q.data.totalCount} noun="spaceType" onPage={paging.setPage} onPageSize={paging.setPageSize} />
           </>
         )}
       </RegistryCard>

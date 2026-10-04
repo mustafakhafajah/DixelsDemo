@@ -5,9 +5,10 @@ import { useSession } from '../../../app/session'
 import type { ClosedRules } from '../../../lib/closedDays'
 import { addDays, dayAt } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
-import { useScheduleStore } from '../../../state/scheduleStore'
+import { EVERYONE, useScheduleStore } from '../../../state/scheduleStore'
 
-/* Items a schedule instance shows (mock: scopeBookings): one user's bookings, plus blocked time on those spaces. */
+/* Items a schedule instance shows (mock: scopeBookings). Admins: everyone's bookings (or one person's) plus the
+ * blocked time in the chosen building / floor / space. Employees: their own bookings plus blocked time on those spaces. */
 export function useScheduleData(id: ScheduleId) {
   const cfg = useScheduleStore((s) => s.configs[id])
   const session = useSession()
@@ -18,24 +19,32 @@ export function useScheduleData(id: ScheduleId) {
   /* Employees have no space picker: they always see all of their own bookings. */
   const multiSpace = !session.isAdmin || cfg.spaceId === 'all'
   const singleSpaceId = multiSpace ? '' : cfg.spaceId
-  const ownerId = cfg.userId || session.userId
+  /* Admins: no owner filter for "Everyone", otherwise the chosen person. Employees: the server only ever sends
+   * their own, and the request says so too. */
+  const everyone = session.isAdmin && cfg.userId === EVERYONE
+  const ownerId = !session.isAdmin ? session.userId : everyone ? undefined : cfg.userId
 
   const ready = !!session.userId
-  /* A chosen building / floor is sent to the server, so each pick is a new request. */
+  /* Every filter is sent to the server, so each pick is a new request; the current items stay on screen
+   * until the new ones arrive. */
   const buildingId = cfg.buildingId || undefined
   const floorId = cfg.floorId || undefined
-  const scoped = useBookings({ from, to, ownerUserId: ownerId, spaceId: singleSpaceId || undefined, buildingId, floorId }, ready)
+  const spaceId = singleSpaceId || undefined
+  const scoped = useBookings({ from, to, ownerUserId: ownerId, spaceId, buildingId, floorId }, ready, true)
   /* Everyone's bookings on the single space, so free windows and slot prefill see the whole picture. */
-  const spaceAll = useBookings({ from, to, spaceId: singleSpaceId }, ready && !!singleSpaceId)
-  const maint = useMaintenance({ from, to, buildingId, floorId }, ready)
+  const spaceAll = useBookings({ from, to, spaceId: singleSpaceId }, ready && !!singleSpaceId && !everyone, true)
+  const maint = useMaintenance({ from, to, spaceId, buildingId, floorId }, ready, true)
 
   return useMemo(() => {
     const spaces = spacesQ.data ?? []
     const mine = scoped.data ?? []
-    const spaceIds = multiSpace ? [...new Set(mine.map((b) => b.spaceId))] : [cfg.spaceId]
-    const cleaning = (maint.data ?? []).filter((m) => spaceIds.includes(m.spaceId))
+    /* Admins see all the blocked time the server sent for the filters; "My Schedule" shows it only on the
+     * spaces the employee booked. */
+    const bookedSpaces = new Set(mine.map((b) => b.spaceId))
+    const cleaning = session.isAdmin ? maint.data ?? [] : (maint.data ?? []).filter((m) => bookedSpaces.has(m.spaceId))
+    const spaceIds = multiSpace ? [...new Set([...bookedSpaces, ...cleaning.map((m) => m.spaceId)])] : [cfg.spaceId]
     const items: ScheduleItem[] = [...mine, ...cleaning].sort((a, b) => a.start.getTime() - b.start.getTime())
-    const busyOnSpace: ScheduleItem[] = singleSpaceId ? [...(spaceAll.data ?? []), ...cleaning] : items
+    const busyOnSpace: ScheduleItem[] = singleSpaceId ? [...(everyone ? mine : spaceAll.data ?? []), ...cleaning] : items
     const shownSpaces = spaceIds.map((sid) => spaces.find((s) => s.id === sid)).filter(Boolean) as Space[]
     const single = singleSpaceId ? spaces.find((s) => s.id === singleSpaceId) ?? null : null
     const building = cfg.buildingId ? buildingsQ.data?.find((b) => b.id === cfg.buildingId) ?? null : null
@@ -49,14 +58,15 @@ export function useScheduleData(id: ScheduleId) {
       shownSpaces,
       single,
       multiSpace,
+      everyone,
       closed,
-      loading: scoped.isLoading || maint.isLoading,
+      loading: scoped.isLoading || maint.isLoading || spaceAll.isLoading,
       /* The first failed request, if any, and a way to ask again. */
       error: [spacesQ, scoped, spaceAll, maint].find((q) => q.isError)?.error ?? null,
       retry: () => { spacesQ.refetch(); scoped.refetch(); spaceAll.refetch(); maint.refetch() },
       spaces,
     }
-  }, [spacesQ.data, buildingsQ.data, scoped.data, spaceAll.data, maint.data, cfg, multiSpace, singleSpaceId, scoped.isLoading, maint.isLoading, spacesQ, scoped, spaceAll, maint])
+  }, [spacesQ, buildingsQ, scoped, spaceAll, maint, cfg, multiSpace, everyone, singleSpaceId, session.isAdmin])
 }
 
 export type ScheduleData = ReturnType<typeof useScheduleData>

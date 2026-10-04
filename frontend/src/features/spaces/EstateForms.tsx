@@ -321,7 +321,6 @@ const SPACE_OVERRIDE_IDS = ['sp-open', 'sp-close', 'sp-min', 'sp-max']
 export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const { t } = useTranslation()
   const buildings = useBuildings().data ?? []
-  const floors = useFloors().data ?? []
   const types = useSpaceTypes().data ?? []
   const save = useSaveSpace()
   const fields = useFieldErrors()
@@ -335,6 +334,8 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const cancelAfter = useCancelUpcomingAfterSave()
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
+  /* The chosen building's floors, asked of the server. */
+  const floors = useFloors(buildingId, !!buildingId).data ?? []
   const [note, setNote] = useState((editing ? englishOf(editing.translations)?.note ?? editing.note : null) ?? '')
   const [ov, setOv] = useState<Overrides>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),

@@ -4,7 +4,7 @@ import { useUserRoles } from './api'
 
 export interface UserDirectoryFilterValues {
   search: string
-  /* '' or a role name */
+  /* '' or a role id */
   role: string
   /* '' | 'active' | 'inactive' */
   status: string
@@ -33,7 +33,7 @@ export function UserDirectoryFilters({ value, onChange }: {
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="udf-role-filter">{t('users.col.role')}</label>
         <Dropdown id="udf-role-filter" value={value.role} onChange={(v) => set({ role: v })}
-          options={[{ value: '', label: t('users.allRoles') }, ...(roles.data ?? []).map((r) => ({ value: r.name, label: r.displayName }))]} />
+          options={[{ value: '', label: t('users.allRoles') }, ...(roles.data ?? []).map((r) => ({ value: r.id, label: r.displayName }))]} />
       </div>
       <div style={{ width: 160 }}>
         <label className="lbl" htmlFor="udf-status">{t('users.col.status')}</label>

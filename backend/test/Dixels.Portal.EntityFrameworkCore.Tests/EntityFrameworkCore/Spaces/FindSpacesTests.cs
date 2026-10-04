@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Maintenance;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
 using Shouldly;
@@ -20,6 +22,9 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Space, Guid> _spaces;
+    private readonly IRepository<Booking, Guid> _bookings;
+    private readonly IRepository<MaintenanceWindow, Guid> _maintenance;
+    private readonly BookingManager _bookingManager;
 
     public FindSpacesTests()
     {
@@ -27,6 +32,9 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
         _buildings = GetRequiredService<IRepository<Building, Guid>>();
         _floors = GetRequiredService<IRepository<Floor, Guid>>();
         _spaces = GetRequiredService<IRepository<Space, Guid>>();
+        _bookings = GetRequiredService<IRepository<Booking, Guid>>();
+        _maintenance = GetRequiredService<IRepository<MaintenanceWindow, Guid>>();
+        _bookingManager = GetRequiredService<BookingManager>();
     }
 
     [Fact]
@@ -52,8 +60,33 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
             .ShouldBe(new[] { $"Studio {e.Tag}" });
         (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, Name = "SMALL" }))
             .ShouldBe(new[] { $"Small {e.Tag}" });
-        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FloorName = "2" }))
+        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FloorId = e.Floor1.Id }))
+            .ShouldBe(new[] { $"Big {e.Tag}", $"Small {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
+        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FloorId = e.Floor2.Id }))
             .ShouldBeEmpty();                               // floor 2 exists but is not bookable
+    }
+
+    /* "Free only": a booking or blocked time in the window, or a window outside opening hours, drops the space. */
+    [Fact]
+    public async Task Free_only_keeps_the_spaces_that_could_be_booked_for_the_window()
+    {
+        var e = await CreateEstateAsync();
+        var ten = DateTime.UtcNow.Date.AddDays(30).AddHours(10);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var booking = await _bookingManager.CreateAsync(e.Big.Id, Guid.NewGuid(), ten, ten.AddHours(1));
+            await _bookings.InsertAsync(booking, autoSave: true);
+            await _maintenance.InsertAsync(new MaintenanceWindow(Guid.NewGuid(), e.Small.Id, ten.AddMinutes(30), ten.AddHours(2)), autoSave: true);
+        });
+
+        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten, FreeToUtc = ten.AddHours(1) }))
+            .ShouldBe(new[] { $"Studio {e.Tag}" });
+        /* Touching is not overlapping: Big is free again from 11:00, Small is still blocked until 12:00. */
+        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(1), FreeToUtc = ten.AddHours(2) }))
+            .ShouldBe(new[] { $"Big {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
+        /* 03:00-04:00 is outside every space's opening hours. */
+        (await FindNamesAsync(new FindSpacesInput { BuildingId = e.Building.Id, FreeFromUtc = ten.AddHours(-7), FreeToUtc = ten.AddHours(-6) }))
+            .ShouldBeEmpty();
     }
 
     [Fact]
@@ -73,7 +106,7 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
     private async Task<List<string>> FindNamesAsync(FindSpacesInput input)
         => (await _service.GetBookableListAsync(input)).Items.Select(s => s.Name).ToList();
 
-    private record Estate(string Tag, Building Building);
+    private record Estate(string Tag, Building Building, Floor Floor1, Floor Floor2, Space Big, Space Small);
 
     /* Floor 1 (bookable): Big (12 seats), Small (4), Studio (studio type), Closed (not bookable).
      * Floor 2 (not bookable): Upstairs. */
@@ -84,18 +117,18 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
         var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
         var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2") { IsBookable = false }, autoSave: true);
 
-        async Task Add(string name, Floor floor, int capacity, Guid type, bool bookable = true)
+        async Task<Space> Add(string name, Floor floor, int capacity, Guid type, bool bookable = true)
             => await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"{name} {tag}", building.Id, floor.Id, type)
             {
                 Capacity = capacity,
                 IsBookable = bookable,
             }, autoSave: true);
 
-        await Add("Big", floor1, 12, DefaultSpaceTypes.MeetingRoom);
-        await Add("Small", floor1, 4, DefaultSpaceTypes.MeetingRoom);
+        var big = await Add("Big", floor1, 12, DefaultSpaceTypes.MeetingRoom);
+        var small = await Add("Small", floor1, 4, DefaultSpaceTypes.MeetingRoom);
         await Add("Studio", floor1, 2, DefaultSpaceTypes.Studio);
         await Add("Closed", floor1, 6, DefaultSpaceTypes.MeetingRoom, bookable: false);
         await Add("Upstairs", floor2, 6, DefaultSpaceTypes.MeetingRoom);
-        return new Estate(tag, building);
+        return new Estate(tag, building, floor1, floor2, big, small);
     });
 }

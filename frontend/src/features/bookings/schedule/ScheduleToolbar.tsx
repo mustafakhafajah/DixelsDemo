@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { useBuildings, useFloors, useUsers } from '../../../api/hooks'
+import { useBuildings, useFloors, useSpaces, useUsers } from '../../../api/hooks'
 import type { Space } from '../../../api/types'
 import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
 import { dayAt, formatDate, formatDateRange, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
-import { useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
+import { EVERYONE, useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
  * whatever the two ends share, in the chosen language's own order. */
@@ -23,14 +23,12 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const session = useSession()
   const users = useUsers(session.isAdmin)
   const buildings = useBuildings().data ?? []
-  const allFloors = useFloors().data ?? []
-  /* Floor stays locked until a building is picked, then lists only that building's floors. */
-  const floors = allFloors.filter((f) => f.buildingId === cfg.buildingId)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+  /* Floor stays locked until a building is picked, then the server is asked for that building's floors;
+   * Space likewise waits for a floor and lists only that floor's spaces. */
+  const floors = useFloors(cfg.buildingId, !!cfg.buildingId).data ?? []
+  const shownSpaces = useSpaces({ floorId: cfg.floorId }, session.isAdmin && !!cfg.floorId).data ?? []
   const inScope = (s: Space, buildingId: string, floorId: string) =>
     (!buildingId || s.buildingId === buildingId) && (!floorId || s.floorId === floorId)
-  /* Only spaces in the chosen building and floor; a chosen space elsewhere goes back to "All my spaces". */
-  const shownSpaces = spaces.filter((s) => inScope(s, cfg.buildingId, cfg.floorId))
   const keepSpace = (buildingId: string, floorId: string) =>
     cfg.spaceId === 'all' || spaces.some((s) => s.id === cfg.spaceId && inScope(s, buildingId, floorId)) ? cfg.spaceId : 'all'
   /* Space stays locked until a floor is picked, so clearing the building or floor also clears the space. */
@@ -94,11 +92,14 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
         </div>
         <div>
           <label className="lbl" htmlFor="my-user">{t('schedule.user')}</label>
-          <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId ?? session.userId}
-            onChange={(v) => store.patch(id, { userId: v === session.userId ? null : v })}
-            options={users.data
-              ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.isAdmin ? t('schedule.userAdmin', { name: u.name }) : u.name }))
-              : [{ value: session.userId, label: t('common.you') }]} />
+          <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId}
+            onChange={(v) => store.patch(id, { userId: v })}
+            options={[
+              { value: EVERYONE, label: t('schedule.everyone') },
+              ...(users.data
+                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.isAdmin ? t('schedule.userAdmin', { name: u.name }) : u.name }))
+                : [{ value: session.userId, label: t('common.you') }]),
+            ]} />
         </div>
       </div>
       <div className="sched-row sched-row-spread">

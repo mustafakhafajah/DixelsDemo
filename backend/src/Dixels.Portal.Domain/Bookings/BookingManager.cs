@@ -62,17 +62,26 @@ public class BookingManager : PortalDomainService
 
     public void ValidateWindow(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
     {
+        var problem = FindWindowProblem(ctx, startUtc, endUtc, allowPast);
+        if (problem != null) throw problem;
+    }
+
+    /* The first rule the window breaks (missing or reversed times, past start, closed day, opening hours,
+     * min / max length), or null when it fits. ValidateWindow throws it; "Find a space" uses it to keep only
+     * spaces that are free for a window without throwing per space. */
+    public BusinessException? FindWindowProblem(SpaceContext ctx, DateTime startUtc, DateTime endUtc, bool allowPast = false)
+    {
         if (startUtc == default || endUtc == default)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:StartEndRequired"]).ForField("start");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:StartEndRequired"]).ForField("start");
         if (endUtc <= startUtc)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: L["Error:EndBeforeStart"]).ForField("end");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.EndBeforeStart, message: L["Error:EndBeforeStart"]).ForField("end");
         if (!allowPast && startUtc < Clock.Now)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: L["Error:StartInPast"]).ForField("start");
+            return new UserFriendlyException(code: PortalDomainErrorCodes.StartInPast, message: L["Error:StartInPast"]).ForField("start");
 
         var c = ctx.Constraints;
         var closed = BuildingCalendar.FindClosedDay(c, startUtc, endUtc);
         if (closed != null)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message: closed.IsHoliday
+            return new UserFriendlyException(code: PortalDomainErrorCodes.HolidayClosed, message: closed.IsHoliday
                 ? L["Error:ClosedForHoliday", ctx.Space.GetName(), closed.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)]
                 : L["Error:ClosedOnWeekday", ctx.Space.GetName(), L[$"Weekdays:{(int)closed.Day.DayOfWeek}"]]).ForField("date");
 
@@ -80,16 +89,17 @@ public class BookingManager : PortalDomainService
         var eMin = endUtc.Hour * 60 + endUtc.Minute;
         if (eMin == 0) eMin = 1440;
         if (sMin < c.OpenMinute || eMin > c.CloseMinute || endUtc.Date > startUtc.Date && eMin != 1440)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
+            return new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
                 L["Error:OutsideHours", ctx.Space.GetName(), $"{c.OpenMinute / 60:00}:00", $"{c.CloseMinute / 60:00}:00"]).ForField("window");
 
         var mins = (endUtc - startUtc).TotalMinutes;
         if (mins < c.MinBookingMinutes)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
+            return new UserFriendlyException(code: PortalDomainErrorCodes.DurationBelowMin, message:
                 L["Error:DurationBelowMin", c.MinBookingMinutes]).ForField("window");
         if (mins > c.MaxBookingHours * 60)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
+            return new UserFriendlyException(code: PortalDomainErrorCodes.DurationAboveMax, message:
                 L["Error:DurationAboveMax", c.MaxBookingHours]).ForField("window");
+        return null;
     }
 
     public void EnsureBookable(SpaceContext ctx)

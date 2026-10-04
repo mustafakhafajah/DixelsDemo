@@ -28,7 +28,7 @@ export const openItem = (i: ScheduleItem) => {
 
 function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const { t } = useTranslation()
-  const { cfg, items, multiSpace, closed } = data
+  const { cfg, items, multiSpace, everyone, closed } = data
   const { userId } = useSession()
   const byDay = useMemo(() => {
     const m: Record<string, ScheduleItem[]> = {}
@@ -45,7 +45,10 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
 
   const label = (i: ScheduleItem) => i.kind === 'maintenance'
     ? multiSpace ? `${i.note || t('schedule.blocked')} · ${i.spaceName}` : i.note || t('schedule.blocked')
-    : multiSpace ? i.spaceName : i.ownerUserId === userId ? t('common.you') : i.ownerName
+    : multiSpace
+      /* With everyone's bookings shown, each one says whose it is too. */
+      ? everyone ? `${i.ownerUserId === userId ? t('common.you') : i.ownerName} · ${i.spaceName}` : i.spaceName
+      : i.ownerUserId === userId ? t('common.you') : i.ownerName
 
   return (
     <div className="month-wrap">
@@ -95,7 +98,7 @@ interface SlotDrag { key: string; a: number; b: number }
 
 function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const { t } = useTranslation()
-  const { cfg, items, multiSpace, single, shownSpaces, busyOnSpace, closed } = data
+  const { cfg, items, multiSpace, everyone, single, shownSpaces, busyOnSpace, closed } = data
   const { userId, can } = useSession()
   const canBook = can(P.Bookings.Create)
   const scroller = useRef<HTMLDivElement>(null)
@@ -253,7 +256,9 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                   const who = it.kind === 'maintenance' ? it.note || t('schedule.blocked') : it.ownerName
                   const label = it.kind === 'maintenance'
                     ? multiSpace ? `${who} · ${it.spaceName}` : who
-                    : multiSpace ? it.spaceName : it.ownerUserId === userId ? t('common.you') : who
+                    : multiSpace
+                      ? everyone ? `${it.ownerUserId === userId ? t('common.you') : who} · ${it.spaceName}` : it.spaceName
+                      : it.ownerUserId === userId ? t('common.you') : who
                   const w = 100 / g.lanes
                   const h = Math.max(17, ((g.e - g.s) / 60) * pph - 1)
                   return (

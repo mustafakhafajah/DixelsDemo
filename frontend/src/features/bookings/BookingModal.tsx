@@ -5,6 +5,7 @@ import { ApiError, errorText } from '../../api/client'
 import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
@@ -51,6 +52,9 @@ type KeptReason = '' | 'booked' | 'closed' | 'hours'
 export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; editing: Booking | null }) {
   const { t } = useTranslation()
   const session = useSession()
+  /* See who booked what (ViewAll) / may hold several spaces at once (MultipleSpaces). */
+  const seesAll = session.can(P.Bookings.ViewAll)
+  const multipleSpaces = session.can(P.Bookings.MultipleSpaces)
   const spacesQ = useSpaces()
   /* A new booking never starts in the past: a prefill from an earlier slot is moved up to now. */
   const earliest = earliestStart()
@@ -108,7 +112,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const rangeFrom = start ? dayAt(dayKey(start)) : undefined
   const lastOcc = generated?.occurrences.at(-1)?.end ?? end
   const rangeTo = lastOcc ? addDays(dayAt(dayKey(lastOcc)), 1) : undefined
-  const bookingsQ = useAvailability({ from: rangeFrom, to: rangeTo }, session, hasWindow)
+  const bookingsQ = useAvailability({ from: rangeFrom, to: rangeTo }, { seesAll, userId: session.userId }, hasWindow)
   const bookings = useMemo(() => bookingsQ.data ?? [], [bookingsQ.data])
 
   const spaces = useMemo(() => spacesQ.data ?? [], [spacesQ.data])
@@ -163,8 +167,8 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     if (!generated || !spaceId) return []
     return generated.occurrences.map((o) => {
       const clash = findOverlap(bookings, spaceId, o.start, o.end)
-      /* Employees can't hold two spaces at once; admins can, so their other bookings don't count. */
-      const self = !clash && !session.isAdmin
+      /* Without Bookings.MultipleSpaces you can't hold two spaces at once, so your other bookings count. */
+      const self = !clash && !multipleSpaces
         ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end)
         : undefined
       const hit = clash ?? self
@@ -178,10 +182,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         skip: closed ? true : skipOverrides[at] ?? !!hit,
         note: closed ? t('booking.occurrence.closed', { when: closed })
           : hit ? (hit.spaceId !== spaceId ? t('booking.occurrence.youHave', { space: hit.spaceName })
-            : (session.isAdmin ? t('booking.occurrence.takenBy', { name: hit.ownerName }) : t('booking.occurrence.alreadyBooked'))) : undefined,
+            : (seesAll ? t('booking.occurrence.takenBy', { name: hit.ownerName }) : t('booking.occurrence.alreadyBooked'))) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, space, session.userId, session.isAdmin, skipOverrides, t])
+  }, [generated, bookings, spaceId, space, session.userId, seesAll, multipleSpaces, skipOverrides, t])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()
@@ -198,7 +202,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const stillBusy = suggested && findOverlap(bookings, space.id, suggested.start, suggested.end)
       setConflict({
         message: clash
-          ? session.isAdmin
+          ? seesAll
             ? t('booking.conflict.byOwner', { space: space.name, owner: clash.ownerName, from: hm(clash.start), to: hm(clash.end) })
             : t('booking.conflict.taken', { space: space.name, from: hm(clash.start), to: hm(clash.end) })
           : message,

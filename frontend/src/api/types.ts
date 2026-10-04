@@ -150,7 +150,6 @@ export interface Profile {
   id: string
   name: string
   email: string | null
-  isAdmin: boolean
   /* Role names from the identity database, e.g. ["admin"]. */
   roles: string[]
 }
@@ -158,7 +157,8 @@ export interface Profile {
 export interface UserLookup {
   id: string
   name: string
-  isAdmin: boolean
+  /* Role names, shown next to the name in the person filter; never used as a permission. */
+  roles: string[]
 }
 
 export interface ListResult<T> {

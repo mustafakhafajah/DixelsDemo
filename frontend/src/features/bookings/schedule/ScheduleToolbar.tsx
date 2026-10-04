@@ -3,8 +3,10 @@ import { useBuildings, useFloors, useSpaces, useUsers } from '../../../api/hooks
 import type { Space } from '../../../api/types'
 import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
+import { P } from '../../../auth/permissions'
 import { dayAt, formatDate, formatDateRange, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
+import { roleLabel } from '../../users/api'
 import { EVERYONE, useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
@@ -21,12 +23,14 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const store = useScheduleStore()
   const cfg = store.configs[id]
   const session = useSession()
-  const users = useUsers(session.isAdmin)
+  /* The full toolbar (space, person, From / To) is for whoever may see everyone's bookings. */
+  const seesAll = session.can(P.Bookings.ViewAll)
+  const users = useUsers(seesAll)
   const buildings = useBuildings().data ?? []
   /* Floor stays locked until a building is picked, then the server is asked for that building's floors;
    * Space likewise waits for a floor and lists only that floor's spaces. */
   const floors = useFloors(cfg.buildingId, !!cfg.buildingId).data ?? []
-  const shownSpaces = useSpaces({ floorId: cfg.floorId }, session.isAdmin && !!cfg.floorId).data ?? []
+  const shownSpaces = useSpaces({ floorId: cfg.floorId }, seesAll && !!cfg.floorId).data ?? []
   const inScope = (s: Space, buildingId: string, floorId: string) =>
     (!buildingId || s.buildingId === buildingId) && (!floorId || s.floorId === floorId)
   const keepSpace = (buildingId: string, floorId: string) =>
@@ -69,7 +73,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   )
 
   /* Employees: the building and floor on top; Month / Week / Day on the left and the period on the far right under it. */
-  if (!session.isAdmin) {
+  if (!seesAll) {
     return (
       <div className="sched-toolbar">
         <div className="sched-row sched-row-left">{building}{floor}</div>
@@ -97,7 +101,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             options={[
               { value: EVERYONE, label: t('schedule.everyone') },
               ...(users.data
-                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.isAdmin ? t('schedule.userAdmin', { name: u.name }) : u.name }))
+                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.roles.length ? t('schedule.userWithRoles', { name: u.name, roles: u.roles.map((r) => roleLabel(r)).join(', ') }) : u.name }))
                 : [{ value: session.userId, label: t('common.you') }]),
             ]} />
         </div>

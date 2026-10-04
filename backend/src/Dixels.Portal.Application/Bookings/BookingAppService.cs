@@ -16,8 +16,9 @@ using Volo.Abp.Users;
 
 namespace Dixels.Portal.Bookings;
 
-/* Each action needs its Bookings permission. On top of that, only the owner (or someone with Bookings.ManageAll)
- * may change a given booking; that depends on the booking, so it is checked in code (EnsureCanActAsync). */
+/* Each action needs its own-booking permission (Create / Edit / Delete). Acting on someone else's booking also
+ * needs the matching "everyone's" permission (EditAll / DeleteAll); that depends on the booking, so it is checked
+ * in code (EnsureCanActAsync). Seeing other people's bookings and names needs ViewAll. */
 [Authorize]
 public class BookingAppService : PortalAppService, IBookingAppService
 {
@@ -37,7 +38,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _scopes = scopes;
     }
 
-    /* Admins (Bookings.ManageAll) list anyone's bookings; everyone else only ever gets their own,
+    /* With Bookings.ViewAll you list anyone's bookings; everyone else only ever gets their own,
      * whatever owner they ask for. Other people's time comes from GetBusyListAsync instead. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
@@ -54,7 +55,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return new ListResultDto<BookingDto>(await MapListAsync(list));
     }
 
-    /* Someone else's booking is "not found" for a non-admin, exactly like a booking that doesn't exist. */
+    /* Without Bookings.ViewAll, someone else's booking is "not found", exactly like a booking that doesn't exist. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<BookingDto> GetAsync(Guid id)
     {
@@ -91,7 +92,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return query.Where(b => spaceIds.Contains(b.SpaceId));
     }
 
-    private Task<bool> SeesAllBookingsAsync() => AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll);
+    private Task<bool> SeesAllBookingsAsync() => AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ViewAll);
 
     [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
@@ -145,7 +146,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input)
     {
         var b = await GetBookingAsync(id);
-        await EnsureCanActAsync(b, L["Error:OnlyOwnChange"]);
+        await EnsureCanActAsync(b, PortalPermissions.Bookings.EditAll, L["Error:OnlyOwnChange"]);
         var state = b.GetLifecycle(Clock.Now);
         if (state is TimeWindowState.Ended or TimeWindowState.Cancelled)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L[$"Error:BookingLocked:{state.ToApiValue()}"]);
@@ -165,8 +166,9 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _manager.ValidateWindow(ctx, start, end);
         await _manager.EnsureNoMaintenanceAsync(ctx, start, end);
         await _manager.EnsureNoConflictAsync(b.SpaceId, start, end, b.Id);
-        /* The owner's rule applies: an admin moving an employee's booking still can't give them two rooms at once. */
-        if (!(b.OwnerUserId == CurrentUser.Id && await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll)))
+        /* The owner's rule applies: moving someone else's booking still can't give them two rooms at once; only your own
+         * booking skips the check, and only with Bookings.MultipleSpaces. */
+        if (!(b.OwnerUserId == CurrentUser.Id && await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.MultipleSpaces)))
             await _manager.EnsureNoSelfOverlapAsync(b.OwnerUserId, b.SpaceId, start, end, b.Id);
 
         b.StartUtc = start;
@@ -189,7 +191,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id)
     {
         var anchor = await GetBookingAsync(id);
-        await EnsureCanActAsync(anchor, L["Error:OnlyOwnCancel"]);
+        await EnsureCanActAsync(anchor, PortalPermissions.Bookings.DeleteAll, L["Error:OnlyOwnCancel"]);
         if (!anchor.SeriesId.HasValue)
         {
             await CancelOneAsync(anchor);
@@ -214,7 +216,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     public async Task<BookingDto> EndEarlyAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
-        await EnsureCanActAsync(b, L["Error:OnlyOwnEnd"]);
+        await EnsureCanActAsync(b, PortalPermissions.Bookings.EditAll, L["Error:OnlyOwnEnd"]);
         if (b.GetLifecycle(Clock.Now) != TimeWindowState.InProgress)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotInProgress, message:
                 L["Error:BookingNotInProgress"]);
@@ -224,12 +226,13 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return await MapAsync(b);
     }
 
-    [Authorize(PortalPermissions.Bookings.ManageAll)]
+    /* How many of everyone's bookings are still to come: reading other people's bookings, so ViewAll. */
+    [Authorize(PortalPermissions.Bookings.ViewAll)]
     public async Task<int> GetUpcomingCountAsync(EstateScopeDto input)
         => await AsyncExecuter.CountAsync(await UpcomingInScopeAsync(input));
 
-    /* Admin: cancel every upcoming booking in a scope, e.g. after making it not bookable. */
-    [Authorize(PortalPermissions.Bookings.ManageAll)]
+    /* Cancel every upcoming booking in a scope, e.g. after making it not bookable: cancelling other people's, so DeleteAll. */
+    [Authorize(PortalPermissions.Bookings.DeleteAll)]
     public async Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input)
     {
         var upcoming = await AsyncExecuter.ToListAsync(await UpcomingInScopeAsync(input));
@@ -242,18 +245,18 @@ public class BookingAppService : PortalAppService, IBookingAppService
         => await _bookings.FindAsync(id)
            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: L["Error:BookingNotFound"]);
 
-    /* Owners act on their own bookings; admins (Bookings.ManageAll) on anyone's. */
-    private async Task EnsureCanActAsync(Booking b, string message)
+    /* Owners act on their own bookings; someone else's needs the given "everyone's" permission (EditAll / DeleteAll). */
+    private async Task EnsureCanActAsync(Booking b, string everyonesPermission, string message)
     {
-        if (b.OwnerUserId != CurrentUser.Id && !await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll))
+        if (b.OwnerUserId != CurrentUser.Id && !await AuthorizationService.IsGrantedAsync(everyonesPermission))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.AccessForbidden, message: message);
     }
 
     private async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? seriesId, string? idempotencyKey)
     {
-        /* Admins may hold several spaces at the same time; employees may not. */
+        /* Only with Bookings.MultipleSpaces may the booker hold several spaces at the same time. */
         var booking = await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
-            seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll));
+            seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.MultipleSpaces));
         /* The database has the last word on overlaps; a same-moment loser gets the normal conflict. */
         await BookingOverlap.Translate(() => _bookings.InsertAsync(booking, autoSave: true));
         return booking;
@@ -261,7 +264,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task CancelOneAsync(Booking b)
     {
-        await EnsureCanActAsync(b, L["Error:OnlyOwnCancel"]);
+        await EnsureCanActAsync(b, PortalPermissions.Bookings.DeleteAll, L["Error:OnlyOwnCancel"]);
         var state = b.GetLifecycle(Clock.Now);
         if (state == TimeWindowState.Ended)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L["Error:EndedCannotCancel"]);
@@ -282,7 +285,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
     private async Task<BookingDto> MapAsync(Booking booking) => (await MapListAsync(new List<Booking> { booking }))[0];
 
     /* ObjectMapper copies the booking; the space and owner names come from one query each for the whole list.
-     * Only admins (Bookings.ManageAll) see who booked what; everyone else sees their own name and
+     * Only with Bookings.ViewAll does anyone see who booked what; everyone else sees their own name and
      * "Booked" (HiddenOwnerName, in their language) on the rest, so another person's name never leaves the server. */
     private async Task<List<BookingDto>> MapListAsync(List<Booking> list)
     {

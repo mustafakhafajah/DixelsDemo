@@ -1,3 +1,4 @@
+using System.Linq;
 using Dixels.Portal.Localization;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Localization;
@@ -16,9 +17,17 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
         AddCrud(group, PortalPermissions.SpaceTypes.Default, "Permission:SpaceTypes");
         AddCrud(group, PortalPermissions.Maintenance.Default, "Permission:Maintenance");
 
-        AddCrud(group, PortalPermissions.Bookings.Default, "Permission:Bookings")
-            .AddChild(PortalPermissions.Bookings.ManageAll, L("Permission:ManageAll"));
+        /* Own bookings: the parent (see), Create, Edit, Delete. Other people's bookings: one permission per action,
+         * each under the own-booking permission it widens, so ABP's permission screen ticks what the action needs. */
+        var bookings = AddCrud(group, PortalPermissions.Bookings.Default, "Permission:Bookings");
+        bookings.AddChild(PortalPermissions.Bookings.ViewAll, L("Permission:Bookings.ViewAll"));
+        Child(bookings, PortalPermissions.Bookings.Edit).AddChild(PortalPermissions.Bookings.EditAll, L("Permission:Bookings.EditAll"));
+        Child(bookings, PortalPermissions.Bookings.Delete).AddChild(PortalPermissions.Bookings.DeleteAll, L("Permission:Bookings.DeleteAll"));
+        Child(bookings, PortalPermissions.Bookings.Create).AddChild(PortalPermissions.Bookings.MultipleSpaces, L("Permission:Bookings.MultipleSpaces"));
     }
+
+    private static PermissionDefinition Child(PermissionDefinition parent, string name)
+        => parent.Children.Single(c => c.Name == name);
 
     /* The ABP convention: a parent permission to view, with Create / Edit / Delete children. */
     private static PermissionDefinition AddCrud(PermissionGroupDefinition group, string name, string displayName)

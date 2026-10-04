@@ -68,11 +68,11 @@ public class EmployeeSeedTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task Employee_is_not_an_admin()
+    public async Task Employee_is_listed_with_only_the_employee_role()
     {
         var employee = await WithUnitOfWorkAsync(() => _users.FindByEmailAsync(RoleDataSeedContributor.EmployeeEmail));
         var users = (await GetRequiredService<IProfileLookupAppService>().GetUsersAsync()).Items;
-        users.Single(u => u.Id == employee!.Id).IsAdmin.ShouldBeFalse();
+        users.Single(u => u.Id == employee!.Id).Roles.ShouldBe(new[] { RoleDataSeedContributor.EmployeeRole });
     }
 
     [Fact]

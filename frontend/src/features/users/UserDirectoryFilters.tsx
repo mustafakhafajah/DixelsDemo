@@ -21,7 +21,6 @@ export function UserDirectoryFilters({ value, onChange }: {
   const { t } = useTranslation()
   const roles = useUserRoles()
   const set = (p: Partial<UserDirectoryFilterValues>) => onChange({ ...value, ...p })
-  const active = Object.values(value).some((v) => v !== '')
 
   return (
     <div className="filter-bar">
@@ -45,7 +44,6 @@ export function UserDirectoryFilters({ value, onChange }: {
         <Dropdown id="udf-lock" value={value.lock} onChange={(v) => set({ lock: v })}
           options={[{ value: '', label: t('users.all') }, { value: 'locked', label: t('users.locked') }, { value: 'unlocked', label: t('users.notLocked') }]} />
       </div>
-      <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_USER_FILTERS)}>{t('common.clearFilters')}</button>
     </div>
   )
 }

@@ -136,7 +136,6 @@ export function FloorsPage() {
             <Dropdown id="ff-building" value={buildingId} onChange={pickBuilding}
               options={[{ value: '', label: t('common.allBuildings') }, ...(buildings.data ?? []).map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
-          <button type="button" className="btn btn-sm" disabled={!buildingId} onClick={() => pickBuilding('')}>{t('common.clearFilters')}</button>
         </div>
         {q.isError ? <LoadError what={t('load.floors')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.totalCount && !buildingId ? (
           <EmptyState art="floor" title={t('empty.floors.title')} text={t('empty.floors.text')}

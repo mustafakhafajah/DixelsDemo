@@ -22,7 +22,6 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
   const set = (p: Partial<SpaceRegistryFilterValues>) => onChange({ ...value, ...p })
   /* Floor stays locked until a building is picked, then lists only that building's floors. */
   const floorOptions = value.buildingId ? floors.filter((f) => f.buildingId === value.buildingId) : []
-  const active = Object.values(value).some((v) => v !== '')
 
   return (
     <div className="filter-bar">
@@ -46,7 +45,6 @@ export function SpaceRegistryFilters({ value, onChange, buildings, floors, types
         <Dropdown id="sf-type" value={value.typeId} onChange={(v) => set({ typeId: v })}
           options={[{ value: '', label: t('common.allTypes') }, ...types.map((t) => ({ value: t.id, label: t.name }))]} />
       </div>
-      <button type="button" className="btn btn-sm" disabled={!active} onClick={() => onChange(EMPTY_SPACE_FILTERS)}>{t('common.clearFilters')}</button>
     </div>
   )
 }

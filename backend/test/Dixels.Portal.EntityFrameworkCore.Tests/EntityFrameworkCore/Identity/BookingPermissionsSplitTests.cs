@@ -15,8 +15,8 @@ using Xunit;
 namespace Dixels.Portal.EntityFrameworkCore.Identity;
 
 /* Bookings.ManageAll is split into one permission per action on other people's bookings. The tree must say what
- * each one needs, whoever held ManageAll must keep every power it gave, and the person list's "(admin)" is only
- * a label for ABP's admin role. */
+ * each one needs, whoever held ManageAll must keep every power it gave, and the person list only carries role
+ * names, never an admin flag. */
 [Collection(PortalTestConsts.CollectionDefinitionName)]
 public class BookingPermissionsSplitTests : PortalEntityFrameworkCoreTestBase
 {
@@ -74,7 +74,7 @@ public class BookingPermissionsSplitTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task The_admin_label_follows_the_admin_role_only()
+    public async Task The_people_list_shows_role_names_not_a_flag()
     {
         var plain = await WithUnitOfWorkAsync(async () =>
         {
@@ -85,8 +85,8 @@ public class BookingPermissionsSplitTests : PortalEntityFrameworkCoreTestBase
 
         var people = (await GetRequiredService<IProfileLookupAppService>().GetUsersAsync()).Items;
 
-        people.Single(u => u.Name == "admin").IsAdmin.ShouldBeTrue();
-        people.Single(u => u.Id == plain.Id).IsAdmin.ShouldBeFalse();
+        people.Single(u => u.Name == "admin").Roles.ShouldBe(new[] { "admin" });
+        people.Single(u => u.Id == plain.Id).Roles.ShouldBeEmpty();
     }
 
     private async Task<string?> ParentOf(string name) => (await _definitions.GetAsync(name)).Parent?.Name;

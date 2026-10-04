@@ -25,14 +25,11 @@ function LockCell({ user }: { user: UserDirectoryItem }) {
   return <span className="lock-on" title={open ? t('users.untilUnlocked') : t('users.timeInUtc')}>{open ? t('users.locked') : t('users.lockedUntil', { date: formatDate(end, LOCK_LABEL) })}</span>
 }
 
-const isAdminRole = (role: UserRole | null, roles?: UserDirectoryRole[]) =>
-  !!role && (role.toLowerCase() === 'admin' || !!roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())?.isAdmin)
-
-/* Admin-type roles get the accent pill; every other role is grey. */
+/* Every role looks the same; the pill only names it. */
 function RolePill({ role, roles }: { role: UserRole | null; roles?: UserDirectoryRole[] }) {
   const { t } = useTranslation()
   if (!role) return <span className="lock-off">{t('nav.noRole')}</span>
-  return <span className={`pill ${isAdminRole(role, roles) ? 'pill-confirmed' : 'pill-ended'}`}><span className="dot" />{roleLabel(role, roles)}</span>
+  return <span className="pill pill-ended"><span className="dot" />{roleLabel(role, roles)}</span>
 }
 
 function StatusPill({ active }: { active: boolean }) {
@@ -99,7 +96,7 @@ export function UserDirectoryPage() {
                     <tr key={u.id}>
                       <td>
                         <div className="user-cell">
-                          <span className={`avatar${isAdminRole(u.role, roles) ? ' admin' : ''}`} aria-hidden="true">{initials(u.name || u.userName)}</span>
+                          <span className="avatar" aria-hidden="true">{initials(u.name || u.userName)}</span>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600 }}><bdi>{u.name || u.userName}</bdi>{u.id === userId && <span className="lock-off" style={{ fontWeight: 400 }}> {t('users.youMark')}</span>}</div>
                             <div className="user-email"><bdi>{u.email}</bdi></div>

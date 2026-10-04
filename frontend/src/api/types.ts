@@ -157,8 +157,8 @@ export interface Profile {
 export interface UserLookup {
   id: string
   name: string
-  /* In ABP's admin role: a label in the person filter, never a permission. */
-  isAdmin: boolean
+  /* Role names, shown next to the name in the person filter; never used as a permission. */
+  roles: string[]
 }
 
 export interface ListResult<T> {

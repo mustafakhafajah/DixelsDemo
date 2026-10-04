@@ -6,6 +6,7 @@ import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
 import { dayAt, formatDate, formatDateRange, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
+import { roleLabel } from '../../users/api'
 import { EVERYONE, useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
@@ -100,7 +101,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             options={[
               { value: EVERYONE, label: t('schedule.everyone') },
               ...(users.data
-                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.isAdmin ? t('schedule.userAdmin', { name: u.name }) : u.name }))
+                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.roles.length ? t('schedule.userWithRoles', { name: u.name, roles: u.roles.map((r) => roleLabel(r)).join(', ') }) : u.name }))
                 : [{ value: session.userId, label: t('common.you') }]),
             ]} />
         </div>

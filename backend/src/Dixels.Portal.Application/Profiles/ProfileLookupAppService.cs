@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
@@ -15,9 +15,6 @@ namespace Dixels.Portal.Profiles;
 [Authorize]
 public class ProfileLookupAppService : PortalAppService, IProfileLookupAppService
 {
-    /* ABP's built-in administrator role; only used to label people in the list. */
-    private const string AdminRoleName = "admin";
-
     private readonly IIdentityUserRepository _users;
     private readonly IIdentityRoleRepository _roles;
 
@@ -39,21 +36,20 @@ public class ProfileLookupAppService : PortalAppService, IProfileLookupAppServic
         };
     }
 
-    /* Every user with a display name, for the Schedule's person filter - reading other people's bookings, so
-     * Bookings.ViewAll. IsAdmin only labels people in the admin role. */
+    /* Every user with a display name and role names, for the Schedule's person filter - reading other people's
+     * bookings, so Bookings.ViewAll. All role names come from one query. */
     [Authorize(PortalPermissions.Bookings.ViewAll)]
     public async Task<ListResultDto<UserLookupDto>> GetUsersAsync()
     {
         var users = await _users.GetListAsync(includeDetails: true);
-        var adminRole = (await _roles.GetListAsync())
-            .FirstOrDefault(r => string.Equals(r.Name, AdminRoleName, StringComparison.OrdinalIgnoreCase));
+        var roleNames = (await _roles.GetListAsync()).ToDictionary(r => r.Id, r => r.Name);
         return new ListResultDto<UserLookupDto>(users
             .OrderBy(u => u.GetDisplayName())
             .Select(u => new UserLookupDto
             {
                 Id = u.Id,
                 Name = u.GetDisplayName(),
-                IsAdmin = adminRole != null && u.Roles.Any(r => r.RoleId == adminRole.Id),
+                Roles = u.Roles.Select(r => roleNames.GetValueOrDefault(r.RoleId)).OfType<string>().OrderBy(n => n).ToList(),
             })
             .ToList());
     }

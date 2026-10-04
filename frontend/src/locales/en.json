@@ -625,7 +625,7 @@
     "allSpacesOnFloor": "All spaces on this floor",
     "user": "User",
     "everyone": "Everyone",
-    "userAdmin": "{{name}} (admin)",
+    "userWithRoles": "{{name}} · {{roles}}",
     "hint": {
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
       "notBookable": "This space cannot be booked, so slots are inert",

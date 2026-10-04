@@ -132,7 +132,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
-              <div className={`avatar${session.roles.some((r) => r.toLowerCase() === 'admin') ? ' admin' : ''}`}>{initials(session.name)}</div>
+              <div className="avatar">{initials(session.name)}</div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
                 <div style={{ fontSize: 11, color: 'var(--slate)' }}>

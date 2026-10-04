@@ -37,10 +37,9 @@ export function useSession() {
   const claims = auth.user?.profile
   /* The roles stored for this user; the token's role claim until the profile arrives. */
   const roles = profile.data?.roles ?? extractRoles(auth.user?.profile.role)
-  /* Only a guess for the moment before the server's grants arrive, so nothing flickers: the admin role is assumed
-   * to hold everything and others the employee set. The server checks every call against the real grants. */
-  const assumeAll = roles.some((r) => r.toLowerCase() === 'admin')
-  const can: Can = (name) => (granted ? !!granted[name] : assumeAll || DEFAULT_EMPLOYEE_POLICIES.has(name))
+  /* Until the server's grants arrive, everyone is given the employee set; the pages wait for the real grants
+   * (RequirePermission), and the server checks every call against them anyway. */
+  const can: Can = (name) => (granted ? !!granted[name] : DEFAULT_EMPLOYEE_POLICIES.has(name))
   return {
     userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
     name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? i18n.t('common.you'),

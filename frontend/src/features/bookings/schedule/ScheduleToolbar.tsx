@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useBuildings, useFloors, useSpaces, useUsers } from '../../../api/hooks'
-import type { Space } from '../../../api/types'
+import { displayName, type Space } from '../../../api/types'
 import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
 import { dayAt, formatDate, formatDateRange, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
-import { roleLabel } from '../../users/api'
 import { EVERYONE, useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
@@ -25,7 +24,8 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const session = useSession()
   /* The full toolbar (space, person, From / To) is for whoever may see everyone's bookings. */
   const seesAll = session.can(P.Bookings.ViewAll)
-  const users = useUsers(seesAll)
+  /* The person list needs ABP's "see users" permission too; without it the filter offers Everyone and You. */
+  const users = useUsers(seesAll && session.can(P.Users.Default))
   const buildings = useBuildings().data ?? []
   /* Floor stays locked until a building is picked, then the server is asked for that building's floors;
    * Space likewise waits for a floor and lists only that floor's spaces. */
@@ -101,7 +101,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
             options={[
               { value: EVERYONE, label: t('schedule.everyone') },
               ...(users.data
-                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : u.roles.length ? t('schedule.userWithRoles', { name: u.name, roles: u.roles.map((r) => roleLabel(r)).join(', ') }) : u.name }))
+                ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? t('common.you') : displayName(u.name, u.surname, u.userName) }))
                 : [{ value: session.userId, label: t('common.you') }]),
             ]} />
         </div>

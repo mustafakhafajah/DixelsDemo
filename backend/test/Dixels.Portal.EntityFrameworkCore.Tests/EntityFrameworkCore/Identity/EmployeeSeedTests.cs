@@ -2,7 +2,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Identity;
 using Dixels.Portal.Permissions;
-using Dixels.Portal.Profiles;
 using Shouldly;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Data;
@@ -65,14 +64,6 @@ public class EmployeeSeedTests : PortalEntityFrameworkCoreTestBase
     {
         foreach (var name in RoleDataSeedContributor.EmployeePermissions)
             (await _definitions.GetOrNullAsync(name)).ShouldNotBeNull($"'{name}' is not a defined permission");
-    }
-
-    [Fact]
-    public async Task Employee_is_listed_with_only_the_employee_role()
-    {
-        var employee = await WithUnitOfWorkAsync(() => _users.FindByEmailAsync(RoleDataSeedContributor.EmployeeEmail));
-        var users = (await GetRequiredService<IProfileLookupAppService>().GetUsersAsync()).Items;
-        users.Single(u => u.Id == employee!.Id).Roles.ShouldBe(new[] { RoleDataSeedContributor.EmployeeRole });
     }
 
     [Fact]

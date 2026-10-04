@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Buildings;
 
-/* Building rules that need the database: a unique name. Creates the entity; the app service saves it. */
-public class BuildingManager : DomainService
+/* Building rules that need the database: an English name, optional names in other languages, each unique
+ * within its language. Creates the entity; the app service saves it. */
+public class BuildingManager : PortalDomainService
 {
     private readonly IRepository<Building, Guid> _buildings;
 
@@ -16,33 +19,49 @@ public class BuildingManager : DomainService
         _buildings = buildings;
     }
 
-    public async Task<Building> CreateAsync(string name, int openHour, int closeHour)
+    public async Task<Building> CreateAsync(string name, IEnumerable<NameTranslation>? translations, int openHour, int closeHour)
     {
-        var trimmed = await CheckNameAsync(name, null);
+        var english = await CheckNameAsync(PortalLanguages.Default, name, null, "name");
+        var extras = await CheckTranslationsAsync(translations, null);
         EnsureValidHours(openHour, closeHour);
-        return new Building(GuidGenerator.Create(), trimmed);
+        var building = new Building(GuidGenerator.Create(), english);
+        foreach (var t in extras) building.SetName(t.Language, t.Name);
+        return building;
     }
 
-    public async Task ChangeNameAsync(Building building, string name)
+    /* translations is the full set of extra languages: one left out is removed. */
+    public async Task ChangeNamesAsync(Building building, string name, IEnumerable<NameTranslation>? translations)
     {
-        building.Name = await CheckNameAsync(name, building.Id);
+        var english = await CheckNameAsync(PortalLanguages.Default, name, building.Id, "name");
+        var extras = await CheckTranslationsAsync(translations, building.Id);
+        building.SetName(PortalLanguages.Default, english);
+        foreach (var t in extras) building.SetName(t.Language, t.Name);
+        building.RemoveTranslationsExcept(extras.Select(t => t.Language));
     }
 
-    public static void EnsureValidHours(int openHour, int closeHour)
+    public void EnsureValidHours(int openHour, int closeHour)
     {
         if (closeHour <= openHour)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidHours, message: "Close hour must be after open hour.").ForField("closeHour");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.InvalidHours, message: L["Error:CloseBeforeOpen"]).ForField("closeHour");
+    }
+
+    private async Task<List<NameTranslation>> CheckTranslationsAsync(IEnumerable<NameTranslation>? input, Guid? excludeId)
+    {
+        var extras = TranslationRules.Clean(L, input, BuildingConsts.MaxNameLength);
+        foreach (var t in extras) await CheckNameAsync(t.Language, t.Name, excludeId, $"translations.{t.Language}");
+        return extras;
     }
 
     /* Returns the trimmed name. excludeId is the building being edited, so it doesn't clash with itself. */
-    private async Task<string> CheckNameAsync(string? name, Guid? excludeId)
+    private async Task<string> CheckNameAsync(string language, string? name, Guid? excludeId, string field)
     {
         var trimmed = name?.Trim() ?? "";
         if (trimmed.Length == 0)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: "Give the building a name.").ForField("name");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.MissingField, message: L["Error:BuildingNameMissing"]).ForField(field);
+        ScriptRules.EnsureFits(L, language, trimmed, field);
         var lower = trimmed.ToLower();
-        if (await _buildings.AnyAsync(b => b.Name.ToLower() == lower && b.Id != excludeId))
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.BuildingDuplicate, message: $"{trimmed} is already in the estate.").ForField("name");
+        if (await _buildings.AnyAsync(b => b.Id != excludeId && b.Translations.Any(t => t.Language == language && t.Name.ToLower() == lower)))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BuildingDuplicate, message: L["Error:BuildingDuplicate", trimmed]).ForField(field);
         return trimmed;
     }
 }

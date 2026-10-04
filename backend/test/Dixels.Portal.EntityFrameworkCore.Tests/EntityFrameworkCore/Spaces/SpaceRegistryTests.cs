@@ -166,7 +166,7 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
                 var list = new List<Space>();
                 for (var i = 0; i < n; i++)
                     list.Add(await _spaces.InsertAsync(
-                        new Space(Guid.NewGuid(), $"Room {f.Name}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
+                        new Space(Guid.NewGuid(), $"Room {f.GetName()}-{tag}-{i:00}", building.Id, f.Id, DefaultSpaceTypes.MeetingRoom),
                         autoSave: true));
                 return list;
             }

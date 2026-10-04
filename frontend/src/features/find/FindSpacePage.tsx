@@ -1,12 +1,13 @@
 import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAvailability, useBuildings, useFindSpaces, useFloors, useMaintenance, useSpaceTypes } from '../../api/hooks'
 import type { ScheduleItem, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
-import { ErrorLine, LoadError, Loading, plural } from '../../components/bits'
+import { ErrorLine, LoadError, Loading } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
-import { addDays, addMin, ceilStep, dayAt, dayKey, dayName, hm, minLabel, minOfDay, monthName, todayKey } from '../../lib/dateUtils'
+import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { findToday, useFindStore, type FindDuration } from '../../state/findStore'
@@ -34,6 +35,7 @@ interface DragState {
 }
 
 function FindFilters() {
+  const { t } = useTranslation()
   const f = useFindStore()
   /* "Custom…" shows a number box; a saved value that isn't a preset reopens in custom mode. */
   const [customCapacity, setCustomCapacity] = useState(() => f.minCapacity > 0 && !CAPACITY_PRESETS.includes(f.minCapacity))
@@ -52,48 +54,48 @@ function FindFilters() {
   return (
     <aside className="card find-filters">
       <div>
-        <h3>When</h3>
+        <h3>{t('find.when')}</h3>
         {/* Stacked, one per row, so neither field is squeezed in the narrow filter column. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <DatePicker value={f.date} aria-label="Date" onChange={(v) => f.patch({ date: v || todayKey() })} />
-          <TimePicker value={minLabel(f.time)} aria-label="Start time"
+          <DatePicker value={f.date} aria-label={t('common.date')} onChange={(v) => f.patch({ date: v || todayKey() })} />
+          <TimePicker value={minLabel(f.time)} aria-label={t('common.startTime')}
             onChange={(v) => { const [h, m] = v.split(':').map(Number); f.patch({ time: h * 60 + m }) }} />
         </div>
         <div className="dur-row" style={{ marginTop: 10 }}>
-          <button type="button" className="dur-chip" onClick={f.now}>Now</button>
+          <button type="button" className="dur-chip" onClick={f.now}>{t('common.now')}</button>
           {([30, 60, 120, 'custom'] as FindDuration[]).map((d) => (
             <button key={d} type="button" className={`dur-chip${f.duration === d ? ' active' : ''}`} onClick={() => setDur(d)}>
-              {d === 30 ? '30 min' : d === 60 ? '1h' : d === 120 ? '2h' : 'Custom'}
+              {d === 'custom' ? t('find.custom') : d === 30 ? t('find.minutes', { count: 30 }) : durationLabel(d)}
             </button>
           ))}
         </div>
         {f.duration === 'custom' && (
           <div style={{ marginTop: 8 }}>
-            <label className="lbl" htmlFor="fv-end">End</label>
-            <TimePicker id="fv-end" aria-label="End time" value={minLabel(endMin)}
+            <label className="lbl" htmlFor="fv-end">{t('common.end')}</label>
+            <TimePicker id="fv-end" aria-label={t('common.endTime')} value={minLabel(endMin)}
               onChange={(v) => { const [h, m] = v.split(':').map(Number); f.patch({ customEnd: h * 60 + m }) }} />
             {/* Until it is fixed, the search uses the shortest booking length from the start. */}
             <ErrorLine id="fv-end-error" error={endMin <= f.time
-              ? { code: 'validation.end_before_start', message: `The end must be after the start (${minLabel(f.time)}).` } : undefined} />
+              ? { code: 'validation.end_before_start', message: t('find.endAfterStart', { start: minLabel(f.time) }) } : undefined} />
           </div>
         )}
       </div>
       <div>
-        <h3>Room criteria</h3>
+        <h3>{t('find.criteria')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
-            <label className="lbl" htmlFor="fv-building">Building</label>
+            <label className="lbl" htmlFor="fv-building">{t('common.building')}</label>
             <Dropdown id="fv-building" value={f.buildingId} onChange={(v) => f.patch({ buildingId: v, floorName: '' })}
-              options={[{ value: '', label: 'All buildings' }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
+              options={[{ value: '', label: t('common.allBuildings') }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
           </div>
           <div>
-            <label className="lbl" htmlFor="fv-floor">Floor</label>
+            <label className="lbl" htmlFor="fv-floor">{t('common.floor')}</label>
             <Dropdown id="fv-floor" value={floorNames.includes(f.floorName) ? f.floorName : ''} onChange={(v) => f.patch({ floorName: v })}
-              disabled={!f.buildingId} placeholder="Choose a building first"
-              options={f.buildingId ? [{ value: '', label: 'All floors' }, ...floorNames.map((n) => ({ value: n, label: `Floor ${n}` }))] : []} />
+              disabled={!f.buildingId} placeholder={t('common.chooseBuildingFirst')}
+              options={f.buildingId ? [{ value: '', label: t('common.allFloors') }, ...floorNames.map((n) => ({ value: n, label: t('common.floorName', { name: n }) }))] : []} />
           </div>
           <div>
-            <label className="lbl" htmlFor="fv-capacity">Capacity</label>
+            <label className="lbl" htmlFor="fv-capacity">{t('common.capacity')}</label>
             <Dropdown id="fv-capacity" value={customCapacity ? 'custom' : String(f.minCapacity)}
               onChange={(v) => {
                 if (v === 'custom') { setCustomCapacity(true); return }
@@ -101,32 +103,32 @@ function FindFilters() {
                 f.patch({ minCapacity: Number(v) })
               }}
               options={[
-                { value: '0', label: 'Any capacity' },
-                ...CAPACITY_PRESETS.map((n) => ({ value: String(n), label: `${n}+` })),
-                { value: 'custom', label: 'Custom…' },
+                { value: '0', label: t('find.anyCapacity') },
+                ...CAPACITY_PRESETS.map((n) => ({ value: String(n), label: t('find.atLeast', { count: n }) })),
+                { value: 'custom', label: t('find.customCapacity') },
               ]} />
             {customCapacity && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                <input id="fv-capacity-custom" type="number" className="inp mono" min={1} placeholder="e.g. 10" autoFocus
-                  aria-label="Minimum seats" value={f.minCapacity || ''}
+                <input id="fv-capacity-custom" type="number" className="inp mono" min={1} placeholder={t('find.seatsPlaceholder')} autoFocus
+                  aria-label={t('find.minSeats')} value={f.minCapacity || ''}
                   onChange={(e) => f.patch({ minCapacity: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
-                <span style={{ fontSize: 12, color: 'var(--slate)', whiteSpace: 'nowrap' }}>seats or more</span>
+                <span style={{ fontSize: 12, color: 'var(--slate)', whiteSpace: 'nowrap' }}>{t('find.seatsOrMore', { count: f.minCapacity })}</span>
               </div>
             )}
           </div>
           <div>
-            <label className="lbl">Space type</label>
+            <label className="lbl">{t('find.spaceType')}</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {types.map(([id, name]) => (
                 <button key={id} type="button" className={`type-pill${f.types.includes(id) ? ' active' : ''}`} onClick={() => f.toggleType(id)}>
-                  {name}
+                  <bdi>{name}</bdi>
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="lbl" htmlFor="fv-query">Search rooms</label>
-            <input id="fv-query" className="inp" placeholder="Room name…" value={f.query} onChange={(e) => f.patch({ query: e.target.value })} />
+            <label className="lbl" htmlFor="fv-query">{t('find.search')}</label>
+            <input id="fv-query" className="inp" dir="auto" placeholder={t('find.searchPlaceholder')} value={f.query} onChange={(e) => f.patch({ query: e.target.value })} />
           </div>
         </div>
       </div>
@@ -135,6 +137,7 @@ function FindFilters() {
 }
 
 export function FindSpacePage() {
+  const { t, i18n } = useTranslation()
   const f = useFindStore()
   const session = useSession()
   const { userId } = session
@@ -181,13 +184,13 @@ export function FindSpacePage() {
 
   let body
   const failed = [findQ, bookingsQ, maintQ].find((q) => q.isError)
-  if (failed) body = <LoadError what="the rooms" error={failed.error} onRetry={() => { findQ.refetch(); bookingsQ.refetch(); maintQ.refetch() }} />
+  if (failed) body = <LoadError what={t('load.rooms')} error={failed.error} onRetry={() => { findQ.refetch(); bookingsQ.refetch(); maintQ.refetch() }} />
   else if (!findQ.data) body = <Loading />
   else if (!candidates.length) {
     body = (
       <div className="sched-empty">
-        <p>No rooms match these filters</p>
-        <p>Widen the room criteria, or pick a different building or floor.</p>
+        <p>{t('find.noRooms')}</p>
+        <p>{t('find.noRoomsHint')}</p>
       </div>
     )
   } else {
@@ -200,12 +203,14 @@ export function FindSpacePage() {
     const isToday = f.date === dayKey(now)
     const wS = Math.max(open, minOfDay(winStart))
     const wE = Math.min(close, wS + durMin)
-    const band = wE > wS ? <div className="rt-band" style={{ left: px(wS - open), width: px(wE - wS) }} /> : null
+    const band = wE > wS ? <div className="rt-band" style={{ insetInlineStart: px(wS - open), width: px(wE - wS) }} /> : null
 
-    /* Drag on a room's row to pick a window: minutes snap to DRAG_SNAP and stay inside the visible day. */
+    /* Drag on a room's row to pick a window: minutes snap to DRAG_SNAP and stay inside the visible day.
+     * Time runs along the reading direction, so in right-to-left languages it is measured from the right edge. */
+    const rtl = i18n.dir() === 'rtl'
     const minuteAt = (e: ReactPointerEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect()
-      const raw = open + ((e.clientX - rect.left) / RT_PX_PER_HOUR) * 60
+      const raw = open + ((rtl ? rect.right - e.clientX : e.clientX - rect.left) / RT_PX_PER_HOUR) * 60
       return Math.min(close, Math.max(open, Math.round(raw / DRAG_SNAP) * DRAG_SNAP))
     }
     startDrag = (e, s) => {
@@ -231,7 +236,7 @@ export function FindSpacePage() {
       f.patch({ time: from, duration: 'custom', customEnd: to })
       modals.booking({ spaceId: s.id, start: dayAt(f.date, 0, from), end: dayAt(f.date, 0, to) })
     }
-    const nowLine = isToday && nowMin >= open && nowMin <= close ? <div className="rt-now" style={{ left: px(nowMin - open) }} /> : null
+    const nowLine = isToday && nowMin >= open && nowMin <= close ? <div className="rt-now" style={{ insetInlineStart: px(nowMin - open) }} /> : null
 
     const groups = new Map<string, Space[]>()
     candidates.forEach((s) => {
@@ -245,7 +250,7 @@ export function FindSpacePage() {
         <div className="rt-header">
           <div className="rt-roominfo" style={{ border: 'none', background: 'none', position: 'static' }} />
           <div className="rt-ruler" style={{ width: trackW }}>
-            {ticks.map((m) => <div key={m} className="rt-tick" style={{ left: px(m - open) }}>{minLabel(m)}</div>)}
+            {ticks.map((m) => <div key={m} className="rt-tick" style={{ insetInlineStart: px(m - open) }}>{minLabel(m)}</div>)}
             {band}{nowLine}
           </div>
         </div>
@@ -255,7 +260,7 @@ export function FindSpacePage() {
           return (
             <div key={k}>
               <div className="rt-group-head">
-                {bld} · Floor {fl} <span className="tag">{plural(rooms.length, 'room')} · {rooms.filter(isFree).length} free</span>
+                <bdi>{t('common.floorIn', { building: bld, floor: fl })}</bdi> <span className="tag">{t('find.roomsFree', { rooms: t('count.room', { count: rooms.length }), count: rooms.filter(isFree).length })}</span>
               </div>
               {rooms.map((s) => {
                 const segs = items.filter((i) => i.spaceId === s.id).map((i) => daySegment(i, f.date))
@@ -270,31 +275,31 @@ export function FindSpacePage() {
                 return (
                   <div key={s.id} className="rt-row">
                     <div className="rt-roominfo">
-                      <div className="rt-roomname">{s.name}</div>
-                      <div className="rt-roommeta">{s.typeName}{s.capacity ? ` · ${s.capacity} seats` : ''}</div>
+                      <div className="rt-roomname"><bdi>{s.name}</bdi></div>
+                      <div className="rt-roommeta"><bdi>{s.typeName}</bdi>{s.capacity ? ` · ${t('find.seats', { count: s.capacity })}` : ''}</div>
                     </div>
                     <div className="rt-track" style={{ width: trackW }}
                       onPointerDown={(e) => startDrag(e, s)} onPointerMove={(e) => moveDrag(e, s)}
                       onPointerUp={() => endDrag(s)} onPointerCancel={() => setDrag(null)}>
                       {band}{nowLine}
                       {drag?.spaceId === s.id && drag.moved && (
-                        <div className="rt-drag" style={{ left: px(Math.min(drag.from, drag.to) - open), width: px(Math.abs(drag.to - drag.from)) }}>
+                        <div className="rt-drag" style={{ insetInlineStart: px(Math.min(drag.from, drag.to) - open), width: px(Math.abs(drag.to - drag.from)) }}>
                           <span>{minLabel(Math.min(drag.from, drag.to))}–{minLabel(Math.max(drag.from, drag.to))}</span>
                         </div>
                       )}
                       {cells.map((c) => (
-                        <div key={c.start} className="rt-free" style={{ left: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
-                          onClick={() => cellPrefill(s, c, c.reg)} title={`Book ${s.name} ${minLabel(c.start)}–${minLabel(c.end)}`} />
+                        <div key={c.start} className="rt-free" style={{ insetInlineStart: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
+                          onClick={() => cellPrefill(s, c, c.reg)} title={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })} />
                       ))}
                       {segs.map((g) => {
                         const it = g.item
-                        const who = it.kind === 'maintenance' ? it.note || 'Blocked' : it.busy ? 'Busy' : it.ownerUserId === userId ? 'You' : it.ownerName
+                        const who = it.kind === 'maintenance' ? it.note || t('schedule.blocked') : it.busy ? t('schedule.busy') : it.ownerUserId === userId ? t('common.you') : it.ownerName
                         return (
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
-                            style={{ left: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
+                            style={{ insetInlineStart: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
                             title={`${hm(it.start)}–${hm(it.end)} UTC · ${who}`}>
                             <b>{g.clipStart ? '↥' : ''}{hm(it.start)}{g.clipEnd ? ' ↧' : ''}</b>
-                            <span>{who}</span>
+                            <span><bdi>{who}</bdi></span>
                           </div>
                         )
                       })}
@@ -314,20 +319,20 @@ export function FindSpacePage() {
       <div className="find-layout">
         <FindFilters />
         <section className="card" style={{ overflow: 'hidden' }}>
-          {/* Today on the left, the date with its arrows in the middle (the empty third column keeps it centred). */}
+          {/* Today at the start, the date with its arrows in the middle (the empty third column keeps it centred). */}
           <div className="find-header">
-            <button type="button" className="btn btn-sm find-today" onClick={findToday}>Today</button>
+            <button type="button" className="btn btn-sm find-today" onClick={findToday}>{t('common.today')}</button>
             <div className="find-date-nav">
-              <button type="button" className="iconbtn" onClick={() => f.shiftDay(-1)} aria-label="Previous day">‹</button>
+              <button type="button" className="iconbtn" onClick={() => f.shiftDay(-1)} aria-label={t('find.previousDay')} title={t('find.previousDay')}>‹</button>
               <span className="mono period-label" style={{ minWidth: 190 }}>
-                {dayName(d).slice(0, 3)}, {monthName(d).slice(0, 3)} {d.getUTCDate()}, {d.getUTCFullYear()}
+                {formatDate(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
-              <button type="button" className="iconbtn" onClick={() => f.shiftDay(1)} aria-label="Next day">›</button>
+              <button type="button" className="iconbtn" onClick={() => f.shiftDay(1)} aria-label={t('find.nextDay')} title={t('find.nextDay')}>›</button>
             </div>
             <span />
           </div>
           <p className="find-stats">
-            {candidates.length ? `${freeCount} of ${plural(candidates.length, 'room')} free ${hm(winStart)}–${hm(winEnd)} · grouped by building and floor.` : ''}
+            {candidates.length ? t('find.stats', { free: freeCount, rooms: t('count.room', { count: candidates.length }), from: hm(winStart), to: hm(winEnd) }) : ''}
           </p>
           {body}
         </section>

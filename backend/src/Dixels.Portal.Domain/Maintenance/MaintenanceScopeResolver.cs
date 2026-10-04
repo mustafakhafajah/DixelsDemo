@@ -4,13 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Maintenance.Scopes;
 using Volo.Abp;
-using Volo.Abp.Domain.Services;
 
 namespace Dixels.Portal.Maintenance;
 
 /* An admin blocks time (cleaning, renovation, ...) for a space, a whole floor or a whole building;
  * this decides which spaces that covers. Each kind of scope has its own IMaintenanceScopeStrategy. */
-public class MaintenanceScopeResolver : DomainService
+public class MaintenanceScopeResolver : PortalDomainService
 {
     private readonly Dictionary<MaintenanceScopeType, IMaintenanceScopeStrategy> _strategies;
 
@@ -24,7 +23,7 @@ public class MaintenanceScopeResolver : DomainService
     {
         var ids = await FindSpaceIdsAsync(type, scopeId);
         if (ids.Count == 0)
-            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: "That scope has no spaces to block.").ForField("scopeId");
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceNotFound, message: L["Error:ScopeHasNoSpaces"]).ForField("scopeId");
         return ids;
     }
 

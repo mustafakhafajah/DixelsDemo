@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import i18n from 'i18next'
 import { useAuth } from 'react-oidc-context'
 import { useApi } from '../../api/client'
 
@@ -129,8 +130,13 @@ export function useUserRoles() {
   })
 }
 
+/* The roles the portal seeds get a translated name; any other role is shown as the server names it. */
+const ROLE_KEYS = { admin: 'roles.admin', employee: 'roles.employee' } as const
+
 /* "front_desk" -> "Front desk": a readable label for a role name. */
 export function roleLabel(role: UserRole, roles?: UserDirectoryRole[]) {
+  const key = ROLE_KEYS[role.toLowerCase() as keyof typeof ROLE_KEYS]
+  if (key) return i18n.t(key)
   const known = roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())
   if (known) return known.displayName
   const words = role.replace(/[_-]/g, ' ').trim()

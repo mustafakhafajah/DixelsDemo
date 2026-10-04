@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Dixels.Portal.EntityFrameworkCore;
 using Dixels.Portal.Localization;
 using Dixels.Portal.MultiTenancy;
+using Dixels.Portal.Web.Components.AppPath;
 using Dixels.Portal.Web.Menus;
 using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
@@ -24,6 +26,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
+using Volo.Abp.Ui.LayoutHooks;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -107,8 +110,10 @@ public class PortalWebModule : AbpModule
         var configuration = context.Services.GetConfiguration();
 
         ConfigureAuthentication(context);
+        ConfigureDataProtection(context, hostingEnvironment);
         ConfigureUrls(configuration);
         ConfigureBundles();
+        ConfigureLayoutHooks();
         ConfigureVirtualFileSystem(hostingEnvironment);
         ConfigureNavigationServices();
         /* No auto API controllers: our API is the hand-written controllers in Dixels.Portal.HttpApi. */
@@ -117,6 +122,19 @@ public class PortalWebModule : AbpModule
         ConfigureErrorStatusCodes();
 
         context.Services.AddMapperlyObjectMapper<PortalWebModule>();
+    }
+
+    /* Under IIS the app pool has no user profile, so ASP.NET Core kept its keys in memory: every restart or app-pool
+     * recycle made the sign-in cookies unreadable and the sign-in form failed with 400. The keys now live on disk next
+     * to the app (encrypted for this machine with DPAPI on Windows), so they survive restarts and redeploys.
+     * Development keeps the default (the developer's user profile). */
+    private static void ConfigureDataProtection(ServiceConfigurationContext context, IWebHostEnvironment hostingEnvironment)
+    {
+        if (hostingEnvironment.IsDevelopment()) return;
+        var keys = context.Services.AddDataProtection()
+            .SetApplicationName("Dixels.Portal")
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(hostingEnvironment.ContentRootPath, "App_Data", "DataProtection-Keys")));
+        if (OperatingSystem.IsWindows()) keys.ProtectKeysWithDpapi(protectToLocalMachine: true);
     }
 
     private void ConfigureErrorStatusCodes()
@@ -158,6 +176,15 @@ public class PortalWebModule : AbpModule
                     bundle.AddFiles("/global-styles.css");
                 }
             );
+        });
+    }
+
+    private void ConfigureLayoutHooks()
+    {
+        /* In the page head, before the theme's scripts, so abp.appPath is the site's own path (e.g. /server/) and not "/". */
+        Configure<AbpLayoutHookOptions>(options =>
+        {
+            options.Add(LayoutHooks.Head.Last, typeof(AppPathViewComponent));
         });
     }
 

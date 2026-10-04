@@ -24,6 +24,9 @@ public class PortalPermissionDefinitionProvider : PermissionDefinitionProvider
         Child(bookings, PortalPermissions.Bookings.Edit).AddChild(PortalPermissions.Bookings.EditAll, L("Permission:Bookings.EditAll"));
         Child(bookings, PortalPermissions.Bookings.Delete).AddChild(PortalPermissions.Bookings.DeleteAll, L("Permission:Bookings.DeleteAll"));
         Child(bookings, PortalPermissions.Bookings.Create).AddChild(PortalPermissions.Bookings.MultipleSpaces, L("Permission:Bookings.MultipleSpaces"));
+
+        var emailing = group.AddPermission(PortalPermissions.Emailing.Default, L("Permission:Emailing"));
+        emailing.AddChild(PortalPermissions.Emailing.SendTest, L("Permission:Emailing.SendTest"));
     }
 
     private static PermissionDefinition Child(PermissionDefinition parent, string name)

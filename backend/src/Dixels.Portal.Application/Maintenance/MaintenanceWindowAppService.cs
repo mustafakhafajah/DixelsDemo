@@ -7,6 +7,7 @@ using Dixels.Portal.Buildings;
 using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
+using Dixels.Portal.Notifications;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;
@@ -26,10 +27,11 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Building, Guid> _buildings;
     private readonly MaintenanceScopeResolver _scopes;
+    private readonly BookingNotifier _notifier;
 
     public MaintenanceWindowAppService(IRepository<MaintenanceWindow, Guid> maintenance, IRepository<Booking, Guid> bookings,
         IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors, IRepository<Building, Guid> buildings,
-        MaintenanceScopeResolver scopes)
+        MaintenanceScopeResolver scopes, BookingNotifier notifier)
     {
         _maintenance = maintenance;
         _bookings = bookings;
@@ -37,6 +39,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         _floors = floors;
         _buildings = buildings;
         _scopes = scopes;
+        _notifier = notifier;
     }
 
     [Authorize(PortalPermissions.Maintenance.Default)]
@@ -96,12 +99,12 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
         var created = 0;
         var affected = 0;
-        var cancelled = 0;
+        var cancelledBookings = new List<Booking>();
         foreach (var o in input.Occurrences)
         {
             var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             affected += await CountAffectedAsync(spaceIds, s, e);
-            if (input.CancelAffectedBookings) cancelled += await CancelAffectedAsync(spaceIds, s, e);
+            if (input.CancelAffectedBookings) cancelledBookings.AddRange(await CancelAffectedAsync(spaceIds, s, e));
             foreach (var spaceId in spaceIds)
             {
                 var m = new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
@@ -116,9 +119,12 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
             }
         }
 
+        /* Each person gets one email listing all their bookings this blocked time cancelled. */
+        await _notifier.BookingsCancelledAsync(cancelledBookings, "the space is blocked at that time");
+
         return new ScheduleMaintenanceResultDto
         {
-            SeriesId = seriesId, Created = created, AffectedBookingsCount = affected, CancelledBookingsCount = cancelled,
+            SeriesId = seriesId, Created = created, AffectedBookingsCount = affected, CancelledBookingsCount = cancelledBookings.Count,
         };
     }
 
@@ -145,14 +151,14 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
             .ToExpression().And(b => spaceIds.Contains(b.SpaceId)));
 
     /* Only bookings that have not started: a meeting already in progress is never cut off. */
-    private async Task<int> CancelAffectedAsync(List<Guid> spaceIds, DateTime startUtc, DateTime endUtc)
+    private async Task<List<Booking>> CancelAffectedAsync(List<Guid> spaceIds, DateTime startUtc, DateTime endUtc)
     {
         var now = Clock.Now;
         var hit = await _bookings.GetListAsync(new OverlappingBookingsSpecification(startUtc, endUtc)
             .ToExpression().And(b => spaceIds.Contains(b.SpaceId) && b.StartUtc > now));
         foreach (var b in hit) b.Cancel();
         await _bookings.UpdateManyAsync(hit, autoSave: true);
-        return hit.Count;
+        return hit;
     }
 
     private async Task<MaintenanceWindowDto> MapAsync(MaintenanceWindow window)

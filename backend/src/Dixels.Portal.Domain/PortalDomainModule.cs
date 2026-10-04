@@ -1,6 +1,4 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Dixels.Portal.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
@@ -68,8 +66,7 @@ public class PortalDomainModule : AbpModule
             options.Kind = DateTimeKind.Utc;
         });
 
-#if DEBUG
-        context.Services.Replace(ServiceDescriptor.Singleton<IEmailSender, NullEmailSender>());
-#endif
+        /* No NullEmailSender for debug builds: the Exchange Online sender (Dixels.Portal.Infrastructure) only logs
+         * emails until ExchangeOnline.Enabled is switched on, which covers the same need on every build. */
     }
 }

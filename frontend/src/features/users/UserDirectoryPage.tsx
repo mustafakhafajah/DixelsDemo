@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { initials, LoadError, Loading } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
@@ -44,7 +45,9 @@ function StatusPill({ active }: { active: boolean }) {
 /* Roles, permissions and accounts are changed in ABP's administration site; this page only shows them. */
 export function UserDirectoryPage() {
   const { t } = useTranslation()
-  const { userId, isAdmin } = useSession()
+  const { userId, can } = useSession()
+  /* "View bookings" opens the Schedule on that person: reading their bookings, so Bookings.ViewAll. */
+  const seesBookings = can(P.Bookings.ViewAll)
   const navigate = useNavigate()
   const [filters, setFilters] = useState<UserDirectoryFilterValues>(EMPTY_USER_FILTERS)
   const paging = useServerPaging()
@@ -67,7 +70,7 @@ export function UserDirectoryPage() {
   const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
 
-  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin
+  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => seesBookings
     ? [{
         label: t('users.viewBookings'),
         onClick: () => { useScheduleStore.getState().patch('my', { userId: u.id }); navigate('/app/bookings') },
@@ -87,7 +90,7 @@ export function UserDirectoryPage() {
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
               <thead>
-                <tr><th>{t('users.col.user')}</th><th>{t('users.col.userName')}</th><th>{t('users.col.role')}</th><th>{t('users.col.status')}</th><th>{t('users.col.lock')}</th>{isAdmin && <th style={{ textAlign: 'end' }}>{t('common.actions')}</th>}</tr>
+                <tr><th>{t('users.col.user')}</th><th>{t('users.col.userName')}</th><th>{t('users.col.role')}</th><th>{t('users.col.status')}</th><th>{t('users.col.lock')}</th>{seesBookings && <th style={{ textAlign: 'end' }}>{t('common.actions')}</th>}</tr>
               </thead>
               <tbody>
                 {q.data.items.map((u) => {
@@ -107,7 +110,7 @@ export function UserDirectoryPage() {
                       <td><RolePill role={u.role} roles={roles} /></td>
                       <td><StatusPill active={u.isActive} /></td>
                       <td><LockCell user={u} /></td>
-                      {isAdmin && (
+                      {seesBookings && (
                         <td style={{ textAlign: 'end' }}>
                           <div style={{ display: 'inline-block' }}>{items.length > 0 && <RowMenu items={items} />}</div>
                         </td>

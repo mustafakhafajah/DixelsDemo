@@ -15,7 +15,10 @@
     "Permission:Create": "Create",
     "Permission:Edit": "Edit",
     "Permission:Delete": "Delete",
-    "Permission:ManageAll": "Manage everyone's",
+    "Permission:Bookings.ViewAll": "See everyone's bookings",
+    "Permission:Bookings.EditAll": "Change everyone's bookings",
+    "Permission:Bookings.DeleteAll": "Cancel everyone's bookings",
+    "Permission:Bookings.MultipleSpaces": "Hold several spaces at once",
 
     "Weekdays:0": "Sundays",
     "Weekdays:1": "Mondays",

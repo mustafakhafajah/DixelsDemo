@@ -150,7 +150,6 @@ export interface Profile {
   id: string
   name: string
   email: string | null
-  isAdmin: boolean
   /* Role names from the identity database, e.g. ["admin"]. */
   roles: string[]
 }
@@ -158,6 +157,7 @@ export interface Profile {
 export interface UserLookup {
   id: string
   name: string
+  /* In ABP's admin role: a label in the person filter, never a permission. */
   isAdmin: boolean
 }
 

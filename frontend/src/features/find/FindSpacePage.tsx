@@ -169,7 +169,7 @@ export function FindSpacePage() {
   /* The day's bookings and blocked time, for the chosen building and floor only. */
   const dayFrom = useMemo(() => dayAt(f.date), [f.date])
   const dayTo = useMemo(() => addDays(dayAt(f.date), 1), [f.date])
-  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo, buildingId, floorId }, session)
+  const bookingsQ = useAvailability({ from: dayFrom, to: dayTo, buildingId, floorId }, { seesAll: session.can(P.Bookings.ViewAll), userId })
   const maintQ = useMaintenance({ from: dayFrom, to: dayTo, buildingId, floorId })
 
   const items: ScheduleItem[] = useMemo(() => [...(bookingsQ.data ?? []), ...(maintQ.data ?? [])], [bookingsQ.data, maintQ.data])

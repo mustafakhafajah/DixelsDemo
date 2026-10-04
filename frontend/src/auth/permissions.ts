@@ -11,9 +11,10 @@ export const P = {
   SpaceTypes: crud('Portal.SpaceTypes'),
   /* Create = block time, Delete = unblock it. */
   Maintenance: crud('Portal.Maintenance'),
-  /* Default = see bookings, Create = book, Edit = reschedule / end early, Delete = cancel,
-   * ManageAll = everyone's bookings rather than only your own. */
-  Bookings: group('Portal.Bookings', ['Create', 'Edit', 'Delete', 'ManageAll']),
+  /* Your own bookings: Default = see, Create = book, Edit = reschedule / end early, Delete = cancel.
+   * Other people's, one per action: ViewAll = see everyone's and who booked, EditAll = reschedule / end early
+   * anyone's, DeleteAll = cancel anyone's. MultipleSpaces = may hold several spaces at once. */
+  Bookings: group('Portal.Bookings', ['Create', 'Edit', 'Delete', 'ViewAll', 'EditAll', 'DeleteAll', 'MultipleSpaces']),
   /* The user directory uses ABP's own "view users" permission (Identity management > Users). */
   Users: { Default: 'AbpIdentity.Users' },
 }

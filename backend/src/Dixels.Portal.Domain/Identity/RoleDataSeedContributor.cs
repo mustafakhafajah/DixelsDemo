@@ -28,7 +28,8 @@ public class RoleDataSeedContributor : IDataSeedContributor, ITransientDependenc
     public const string EmployeePassword = "1q2w3E*";
 
     /* What an employee may do: see the estate and blocked time, and book / change / cancel their
-     * own bookings. Not Bookings.ManageAll and no estate Create/Edit/Delete - that is the admin.
+     * own bookings. None of the "everyone's bookings" permissions (ViewAll, EditAll, DeleteAll), not
+     * MultipleSpaces, and no estate Create/Edit/Delete - those are the admin's.
      * Written as strings because PortalPermissions lives in Application.Contracts, which the
      * Domain project cannot reference; keep them in step with PortalPermissions.cs
      * (EmployeeSeedTests fails if a name here is not a defined permission). */

@@ -266,14 +266,14 @@ export function useBusy(filter: RangeFilter, enabled = true) {
   })
 }
 
-/* Everything that makes a time taken. Admins get every booking in full; everyone else gets their own
- * bookings plus grey "Busy" windows for the rest, because the server never sends them anyone else's. */
-export function useAvailability(filter: RangeFilter, who: { isAdmin: boolean; userId: string }, enabled = true) {
-  const all = useBookings(filter, enabled && who.isAdmin)
-  const own = useBookings({ ...filter, ownerUserId: who.userId }, enabled && !who.isAdmin && !!who.userId)
-  const busy = useBusy(filter, enabled && !who.isAdmin)
+/* Everything that makes a time taken. With Bookings.ViewAll (seesAll) every booking comes in full; everyone else
+ * gets their own bookings plus grey "Busy" windows for the rest, because the server never sends them anyone else's. */
+export function useAvailability(filter: RangeFilter, who: { seesAll: boolean; userId: string }, enabled = true) {
+  const all = useBookings(filter, enabled && who.seesAll)
+  const own = useBookings({ ...filter, ownerUserId: who.userId }, enabled && !who.seesAll && !!who.userId)
+  const busy = useBusy(filter, enabled && !who.seesAll)
   const data = useMemo(() => (own.data && busy.data ? [...own.data, ...busy.data] : undefined), [own.data, busy.data])
-  if (who.isAdmin) return all
+  if (who.seesAll) return all
   const failed = own.isError ? own : busy.isError ? busy : null
   return {
     data,

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
@@ -5,22 +6,25 @@ using Dixels.Portal.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Identity;
-using Volo.Abp.PermissionManagement;
 using Volo.Abp.Users;
 
 namespace Dixels.Portal.Profiles;
 
-/* "Admin" everywhere means holding Bookings.ManageAll (directly or through a role). */
+/* Who is signed in, and the people list for the Schedule's person filter. What anyone may do is never decided
+ * here: every screen and service asks for the exact permission it needs (Bookings.ViewAll, EditAll, ...). */
 [Authorize]
 public class ProfileLookupAppService : PortalAppService, IProfileLookupAppService
 {
-    private readonly IIdentityUserRepository _users;
-    private readonly IPermissionFinder _permissionFinder;
+    /* ABP's built-in administrator role; only used to label people in the list. */
+    private const string AdminRoleName = "admin";
 
-    public ProfileLookupAppService(IIdentityUserRepository users, IPermissionFinder permissionFinder)
+    private readonly IIdentityUserRepository _users;
+    private readonly IIdentityRoleRepository _roles;
+
+    public ProfileLookupAppService(IIdentityUserRepository users, IIdentityRoleRepository roles)
     {
         _users = users;
-        _permissionFinder = permissionFinder;
+        _roles = roles;
     }
 
     public async Task<CurrentUserProfileDto> GetCurrentAsync()
@@ -31,28 +35,26 @@ public class ProfileLookupAppService : PortalAppService, IProfileLookupAppServic
             Id = user.Id,
             Name = user.GetDisplayName(),
             Email = user.Email,
-            IsAdmin = await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ManageAll),
             Roles = (await _users.GetRoleNamesAsync(user.Id)).OrderBy(r => r).ToList(),
         };
     }
 
-    /* Every user with a display name and an admin flag, for admin pickers. */
-    [Authorize(PortalPermissions.Bookings.ManageAll)]
+    /* Every user with a display name, for the Schedule's person filter - reading other people's bookings, so
+     * Bookings.ViewAll. IsAdmin only labels people in the admin role. */
+    [Authorize(PortalPermissions.Bookings.ViewAll)]
     public async Task<ListResultDto<UserLookupDto>> GetUsersAsync()
     {
-        var users = await _users.GetListAsync();
-        var grants = users.Count == 0
-            ? new()
-            : await _permissionFinder.IsGrantedAsync(users
-                .Select(u => new IsGrantedRequest { UserId = u.Id, PermissionNames = new[] { PortalPermissions.Bookings.ManageAll } })
-                .ToList());
-        var admins = grants
-            .Where(g => g.Permissions.TryGetValue(PortalPermissions.Bookings.ManageAll, out var granted) && granted)
-            .Select(g => g.UserId)
-            .ToHashSet();
+        var users = await _users.GetListAsync(includeDetails: true);
+        var adminRole = (await _roles.GetListAsync())
+            .FirstOrDefault(r => string.Equals(r.Name, AdminRoleName, StringComparison.OrdinalIgnoreCase));
         return new ListResultDto<UserLookupDto>(users
             .OrderBy(u => u.GetDisplayName())
-            .Select(u => new UserLookupDto { Id = u.Id, Name = u.GetDisplayName(), IsAdmin = admins.Contains(u.Id) })
+            .Select(u => new UserLookupDto
+            {
+                Id = u.Id,
+                Name = u.GetDisplayName(),
+                IsAdmin = adminRole != null && u.Roles.Any(r => r.RoleId == adminRole.Id),
+            })
             .ToList());
     }
 }

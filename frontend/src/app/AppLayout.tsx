@@ -77,7 +77,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   const session = useSession()
   const today = useMemo(() => dayAt(todayKey()), [])
   const seesBookings = session.can(P.Bookings.Default)
-  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
+  const bookings = useBookings({ from: today, ownerUserId: session.managesAll ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
   const showEstate = Object.fromEntries(ESTATE_PAGES.map((p) => [p.path, manageAny(p.area).some(session.can)]))
@@ -99,7 +99,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           <div>
             <NavLink to="/app/bookings" className={navClass}>
               {Icon.bookings}
-              <span>{session.isAdmin ? 'Schedule' : 'My Schedule'}</span>
+              <span>{session.managesAll ? 'Schedule' : 'My Schedule'}</span>
               <span className="nav-count">{upcoming ?? ''}</span>
             </NavLink>
           </div>
@@ -121,7 +121,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px 10px' }}>
-          <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
+          <div className="avatar">{initials(session.name)}</div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.name}</div>
             <div style={{ fontSize: 11, color: 'var(--slate)' }}>
@@ -139,10 +139,10 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
 
 function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivElement | null) => void }) {
   const { pathname } = useLocation()
-  const { isAdmin, can } = useSession()
+  const { managesAll, can } = useSession()
   const view = pathname.split('/')[2] || 'bookings'
   const meta = PAGE_META[view] ?? PAGE_META.bookings
-  const title = view === 'bookings' ? (isAdmin ? 'Schedule' : 'My Schedule') : meta[0]
+  const title = view === 'bookings' ? (managesAll ? 'Schedule' : 'My Schedule') : meta[0]
   const { theme, toggle } = useThemeStore()
   const dark = theme === 'dark'
   const themeLabel = dark ? 'Switch to light theme' : 'Switch to dark theme'

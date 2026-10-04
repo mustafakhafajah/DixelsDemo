@@ -26,7 +26,7 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
     const state = lifecycleOf(i)
     const isMaint = i.kind === 'maintenance'
     const mine = !isMaint && i.ownerUserId === session.userId
-    const may = !isMaint && (mine || session.isAdmin)
+    const may = !isMaint && (mine || session.managesAll)
     const primary = isMaint ? (multiSpace ? i.spaceName : i.note || 'Blocked') : multiSpace ? i.spaceName : mine ? 'You' : i.ownerName
     const secondary = isMaint
       ? multiSpace ? i.note || 'Blocked' : i.scopeLabel

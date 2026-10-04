@@ -16,7 +16,7 @@ function BookingDetail({ b }: { b: Booking }) {
   const space = spaces.data?.find((s) => s.id === b.spaceId)
   const state = lifecycleOf(b)
   const mine = b.ownerUserId === session.userId
-  const may = mine || session.isAdmin
+  const may = mine || session.managesAll
   const series = useBookings({ from: b.start }, !!b.seriesId)
   const laterInSeries = b.seriesId ? (series.data ?? []).filter((x) => x.seriesId === b.seriesId && x.id !== b.id).length : 0
   const [askSeries, setAskSeries] = useState(false)
@@ -25,7 +25,7 @@ function BookingDetail({ b }: { b: Booking }) {
   if (state === 'ended') note = 'This booking has ended. Ended bookings are locked and cannot be changed.'
   else if (state === 'cancelled') note = 'Cancelled. The record is kept and the window is bookable again.'
   else if (state === 'in_progress') note = 'This booking has already started, so it can only be cancelled or ended early.'
-  else if (!mine && session.isAdmin) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it.`
+  else if (!mine && session.managesAll) note = `Owned by ${b.ownerName}. As the space administrator you can reschedule or cancel it.`
   else if (!mine) note = 'Someone else booked this. You can only change your own bookings.'
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))

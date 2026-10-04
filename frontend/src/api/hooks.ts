@@ -15,7 +15,7 @@ import {
   type Maintenance,
   type MaintenanceDto,
   type MaintenanceScopeType,
-  type Profile,
+  type CurrentUser,
   type Space,
   type SpaceRegistryPage,
   type SpaceType,
@@ -31,29 +31,22 @@ function useEnabled() {
 
 /* ─── Reads ─── */
 
-export function useProfile() {
-  const api = useApi()
-  return useQuery({
-    queryKey: ['profile'],
-    queryFn: () => api<Profile>('GET', '/api/app/profile-lookup/current'),
-    enabled: useEnabled(),
-    staleTime: 5 * 60_000,
-  })
-}
-
-/* What the signed-in user may do, as ABP grants it right now. Refetched on focus and every minute,
- * and invalidated (PERMISSION_KEYS) when someone changes grants, so hidden features follow along. */
-export const PERMISSION_KEYS = [['permissions']]
+/* ABP's application configuration: who is signed in and what they may do, as ABP grants it right now.
+ * One request feeds both hooks below. Refetched on focus and every minute, and invalidated
+ * (PERMISSION_KEYS) when someone changes grants, so hidden features follow along. */
+export const PERMISSION_KEYS = [['app-config']]
 
 interface ApplicationConfiguration {
   auth?: { grantedPolicies?: Record<string, boolean> }
+  currentUser?: CurrentUser
 }
 
-export function useGrantedPolicies() {
+function useApplicationConfiguration<T>(select: (c: ApplicationConfiguration) => T) {
   const api = useApi()
   return useQuery({
-    queryKey: ['permissions'],
-    queryFn: async () => (await api<ApplicationConfiguration>('GET', '/api/abp/application-configuration')).auth?.grantedPolicies ?? {},
+    queryKey: PERMISSION_KEYS[0],
+    queryFn: () => api<ApplicationConfiguration>('GET', '/api/abp/application-configuration'),
+    select,
     enabled: useEnabled(),
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -61,12 +54,20 @@ export function useGrantedPolicies() {
   })
 }
 
+const selectPolicies = (c: ApplicationConfiguration) => c.auth?.grantedPolicies ?? {}
+const selectCurrentUser = (c: ApplicationConfiguration) => c.currentUser ?? null
+
+export const useGrantedPolicies = () => useApplicationConfiguration(selectPolicies)
+export const useCurrentUser = () => useApplicationConfiguration(selectCurrentUser)
+
+/* ABP's own user lookup (needs AbpIdentity.UserLookup), for pickers. Capped at ABP's largest page. */
 export function useUsers(enabled = true) {
   const api = useApi()
   const ok = useEnabled()
   return useQuery({
-    queryKey: ['users'],
-    queryFn: async () => (await api<ListResult<UserLookup>>('GET', '/api/app/profile-lookup/users')).items,
+    queryKey: ['users', 'lookup'],
+    queryFn: async () => (await api<ListResult<UserLookup>>('GET', '/api/identity/users/lookup/search', undefined,
+      { Sorting: 'Name, Surname, UserName', MaxResultCount: 1000 })).items,
     enabled: ok && enabled,
     staleTime: 5 * 60_000,
   })
@@ -222,14 +223,14 @@ export function useBusy(filter: RangeFilter, enabled = true) {
   })
 }
 
-/* Everything that makes a time taken. Admins get every booking in full; everyone else gets their own
+/* Everything that makes a time taken. Holders of Bookings.ManageAll get every booking in full; everyone else gets their own
  * bookings plus grey "Busy" windows for the rest, because the server never sends them anyone else's. */
-export function useAvailability(filter: RangeFilter, who: { isAdmin: boolean; userId: string }, enabled = true) {
-  const all = useBookings(filter, enabled && who.isAdmin)
-  const own = useBookings({ ...filter, ownerUserId: who.userId }, enabled && !who.isAdmin && !!who.userId)
-  const busy = useBusy(filter, enabled && !who.isAdmin)
+export function useAvailability(filter: RangeFilter, who: { managesAll: boolean; userId: string }, enabled = true) {
+  const all = useBookings(filter, enabled && who.managesAll)
+  const own = useBookings({ ...filter, ownerUserId: who.userId }, enabled && !who.managesAll && !!who.userId)
+  const busy = useBusy(filter, enabled && !who.managesAll)
   const data = useMemo(() => (own.data && busy.data ? [...own.data, ...busy.data] : undefined), [own.data, busy.data])
-  if (who.isAdmin) return all
+  if (who.managesAll) return all
   const failed = own.isError ? own : busy.isError ? busy : null
   return {
     data,

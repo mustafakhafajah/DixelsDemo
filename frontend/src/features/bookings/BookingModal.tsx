@@ -157,7 +157,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     return generated.occurrences.map((o) => {
       const clash = findOverlap(bookings, spaceId, o.start, o.end)
       /* Employees can't hold two spaces at once; admins can, so their other bookings don't count. */
-      const self = !clash && !session.isAdmin
+      const self = !clash && !session.managesAll
         ? bookings.find((b) => b.ownerUserId === session.userId && b.spaceId !== spaceId && b.start < o.end && o.start < b.end)
         : undefined
       const hit = clash ?? self
@@ -170,10 +170,10 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         flagged: !!hit || !!closed,
         skip: closed ? true : skipOverrides[t] ?? !!hit,
         note: closed ? `closed ${closed}`
-          : hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.isAdmin ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
+          : hit ? (hit.spaceId !== spaceId ? `you have ${hit.spaceName} then` : (session.managesAll ? `taken by ${hit.ownerName}` : 'already booked')) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, space, session.userId, session.isAdmin, skipOverrides])
+  }, [generated, bookings, spaceId, space, session.userId, session.managesAll, skipOverrides])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()
@@ -190,7 +190,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const stillBusy = suggested && findOverlap(bookings, space.id, suggested.start, suggested.end)
       setConflict({
         message: clash
-          ? `${space.name} is already booked${session.isAdmin ? ` by ${clash.ownerName}` : ''} from ${hm(clash.start)} to ${hm(clash.end)} UTC. Bookings on one space may never overlap.`
+          ? `${space.name} is already booked${session.managesAll ? ` by ${clash.ownerName}` : ''} from ${hm(clash.start)} to ${hm(clash.end)} UTC. Bookings on one space may never overlap.`
           : message,
         suggested: stillBusy ? null : suggested,
       })

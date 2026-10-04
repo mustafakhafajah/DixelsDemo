@@ -1,5 +1,6 @@
 import { useAuth } from 'react-oidc-context'
-import { useGrantedPolicies, useProfile } from '../api/hooks'
+import { useCurrentUser, useGrantedPolicies } from '../api/hooks'
+import { displayName } from '../api/types'
 import { DEFAULT_EMPLOYEE_POLICIES, P } from '../auth/permissions'
 import { extractRoles } from '../auth/roles'
 
@@ -25,25 +26,24 @@ function homePath(can: Can) {
   return can(P.Users.Default) ? '/app/users' : '/app/find'
 }
 
-/* The token's role claim decides routing instantly; the server profile confirms it. */
+/* Who is signed in and what they may do, straight from ABP: its current user and its granted permissions.
+ * Every decision asks for the permission it needs through can(); there is no separate "admin" flag. */
 export function useSession() {
   const auth = useAuth()
-  const profile = useProfile()
+  const user = useCurrentUser().data
   const policies = useGrantedPolicies()
   const granted = policies.data
-  const roleAdmin = extractRoles(auth.user?.profile.role).includes('admin')
   const claims = auth.user?.profile
-  const isAdmin = profile.data?.isAdmin ?? roleAdmin
-  /* The roles stored for this user; the token's role claim until the profile arrives. */
-  const roles = profile.data?.roles ?? extractRoles(auth.user?.profile.role)
-  /* Until the server's grants arrive, admins are assumed to hold everything and others the employee set. */
-  const can: Can = (name) => (granted ? !!granted[name] : isAdmin || DEFAULT_EMPLOYEE_POLICIES.has(name))
+  /* Until the server's grants arrive, everyone is assumed to hold the employee set. */
+  const can: Can = (name) => (granted ? !!granted[name] : DEFAULT_EMPLOYEE_POLICIES.has(name))
   return {
-    userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
-    name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? 'You',
-    isAdmin,
-    roles,
+    userId: user?.id ?? (claims?.sub as string | undefined) ?? '',
+    name: (user && displayName(user.name, user.surName, user.userName)) || (claims?.name as string | undefined) || (claims?.preferred_username as string | undefined) || 'You',
+    /* The roles stored for this user; the token's role claim until ABP's configuration arrives. */
+    roles: user?.roles ?? extractRoles(claims?.role),
     can,
+    /* Bookings.ManageAll: sees, books for and changes everyone's bookings, not only their own. */
+    managesAll: can(P.Bookings.ManageAll),
     /* A failed load counts as loaded, so the guards fall back to the defaults above instead of waiting forever. */
     permissionsLoaded: !!granted || policies.isError,
     home: homePath(can),

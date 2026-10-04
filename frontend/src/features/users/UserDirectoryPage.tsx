@@ -38,7 +38,7 @@ function StatusPill({ active }: { active: boolean }) {
 
 /* Roles, permissions and accounts are changed in ABP's administration site; this page only shows them. */
 export function UserDirectoryPage() {
-  const { userId, isAdmin } = useSession()
+  const { userId, managesAll } = useSession()
   const navigate = useNavigate()
   const [filters, setFilters] = useState<UserDirectoryFilterValues>(EMPTY_USER_FILTERS)
   const [page, setPage] = useState(1)
@@ -66,7 +66,8 @@ export function UserDirectoryPage() {
   const changePageSize = (s: number) => { setPageSize(s); setPage(1) }
   const filtered = Object.values(filters).some((v) => v !== '')
 
-  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin
+  /* Opening someone else's schedule needs Bookings.ManageAll. */
+  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => managesAll
     ? [{
         label: 'View bookings',
         onClick: () => { useScheduleStore.getState().patch('my', { userId: u.id }); navigate('/app/bookings') },
@@ -86,7 +87,7 @@ export function UserDirectoryPage() {
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
               <thead>
-                <tr><th>User</th><th>Username</th><th>Role</th><th>Status</th><th>Lock</th>{isAdmin && <th style={{ textAlign: 'right' }}>Actions</th>}</tr>
+                <tr><th>User</th><th>Username</th><th>Role</th><th>Status</th><th>Lock</th>{managesAll && <th style={{ textAlign: 'right' }}>Actions</th>}</tr>
               </thead>
               <tbody>
                 {q.data.items.map((u) => {
@@ -106,7 +107,7 @@ export function UserDirectoryPage() {
                       <td><RolePill role={u.role} roles={roles} /></td>
                       <td><StatusPill active={u.isActive} /></td>
                       <td><LockCell user={u} /></td>
-                      {isAdmin && (
+                      {managesAll && (
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-block' }}>{items.length > 0 && <RowMenu items={items} />}</div>
                         </td>

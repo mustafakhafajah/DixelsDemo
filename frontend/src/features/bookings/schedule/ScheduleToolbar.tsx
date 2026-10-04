@@ -1,5 +1,6 @@
 import { useBuildings, useFloors, useUsers } from '../../../api/hooks'
-import type { Space } from '../../../api/types'
+import { displayName, type Space } from '../../../api/types'
+import { P } from '../../../auth/permissions'
 import { DatePicker, Dropdown } from '../../../components/pickers'
 import { useSession } from '../../../app/session'
 import { dayAt, dayName, monthName, todayKey } from '../../../lib/dateUtils'
@@ -21,7 +22,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const store = useScheduleStore()
   const cfg = store.configs[id]
   const session = useSession()
-  const users = useUsers(session.isAdmin)
+  const users = useUsers(session.managesAll && session.can(P.Users.Lookup))
   const buildings = useBuildings().data ?? []
   const allFloors = useFloors().data ?? []
   /* Floor stays locked until a building is picked, then lists only that building's floors. */
@@ -71,7 +72,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   )
 
   /* Employees: the building and floor on top; Month / Week / Day on the left and the period on the far right under it. */
-  if (!session.isAdmin) {
+  if (!session.managesAll) {
     return (
       <div className="sched-toolbar">
         <div className="sched-row sched-row-left">{building}{floor}</div>
@@ -97,7 +98,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
           <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId ?? session.userId}
             onChange={(v) => store.patch(id, { userId: v === session.userId ? null : v })}
             options={users.data
-              ? users.data.map((u) => ({ value: u.id, label: `${u.id === session.userId ? 'You' : u.name}${u.isAdmin && u.id !== session.userId ? ' (admin)' : ''}` }))
+              ? users.data.map((u) => ({ value: u.id, label: u.id === session.userId ? 'You' : displayName(u.name, u.surname, u.userName) }))
               : [{ value: session.userId, label: 'You' }]} />
         </div>
       </div>

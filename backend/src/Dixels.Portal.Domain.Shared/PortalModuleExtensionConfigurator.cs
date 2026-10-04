@@ -1,5 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Dixels.Portal.Localization;
+using Dixels.Portal.Users;
 using Volo.Abp.Identity;
+using Volo.Abp.Localization;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
 
@@ -69,5 +72,21 @@ public static class PortalModuleExtensionConfigurator
          * See the documentation for more:
          * https://docs.abp.io/en/abp/latest/Module-Entity-Extensions
          */
+
+        ObjectExtensionManager.Instance.Modules()
+            .ConfigureIdentity(identity =>
+            {
+                identity.ConfigureUser(user =>
+                {
+                    /* Not mapped to its own column, so it is kept in ExtraProperties and needs no migration. */
+                    user.AddOrUpdateProperty<string>(PortalUserConsts.AddressPropertyName, property =>
+                    {
+                        property.Attributes.Add(new StringLengthAttribute(PortalUserConsts.MaxAddressLength));
+                        property.DisplayName = LocalizableString.Create<PortalResource>("DisplayName:" + PortalUserConsts.AddressPropertyName);
+                        /* Users may change their own address (ABP's my-profile update), not only admins. */
+                        property.Configuration[IdentityModuleExtensionConsts.ConfigurationNames.AllowUserToEdit] = true;
+                    });
+                });
+            });
     }
 }

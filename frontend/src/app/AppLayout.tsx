@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { LanguagesIcon, MoonIcon, SunIcon } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { LanguagesIcon, MoonIcon, SunIcon, UserIcon } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
@@ -33,6 +33,7 @@ const PAGE_META = {
   spaces: ['pages.spaces.title', 'pages.spaces.subtitle'],
   'space-types': ['pages.spaceTypes.title', 'pages.spaceTypes.subtitle'],
   users: ['pages.users.title', 'pages.users.subtitle'],
+  profile: ['pages.profile.title', 'pages.profile.subtitle'],
 } as const
 
 /* "New booking" only where booking is the task at hand. */
@@ -128,7 +129,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
       </nav>
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--line)', paddingTop: 13 }}>
-        {/* The person's name opens a small menu: who is signed in, Language and Theme submenus, then Sign out. */}
+        {/* The person's name opens a small menu: who is signed in, My Profile, Language and Theme submenus, then Sign out. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
@@ -154,6 +155,11 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {/* Picking it also closes the slide-in menu on phones and tablets, like any other page link. */}
+            <DropdownMenuItem asChild onSelect={onNavigate}>
+              {/* Without Tailwind's preflight a link keeps the browser's blue underline; this makes it look like the other items. */}
+              <Link to="/app/profile" className="tw:text-inherit tw:no-underline"><UserIcon />{t('nav.myProfile')}</Link>
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger><LanguagesIcon />{t('language.label')}</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="tw:min-w-40">

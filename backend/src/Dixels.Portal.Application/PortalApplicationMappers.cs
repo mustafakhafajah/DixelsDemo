@@ -2,9 +2,11 @@ using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Maintenance;
+using Dixels.Portal.Profiles;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
 using Riok.Mapperly.Abstractions;
+using Volo.Abp.Identity;
 using Volo.Abp.Mapperly;
 
 namespace Dixels.Portal;
@@ -113,4 +115,21 @@ public partial class MaintenanceWindowToMaintenanceWindowDtoMapper : MapperBase<
     [MapperIgnoreTarget(nameof(MaintenanceWindowDto.ScopeLabel))]
     [MapperIgnoreTarget(nameof(MaintenanceWindowDto.Lifecycle))]
     public override partial void Map(MaintenanceWindow source, MaintenanceWindowDto destination);
+}
+
+/* Only what ABP's own profile leaves out; the profile itself comes from ABP's IProfileAppService. */
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class IdentityUserToMyProfileDtoMapper : MapperBase<IdentityUser, MyProfileDto>
+{
+    [MapperIgnoreTarget(nameof(MyProfileDto.Profile))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.Roles))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.TenantName))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.LastSignInTime))]
+    public override partial MyProfileDto Map(IdentityUser source);
+
+    [MapperIgnoreTarget(nameof(MyProfileDto.Profile))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.Roles))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.TenantName))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.LastSignInTime))]
+    public override partial void Map(IdentityUser source, MyProfileDto destination);
 }

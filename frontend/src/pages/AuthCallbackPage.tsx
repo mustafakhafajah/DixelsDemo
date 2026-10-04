@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { useTranslation } from 'react-i18next'
 import { SplashScreen } from '../components/SplashScreen'
@@ -21,7 +21,7 @@ function AuthCallbackPage() {
       <div style={{ padding: 40, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
         <h1>{t('login.failed')}</h1>
         <p>{auth.error.message}</p>
-        <a href="/">{t('login.back')}</a>
+        <Link to="/">{t('login.back')}</Link>
       </div>
     )
   }

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Dixels.Portal.EntityFrameworkCore;
 using Dixels.Portal.Localization;
 using Dixels.Portal.MultiTenancy;
+using Dixels.Portal.Web.Components.AppPath;
 using Dixels.Portal.Web.Menus;
 using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
@@ -25,6 +26,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
+using Volo.Abp.Ui.LayoutHooks;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
@@ -111,6 +113,7 @@ public class PortalWebModule : AbpModule
         ConfigureDataProtection(context, hostingEnvironment);
         ConfigureUrls(configuration);
         ConfigureBundles();
+        ConfigureLayoutHooks();
         ConfigureVirtualFileSystem(hostingEnvironment);
         ConfigureNavigationServices();
         /* No auto API controllers: our API is the hand-written controllers in Dixels.Portal.HttpApi. */
@@ -173,6 +176,15 @@ public class PortalWebModule : AbpModule
                     bundle.AddFiles("/global-styles.css");
                 }
             );
+        });
+    }
+
+    private void ConfigureLayoutHooks()
+    {
+        /* In the page head, before the theme's scripts, so abp.appPath is the site's own path (e.g. /server/) and not "/". */
+        Configure<AbpLayoutHookOptions>(options =>
+        {
+            options.Add(LayoutHooks.Head.Last, typeof(AppPathViewComponent));
         });
     }
 

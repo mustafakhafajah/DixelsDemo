@@ -2,7 +2,8 @@ import { useCallback } from 'react'
 import { useAuth } from 'react-oidc-context'
 import i18n from 'i18next'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'https://localhost:44393'
+/* May carry a path (https://host/server), so request paths are appended to it, not resolved against it. */
+const API_URL = (import.meta.env.VITE_API_URL ?? 'https://localhost:44393').replace(/\/+$/, '')
 
 /* One message the server tied to a request field, e.g. { field: 'name', message: 'Give the space a name.' }. */
 export interface ServerFieldError { field: string; code: string; message: string }
@@ -35,7 +36,7 @@ type Query = Record<string, QueryValue | string[]>
 
 /* A list is sent as a repeated key (TypeIds=a&TypeIds=b), which is how ASP.NET binds List<T>. */
 export function buildUrl(path: string, query?: Query): string {
-  const url = new URL(path, API_URL)
+  const url = new URL(API_URL + (path.startsWith('/') ? path : `/${path}`))
   Object.entries(query ?? {}).forEach(([k, v]) => {
     if (Array.isArray(v)) v.forEach((item) => url.searchParams.append(k, item))
     else if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
@@ -55,6 +56,9 @@ interface AbpErrorBody {
 export async function apiRequest<T>(token: string | undefined, method: string, path: string, body?: unknown, query?: Query): Promise<T> {
   const res = await fetch(buildUrl(path, query), {
     method,
+    /* The access token is the only credential. When the portal and the server share one address, the browser
+     * would also send the server's sign-in cookie, and the server then demands an anti-forgery token. */
+    credentials: 'omit',
     headers: {
       Accept: 'application/json',
       /* The server answers in this language: names, notes and error messages. */

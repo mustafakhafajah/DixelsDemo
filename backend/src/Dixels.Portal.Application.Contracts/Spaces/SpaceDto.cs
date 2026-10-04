@@ -31,4 +31,6 @@ public class SpaceDto : EntityDto<Guid>
     public bool CanCurrentUserBook { get; set; }
     /* Why it cannot be booked right now (the space, its floor or its building is not bookable); null when it can. */
     public string? NotBookableReason { get; set; }
+    /* Confirmed bookings on this space that have not ended yet. */
+    public int UpcomingBookingCount { get; set; }
 }

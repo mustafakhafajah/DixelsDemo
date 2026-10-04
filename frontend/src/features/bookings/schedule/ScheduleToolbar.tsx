@@ -6,7 +6,8 @@ import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
 import { dayAt, formatDate, formatDateRange, todayKey } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
-import { EVERYONE, useScheduleStore, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
+import { useDropUnknown } from '../../../lib/useUrlState'
+import { EVERYONE, useScheduleConfig, type ScheduleConfig, type ScheduleMode } from '../../../state/scheduleStore'
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
  * whatever the two ends share, in the chosen language's own order. */
@@ -19,25 +20,34 @@ export function periodLabel(cfg: ScheduleConfig): string {
 
 export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[] }) {
   const { t } = useTranslation()
-  const store = useScheduleStore()
-  const cfg = store.configs[id]
+  const [cfg, store] = useScheduleConfig(id)
   const session = useSession()
   /* The full toolbar (space, person, From / To) is for whoever may see everyone's bookings. */
   const seesAll = session.can(P.Bookings.ViewAll)
   /* The person list needs ABP's "see users" permission too; without it the filter offers Everyone and You. */
-  const users = useUsers(seesAll && session.can(P.Users.Default))
-  const buildings = useBuildings().data ?? []
+  const listsUsers = seesAll && session.can(P.Users.Default)
+  const users = useUsers(listsUsers)
+  const buildingsQ = useBuildings()
+  const buildings = buildingsQ.data ?? []
   /* Floor stays locked until a building is picked, then the server is asked for that building's floors;
    * Space likewise waits for a floor and lists only that floor's spaces. */
-  const floors = useFloors(cfg.buildingId, !!cfg.buildingId).data ?? []
-  const shownSpaces = useSpaces({ floorId: cfg.floorId }, seesAll && !!cfg.floorId).data ?? []
+  const floorsQ = useFloors(cfg.buildingId, !!cfg.buildingId)
+  const floors = floorsQ.data ?? []
+  const spacesQ = useSpaces({ floorId: cfg.floorId }, seesAll && !!cfg.floorId)
+  const shownSpaces = spacesQ.data ?? []
+  /* A shared link with a building, floor, space or person this viewer can't pick falls back to the default. */
+  useDropUnknown(cfg.buildingId, buildingsQ.data?.map((b) => b.id), () => store.patch({ buildingId: '', floorId: '', spaceId: 'all' }))
+  useDropUnknown(cfg.floorId, floorsQ.data?.map((f) => f.id), () => store.patch({ floorId: '', spaceId: 'all' }))
+  useDropUnknown(cfg.spaceId === 'all' ? '' : cfg.spaceId, seesAll ? spacesQ.data?.map((s) => s.id) : undefined, () => store.patch({ spaceId: 'all' }))
+  useDropUnknown(cfg.userId === EVERYONE ? '' : cfg.userId,
+    seesAll ? (listsUsers ? users.data?.map((u) => u.id) : [session.userId]) : undefined, () => store.patch({ userId: EVERYONE }))
   const inScope = (s: Space, buildingId: string, floorId: string) =>
     (!buildingId || s.buildingId === buildingId) && (!floorId || s.floorId === floorId)
   const keepSpace = (buildingId: string, floorId: string) =>
     cfg.spaceId === 'all' || spaces.some((s) => s.id === cfg.spaceId && inScope(s, buildingId, floorId)) ? cfg.spaceId : 'all'
   /* Space stays locked until a floor is picked, so clearing the building or floor also clears the space. */
-  const pickBuilding = (buildingId: string) => store.patch(id, { buildingId, floorId: '', spaceId: 'all' })
-  const pickFloor = (floorId: string) => store.patch(id, { floorId, spaceId: floorId ? keepSpace(cfg.buildingId, floorId) : 'all' })
+  const pickBuilding = (buildingId: string) => store.patch({ buildingId, floorId: '', spaceId: 'all' })
+  const pickFloor = (floorId: string) => store.patch({ floorId, spaceId: floorId ? keepSpace(cfg.buildingId, floorId) : 'all' })
 
   const building = (
     <div style={{ minWidth: 200 }}>
@@ -57,7 +67,7 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   const views = (
     <div className="seg" role="group" aria-label={t('schedule.viewLabel')}>
       {(['month', 'week', 'day'] as ScheduleMode[]).map((m) => (
-        <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(id, m)}>
+        <button key={m} type="button" className={cfg.mode === m ? 'active' : ''} onClick={() => store.setMode(m)}>
           {t(`schedule.view.${m}`)}
         </button>
       ))}
@@ -65,10 +75,10 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
   )
   const period = (
     <div className="sched-period">
-      <button type="button" className="iconbtn" onClick={() => store.shift(id, -1)} aria-label={t('schedule.previousPeriod')} title={t('schedule.previousPeriod')}>‹</button>
+      <button type="button" className="iconbtn" onClick={() => store.shift(-1)} aria-label={t('schedule.previousPeriod')} title={t('schedule.previousPeriod')}>‹</button>
       <span className="mono period-label">{periodLabel(cfg)}</span>
-      <button type="button" className="iconbtn" onClick={() => store.shift(id, 1)} aria-label={t('schedule.nextPeriod')} title={t('schedule.nextPeriod')}>›</button>
-      <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(id, todayKey())}>{t('common.today')}</button>
+      <button type="button" className="iconbtn" onClick={() => store.shift(1)} aria-label={t('schedule.nextPeriod')} title={t('schedule.nextPeriod')}>›</button>
+      <button type="button" className="btn btn-sm" onClick={() => store.setPeriod(todayKey())}>{t('common.today')}</button>
     </div>
   )
 
@@ -90,14 +100,14 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
         {floor}
         <div style={{ minWidth: 230 }}>
           <label className="lbl" htmlFor="my-space">{t('common.space')}</label>
-          <Dropdown id="my-space" value={cfg.floorId ? cfg.spaceId : ''} onChange={(v) => store.patch(id, { spaceId: v })}
+          <Dropdown id="my-space" value={cfg.floorId ? cfg.spaceId : ''} onChange={(v) => store.patch({ spaceId: v })}
             disabled={!cfg.floorId} placeholder={t('common.chooseFloorFirst')}
             options={cfg.floorId ? [{ value: 'all', label: t('schedule.allSpacesOnFloor') }, ...shownSpaces.map((s) => ({ value: s.id, label: s.name }))] : []} />
         </div>
         <div>
           <label className="lbl" htmlFor="my-user">{t('schedule.user')}</label>
           <Dropdown id="my-user" style={{ width: 170 }} value={cfg.userId}
-            onChange={(v) => store.patch(id, { userId: v })}
+            onChange={(v) => store.patch({ userId: v })}
             options={[
               { value: EVERYONE, label: t('schedule.everyone') },
               ...(users.data
@@ -113,12 +123,12 @@ export function ScheduleToolbar({ id, spaces }: { id: ScheduleId; spaces: Space[
           <div>
             <label className="lbl" htmlFor={`${id}-from`}>{t('common.from')}</label>
             <DatePicker id={`${id}-from`} style={{ width: 180 }} value={cfg.from}
-              onChange={(v) => store.onRangeInput(id, v, cfg.to)} />
+              onChange={(v) => store.onRangeInput(v, cfg.to)} />
           </div>
           <div>
             <label className="lbl" htmlFor={`${id}-to`}>{t('common.to')}</label>
             <DatePicker id={`${id}-to`} style={{ width: 180 }} value={cfg.to} min={cfg.from}
-              onChange={(v) => store.onRangeInput(id, cfg.from, v)} />
+              onChange={(v) => store.onRangeInput(cfg.from, v)} />
           </div>
         </div>
       </div>

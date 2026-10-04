@@ -22,7 +22,7 @@ export function useBookingActions() {
     cancel: (b: Booking) =>
       cancel.mutateAsync(b.id).then(() => toast('ok', t('actions.cancelled'), t('actions.cancelledMessage', { space: b.spaceName })), fail(t('actions.cancelFailed'))),
     cancelSeriesFrom: (b: Booking) =>
-      cancelSeries.mutateAsync(b.id).then(
+      cancelSeries.mutateAsync(b).then(
         (r) => toast('ok', t('actions.seriesCancelled', { count: r.cancelledCount }), t('actions.seriesCancelledMessage', { from: stamp(b.start) })),
         fail(t('actions.cancelFailed'))),
     endEarly: (b: Booking) =>

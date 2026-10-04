@@ -8,7 +8,7 @@ namespace Dixels.Portal.Controllers.Users;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/user-directory")]
+[Route("api/app/users")]
 public class UserDirectoryController : PortalController, IUserDirectoryAppService
 {
     private readonly IUserDirectoryAppService _directory;

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
 import { errorText } from '../../api/client'
@@ -18,7 +18,7 @@ import { RowMenu } from '../../components/RowMenu'
 import { closedWeekdaysLabel } from '../../lib/closedDays'
 import { pad } from '../../lib/dateUtils'
 import { useServerPaging, useStayOnRealPage } from '../../lib/useServerPaging'
-import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { urlParam, useDropUnknown, useUrlSearchBox, useUrlState } from '../../lib/useUrlState'
 import { modals } from '../../state/modalStore'
 import { useFilteredNavCount } from '../../state/navCountStore'
 import { toast } from '../../state/toastStore'
@@ -119,13 +119,15 @@ export function FloorsPage() {
   const buildings = useBuildings()
   const { can } = useSession()
   const bookableItem = useBookableMenuItem()
-  const [buildingId, setBuildingId] = useState('')
-  /* The building filter and the page are both sent to the server, so each change is a new request. */
+  /* The building filter and the page are both sent to the server, so each change is a new request.
+   * Both are in the address (?building=…&page=…), so a copied link shows the same list. */
+  const [{ buildingId }, setUrl] = useUrlState({ buildingId: urlParam.text('building') })
   const paging = useServerPaging()
   const q = useFloorsPage({ page: paging.page, pageSize: paging.pageSize, buildingId: buildingId || undefined })
   useStayOnRealPage(paging, q.data?.totalCount)
   useFilteredNavCount('floors', buildingId && q.data ? q.data.totalCount : undefined)
-  const pickBuilding = (v: string) => { setBuildingId(v); paging.setPage(1) }
+  const pickBuilding = (v: string) => { setUrl({ buildingId: v }); paging.setPage(1) }
+  useDropUnknown(buildingId, buildings.data?.map((b) => b.id), () => pickBuilding(''))
   const byId = Object.fromEntries((buildings.data ?? []).map((b) => [b.id, b]))
   return (
     <section>
@@ -201,22 +203,36 @@ export function SpacesPage() {
   const types = useSpaceTypes()
   const { can } = useSession()
   const bookableItem = useBookableMenuItem()
-  const [filters, setFilters] = useState<SpaceRegistryFilterValues>(EMPTY_SPACE_FILTERS)
-  /* The floor list is asked for the chosen building. */
-  const floors = useFloors(filters.buildingId, !!filters.buildingId)
+  /* Every filter and the page live in the address (?q=…&building=…&floor=…&type=…&page=…), so a copied link
+   * shows the same list. The typed name reaches the address (and the server) once typing pauses; dropdowns at once. */
+  const [url, setUrl] = useUrlState({
+    name: urlParam.text('q'), buildingId: urlParam.text('building'), floorId: urlParam.text('floor'), typeId: urlParam.text('type'),
+  })
   const paging = useServerPaging()
   const { page, pageSize, setPage } = paging
-  /* Only the typed fields are debounced; dropdowns apply at once. */
-  const name = useDebouncedValue(filters.name.trim())
+  const [nameText, setNameText] = useUrlSearchBox(url.name, (name) => { setUrl({ name }); setPage(1) })
+  const filters: SpaceRegistryFilterValues = { ...url, name: nameText }
+  /* The floor list is asked for the chosen building. */
+  const floors = useFloors(url.buildingId, !!url.buildingId)
 
   const q = useSpaceRegistry({
-    page, pageSize, name: name || undefined,
-    buildingId: filters.buildingId || undefined, floorId: filters.floorId || undefined, typeId: filters.typeId || undefined,
+    page, pageSize, name: url.name || undefined,
+    buildingId: url.buildingId || undefined, floorId: (url.buildingId && url.floorId) || undefined, typeId: url.typeId || undefined,
   })
   const total = q.data?.totalCount ?? 0
   useStayOnRealPage(paging, q.data?.totalCount)
 
-  const changeFilters = (v: SpaceRegistryFilterValues) => { setFilters(v); setPage(1) }
+  const changeFilters = (v: SpaceRegistryFilterValues) => {
+    setNameText(v.name)
+    if (v.buildingId !== url.buildingId || v.floorId !== url.floorId || v.typeId !== url.typeId || (!v.name && url.name)) {
+      setUrl({ buildingId: v.buildingId, floorId: v.floorId, typeId: v.typeId, ...(v.name ? {} : { name: '' }) })
+      setPage(1)
+    }
+  }
+  /* A shared link with a building, floor or type this viewer does not have falls back to "all". */
+  useDropUnknown(url.buildingId, buildings.data?.map((b) => b.id), () => setUrl({ buildingId: '', floorId: '' }))
+  useDropUnknown(url.floorId, url.buildingId ? floors.data?.map((f) => f.id) : [], () => setUrl({ floorId: '' }))
+  useDropUnknown(url.typeId, types.data?.map((t) => t.id), () => setUrl({ typeId: '' }))
   const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
   useFilteredNavCount('spaces', filtered && q.data ? total : undefined)
@@ -249,7 +265,7 @@ export function SpacesPage() {
                     <td>
                       <BookablePill bookable={s.canCurrentUserBook} reason={s.notBookableReason} />
                       {s.isBookable && !s.canCurrentUserBook && <div style={{ ...muted, marginTop: 3 }}>{t('estate.blockedByParent')}</div>}
-                      <div style={{ ...muted, marginTop: 3 }}>{t('estate.upcoming', { count: q.data.upcomingBookingCounts[s.id] ?? 0 })}</div>
+                      <div style={{ ...muted, marginTop: 3 }}>{t('estate.upcoming', { count: s.upcomingBookingCount })}</div>
                     </td>
                     <Actions>
                       <RowMenu items={[

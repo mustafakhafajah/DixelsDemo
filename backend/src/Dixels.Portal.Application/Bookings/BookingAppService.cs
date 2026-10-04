@@ -184,24 +184,43 @@ public class BookingAppService : PortalAppService, IBookingAppService
         return await MapAsync(b);
     }
 
-    /* Cancels this booking and every later one in its series; ended occurrences are left alone. */
-    [Authorize(PortalPermissions.Bookings.Delete)]
-    public async Task<CancelSeriesResultDto> CancelSeriesFromAsync(Guid id)
+    /* PATCH: the body says which change it is. Calls inside this class skip the [Authorize] checks on the
+     * actions, so each change checks the same permission its own action needs. */
+    public async Task<BookingDto> UpdateAsync(Guid id, UpdateBookingDto input)
     {
-        var anchor = await GetBookingAsync(id);
-        await EnsureCanActAsync(anchor, L["Error:OnlyOwnCancel"]);
-        if (!anchor.SeriesId.HasValue)
+        switch (input.Lifecycle)
         {
-            await CancelOneAsync(anchor);
-            return new CancelSeriesResultDto { CancelledCount = 1 };
+            case UpdateBookingDto.Cancelled:
+                await AuthorizationService.CheckAsync(PortalPermissions.Bookings.Delete);
+                return await CancelAsync(id);
+            case UpdateBookingDto.Ended:
+                await AuthorizationService.CheckAsync(PortalPermissions.Bookings.Edit);
+                return await EndEarlyAsync(id);
+            default:
+                await AuthorizationService.CheckAsync(PortalPermissions.Bookings.Edit);
+                return await RescheduleAsync(id, new RescheduleBookingDto
+                {
+                    StartUtc = input.StartUtc!.Value,
+                    EndUtc = input.EndUtc!.Value,
+                    ExpectedVersion = input.ExpectedVersion,
+                });
         }
+    }
 
-        var seriesId = anchor.SeriesId.Value;
-        var from = anchor.StartUtc;
-        var targets = await _bookings.GetListAsync(b =>
-            b.SeriesId == seriesId && b.Status == BookingStatus.Confirmed && b.StartUtc >= from);
+    /* Cancels the series' bookings from input.FromUtc on; ended occurrences are left alone. Every occurrence
+     * has the same owner, so one ownership check covers the whole series. */
+    [Authorize(PortalPermissions.Bookings.Delete)]
+    public async Task<CancelSeriesResultDto> CancelSeriesAsync(Guid seriesId, CancelBookingSeriesDto input)
+    {
+        var series = await _bookings.GetListAsync(b => b.SeriesId == seriesId);
+        if (series.Count == 0)
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: L["Error:BookingNotFound"]);
+        await EnsureCanActAsync(series[0], L["Error:OnlyOwnCancel"]);
+
+        var from = input.FromUtc.AsUtc();
         var count = 0;
-        foreach (var b in targets.Where(b => b.GetLifecycle(Clock.Now) != TimeWindowState.Ended))
+        foreach (var b in series.Where(b => b.Status == BookingStatus.Confirmed && b.StartUtc >= from
+                                            && b.GetLifecycle(Clock.Now) != TimeWindowState.Ended))
         {
             await CancelOneAsync(b);
             count++;

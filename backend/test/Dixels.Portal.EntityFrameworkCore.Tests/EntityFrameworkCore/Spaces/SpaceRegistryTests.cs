@@ -42,8 +42,8 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
     {
         var e = await CreateEstateAsync(spacesPerFloor: 12);
 
-        var first = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, MaxResultCount = 10 });
-        var last = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, SkipCount = 20, MaxResultCount = 10 });
+        var first = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id, MaxResultCount = 10 });
+        var last = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id, SkipCount = 20, MaxResultCount = 10 });
 
         first.TotalCount.ShouldBe(24);
         first.Items.Count.ShouldBe(10);
@@ -52,15 +52,16 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
         first.Items.Select(s => s.Id).Intersect(last.Items.Select(s => s.Id)).ShouldBeEmpty();
     }
 
+    /* "Find a space" and the pickers send no paging and get every matching space (up to ABP's cap of 1,000). */
     [Fact]
-    public async Task Page_size_is_capped_at_100()
+    public async Task Without_paging_every_matching_space_comes_back()
     {
         var e = await CreateEstateAsync(spacesPerFloor: 60);
 
-        var page = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, MaxResultCount = 1000 });
+        var page = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id });
 
         page.TotalCount.ShouldBe(120);
-        page.Items.Count.ShouldBe(100);
+        page.Items.Count.ShouldBe(120);
     }
 
     [Fact]
@@ -74,10 +75,10 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
             await _spaces.UpdateAsync(s, autoSave: true);
         });
 
-        (await _service.GetPagedListAsync(new GetSpacesInput { FloorId = e.Floor2.Id })).TotalCount.ShouldBe(3);
-        (await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, Name = $"ROOM 2-{e.Tag}" }))
+        (await _service.GetListAsync(new GetSpaceListInput { FloorId = e.Floor2.Id })).TotalCount.ShouldBe(3);
+        (await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id, Name = $"ROOM 2-{e.Tag}" }))
             .TotalCount.ShouldBe(3);
-        var studios = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id, TypeId = DefaultSpaceTypes.Studio });
+        var studios = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id, TypeIds = { DefaultSpaceTypes.Studio } });
         studios.Items.Single().Id.ShouldBe(e.Floor2Spaces[0].Id);
     }
 
@@ -96,7 +97,7 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task Counts_only_confirmed_future_bookings_for_the_spaces_on_the_page()
+    public async Task Each_space_counts_only_its_confirmed_future_bookings()
     {
         var e = await CreateEstateAsync(spacesPerFloor: 2);
         var busy = e.Floor1Spaces[0];
@@ -110,11 +111,10 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
             await _bookings.UpdateAsync(b, autoSave: true);
         });
 
-        var page = await _service.GetPagedListAsync(new GetSpacesInput { BuildingId = e.Building.Id });
+        var page = await _service.GetListAsync(new GetSpaceListInput { BuildingId = e.Building.Id });
 
-        page.UpcomingBookingCounts[busy.Id].ShouldBe(2);
-        page.UpcomingBookingCounts.ContainsKey(e.Floor1Spaces[1].Id).ShouldBeFalse();
-        page.UpcomingBookingCounts.Keys.ShouldAllBe(id => page.Items.Any(s => s.Id == id));
+        page.Items.Single(s => s.Id == busy.Id).UpcomingBookingCount.ShouldBe(2);
+        page.Items.Single(s => s.Id == e.Floor1Spaces[1].Id).UpcomingBookingCount.ShouldBe(0);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class SpaceRegistryTests : PortalEntityFrameworkCoreTestBase
             .UseNpgsql("Host=localhost;Database=translation-check").Options);
 
         /* IgnoreQueryFilters: ABP's soft-delete filter needs ABP's services, which a hand-made context lacks. */
-        var sql = db.Set<Space>().IgnoreQueryFilters().ApplyRegistryFilter(new GetSpacesInput { Name = "room" }).ToQueryString();
+        var sql = db.Set<Space>().IgnoreQueryFilters().ApplyListFilter(new GetSpaceListInput { Name = "room" }).ToQueryString();
 
         sql.ShouldContain("lower(");
     }

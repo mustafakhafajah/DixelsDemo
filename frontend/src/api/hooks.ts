@@ -18,7 +18,6 @@ import {
   type MaintenanceScopeType,
   type Profile,
   type Space,
-  type SpaceRegistryPage,
   type SpaceType,
   type Translation,
   type UserLookup,
@@ -37,7 +36,7 @@ export function useProfile() {
   const api = useApi()
   return useQuery({
     queryKey: ['profile'],
-    queryFn: () => api<Profile>('GET', '/api/app/profile-lookup/current'),
+    queryFn: () => api<Profile>('GET', '/api/app/users/me'),
     enabled: useEnabled(),
     staleTime: 5 * 60_000,
   })
@@ -68,7 +67,7 @@ export function useUsers(enabled = true) {
   const ok = useEnabled()
   return useQuery({
     queryKey: ['users'],
-    queryFn: async () => (await api<ListResult<UserLookup>>('GET', '/api/app/profile-lookup/users')).items,
+    queryFn: async () => (await api<ListResult<UserLookup>>('GET', '/api/app/user-summaries')).items,
     enabled: ok && enabled,
     staleTime: 5 * 60_000,
   })
@@ -78,7 +77,7 @@ export function useBuildings() {
   const api = useApi()
   return useQuery({
     queryKey: ['buildings'],
-    queryFn: async () => (await api<ListResult<Building>>('GET', '/api/app/building')).items,
+    queryFn: async () => (await api<ListResult<Building>>('GET', '/api/app/buildings')).items,
     enabled: useEnabled(),
   })
 }
@@ -90,7 +89,7 @@ export function useFloors(buildingId?: string, enabled = true) {
   const ok = useEnabled()
   return useQuery({
     queryKey: ['floors', { buildingId: buildingId || null }],
-    queryFn: async () => (await api<ListResult<Floor>>('GET', '/api/app/floor', undefined, { BuildingId: buildingId || undefined })).items,
+    queryFn: async () => (await api<ListResult<Floor>>('GET', '/api/app/floors', undefined, { buildingId: buildingId || undefined })).items,
     enabled: ok && enabled,
   })
 }
@@ -101,9 +100,9 @@ export function useSpaces(filter: { buildingId?: string; floorId?: string } = {}
   const ok = useEnabled()
   return useQuery({
     queryKey: ['spaces', 'list', { buildingId: filter.buildingId || null, floorId: filter.floorId || null }],
-    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space', undefined, {
-      BuildingId: filter.buildingId || undefined,
-      FloorId: filter.floorId || undefined,
+    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/spaces', undefined, {
+      buildingId: filter.buildingId || undefined,
+      floorId: filter.floorId || undefined,
     })).items,
     enabled: ok && enabled,
   })
@@ -120,8 +119,8 @@ function useEstatePage<T>(key: string, path: string, q: PageQuery, params: Recor
   return useQuery({
     queryKey: [key, 'page', q],
     queryFn: () => api<PagedResult<T>>('GET', path, undefined, {
-      SkipCount: String((q.page - 1) * q.pageSize),
-      MaxResultCount: String(q.pageSize),
+      skipCount: String((q.page - 1) * q.pageSize),
+      maxResultCount: String(q.pageSize),
       ...params,
     }),
     enabled: useEnabled(),
@@ -130,12 +129,12 @@ function useEstatePage<T>(key: string, path: string, q: PageQuery, params: Recor
   })
 }
 
-export const useBuildingsPage = (q: PageQuery) => useEstatePage<Building>('buildings', '/api/app/building', q)
+export const useBuildingsPage = (q: PageQuery) => useEstatePage<Building>('buildings', '/api/app/buildings', q)
 
 export const useFloorsPage = (q: PageQuery & { buildingId?: string }) =>
-  useEstatePage<Floor>('floors', '/api/app/floor', q, { BuildingId: q.buildingId || undefined })
+  useEstatePage<Floor>('floors', '/api/app/floors', q, { buildingId: q.buildingId || undefined })
 
-export const useSpaceTypesPage = (q: PageQuery) => useEstatePage<SpaceType>('space-types', '/api/app/space-type', q)
+export const useSpaceTypesPage = (q: PageQuery) => useEstatePage<SpaceType>('space-types', '/api/app/space-types', q)
 
 export interface FindSpacesQuery {
   buildingId?: string
@@ -154,14 +153,15 @@ export function useFindSpaces(q: FindSpacesQuery) {
   const api = useApi()
   return useQuery({
     queryKey: ['spaces', 'find', { ...q, freeFrom: q.freeFrom?.getTime(), freeTo: q.freeTo?.getTime() }],
-    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/space/bookable-list', undefined, {
-      BuildingId: q.buildingId,
-      FloorId: q.floorId,
-      MinCapacity: q.minCapacity || undefined,
-      TypeIds: q.typeIds,
-      Name: q.name,
-      FreeFromUtc: q.freeFrom?.toISOString(),
-      FreeToUtc: q.freeTo?.toISOString(),
+    queryFn: async () => (await api<ListResult<Space>>('GET', '/api/app/spaces', undefined, {
+      bookable: true,
+      buildingId: q.buildingId,
+      floorId: q.floorId,
+      minCapacity: q.minCapacity || undefined,
+      typeIds: q.typeIds,
+      name: q.name,
+      freeFromUtc: q.freeFrom?.toISOString(),
+      freeToUtc: q.freeTo?.toISOString(),
     })).items,
     enabled: useEnabled(),
     /* Keep the current rooms on screen while a changed filter loads, instead of flashing "Loading…". */
@@ -173,7 +173,7 @@ export function useSpaceTypes() {
   const api = useApi()
   return useQuery({
     queryKey: ['space-types'],
-    queryFn: async () => (await api<ListResult<SpaceType>>('GET', '/api/app/space-type')).items,
+    queryFn: async () => (await api<ListResult<SpaceType>>('GET', '/api/app/space-types')).items,
     enabled: useEnabled(),
   })
 }
@@ -192,13 +192,13 @@ export function useSpaceRegistry(q: SpaceRegistryQuery) {
   const api = useApi()
   return useQuery({
     queryKey: ['spaces', 'registry', q],
-    queryFn: () => api<SpaceRegistryPage>('GET', '/api/app/space/paged-list', undefined, {
-      SkipCount: (q.page - 1) * q.pageSize,
-      MaxResultCount: q.pageSize,
-      BuildingId: q.buildingId,
-      FloorId: q.floorId,
-      Name: q.name,
-      TypeId: q.typeId,
+    queryFn: () => api<PagedResult<Space>>('GET', '/api/app/spaces', undefined, {
+      skipCount: (q.page - 1) * q.pageSize,
+      maxResultCount: q.pageSize,
+      buildingId: q.buildingId,
+      floorId: q.floorId,
+      name: q.name,
+      typeIds: q.typeId ? [q.typeId] : undefined,
     }),
     enabled: useEnabled(),
     /* Keep showing the current page while the next one loads, instead of flashing "Loading…". */
@@ -218,13 +218,13 @@ export interface RangeFilter {
 
 function rangeQuery(f: RangeFilter) {
   return {
-    FromUtc: f.from?.toISOString(),
-    ToUtc: f.to?.toISOString(),
-    SpaceId: f.spaceId,
-    BuildingId: f.buildingId,
-    FloorId: f.floorId,
-    OwnerUserId: f.ownerUserId,
-    IncludeCancelled: f.includeCancelled || undefined,
+    fromUtc: f.from?.toISOString(),
+    toUtc: f.to?.toISOString(),
+    spaceId: f.spaceId,
+    buildingId: f.buildingId,
+    floorId: f.floorId,
+    ownerUserId: f.ownerUserId,
+    includeCancelled: f.includeCancelled || undefined,
   }
 }
 
@@ -242,7 +242,7 @@ export function useBookings(filter: RangeFilter, enabled = true, keepPrevious = 
   return useQuery({
     queryKey: ['bookings', filterKey(filter)],
     queryFn: async (): Promise<Booking[]> =>
-      (await api<ListResult<BookingDto>>('GET', '/api/app/booking', undefined, rangeQuery(filter))).items.map(toBooking),
+      (await api<ListResult<BookingDto>>('GET', '/api/app/bookings', undefined, rangeQuery(filter))).items.map(toBooking),
     enabled: ok && enabled,
     refetchInterval: 60_000,
     placeholderData: keepPrevious ? keepPreviousData : undefined,
@@ -256,10 +256,10 @@ export function useBusy(filter: RangeFilter, enabled = true) {
   return useQuery({
     queryKey: ['bookings', 'busy', filterKey(filter)],
     queryFn: async (): Promise<Booking[]> =>
-      (await api<ListResult<BusyWindowDto>>('GET', '/api/app/booking/busy', undefined,
+      (await api<ListResult<BusyWindowDto>>('GET', '/api/app/busy-windows', undefined,
         {
-          FromUtc: filter.from?.toISOString(), ToUtc: filter.to?.toISOString(), SpaceId: filter.spaceId,
-          BuildingId: filter.buildingId, FloorId: filter.floorId,
+          fromUtc: filter.from?.toISOString(), toUtc: filter.to?.toISOString(), spaceId: filter.spaceId,
+          buildingId: filter.buildingId, floorId: filter.floorId,
         })).items.map(toBusy),
     enabled: ok && enabled,
     refetchInterval: 60_000,
@@ -290,7 +290,7 @@ export function useMaintenance(filter: RangeFilter, enabled = true, keepPrevious
   return useQuery({
     queryKey: ['maintenance', filterKey(filter)],
     queryFn: async (): Promise<Maintenance[]> =>
-      (await api<ListResult<MaintenanceDto>>('GET', '/api/app/maintenance-window', undefined, rangeQuery(filter))).items.map(toMaintenance),
+      (await api<ListResult<MaintenanceDto>>('GET', '/api/app/maintenance-windows', undefined, rangeQuery(filter))).items.map(toMaintenance),
     enabled: ok && enabled,
     refetchInterval: 60_000,
     placeholderData: keepPrevious ? keepPreviousData : undefined,
@@ -302,7 +302,7 @@ export function useBooking(id: string | null) {
   const ok = useEnabled()
   return useQuery({
     queryKey: ['booking', id],
-    queryFn: async () => toBooking(await api<BookingDto>('GET', `/api/app/booking/${id}`)),
+    queryFn: async () => toBooking(await api<BookingDto>('GET', `/api/app/bookings/${id}`)),
     enabled: ok && !!id,
   })
 }
@@ -312,7 +312,7 @@ export function useMaintenanceWindow(id: string | null) {
   const ok = useEnabled()
   return useQuery({
     queryKey: ['maintenance-window', id],
-    queryFn: async () => toMaintenance(await api<MaintenanceDto>('GET', `/api/app/maintenance-window/${id}`)),
+    queryFn: async () => toMaintenance(await api<MaintenanceDto>('GET', `/api/app/maintenance-windows/${id}`)),
     enabled: ok && !!id,
   })
 }
@@ -338,7 +338,7 @@ export function useCreateBooking() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: CreateBookingInput) => api<BookingDto>('POST', '/api/app/booking', input).then(toBooking),
+    mutationFn: (input: CreateBookingInput) => api<BookingDto>('POST', '/api/app/bookings', input).then(toBooking),
     onSuccess: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -354,7 +354,7 @@ export function useCreateBookingSeries() {
   const invalidate = useInvalidate()
   return useMutation({
     mutationFn: (input: { spaceId: string; occurrences: Window[] }) =>
-      api<SeriesResult>('POST', '/api/app/booking/series', input),
+      api<SeriesResult>('POST', '/api/app/booking-series', input),
     onSuccess: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -364,7 +364,7 @@ export function useRescheduleBooking() {
   const invalidate = useInvalidate()
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string; startUtc: string; endUtc: string; expectedVersion: number }) =>
-      api<BookingDto>('POST', `/api/app/booking/${id}/reschedule`, body).then(toBooking),
+      api<BookingDto>('PATCH', `/api/app/bookings/${id}`, body).then(toBooking),
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -373,17 +373,23 @@ export function useCancelBooking() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) => api<BookingDto>('POST', `/api/app/booking/${id}/cancel`).then(toBooking),
+    mutationFn: (id: string) => api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'cancelled' }).then(toBooking),
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
 
+/* Cancels this booking and every later one in its series; a booking outside a series is cancelled on its own. */
 export function useCancelBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) =>
-      api<{ seriesId: string | null; cancelledCount: number }>('POST', `/api/app/booking/${id}/cancel-series-from`),
+    mutationFn: async (b: Pick<Booking, 'id' | 'seriesId' | 'start'>): Promise<{ seriesId: string | null; cancelledCount: number }> => {
+      if (!b.seriesId) {
+        await api<BookingDto>('PATCH', `/api/app/bookings/${b.id}`, { lifecycle: 'cancelled' })
+        return { seriesId: null, cancelledCount: 1 }
+      }
+      return api('PATCH', `/api/app/booking-series/${b.seriesId}`, { lifecycle: 'cancelled', fromUtc: b.start.toISOString() })
+    },
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -392,7 +398,7 @@ export function useEndBookingEarly() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) => api<BookingDto>('POST', `/api/app/booking/${id}/end-early`).then(toBooking),
+    mutationFn: (id: string) => api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'ended' }).then(toBooking),
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -410,7 +416,7 @@ export function usePreviewMaintenance(input: MaintenanceScopeInput | null) {
     queryKey: ['maintenance-preview', input],
     queryFn: () =>
       api<{ spaceCount: number; totalAffected: number; perOccurrence: { startUtc: string; endUtc: string; affectedCount: number }[] }>(
-        'POST', '/api/app/maintenance-window/preview-affected-bookings', input),
+        'POST', '/api/app/maintenance-windows/previews', input),
     enabled: ok && !!input && input.occurrences.length > 0,
   })
 }
@@ -421,7 +427,7 @@ export function useScheduleMaintenance() {
   return useMutation({
     mutationFn: (input: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean }) =>
       api<{ seriesId: string | null; created: number; affectedBookingsCount: number; cancelledBookingsCount: number }>(
-        'POST', '/api/app/maintenance-window/schedule', input),
+        'POST', '/api/app/maintenance-windows', input),
     /* Blocking can cancel bookings, so booking views refresh too. */
     onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ...BOOKING_KEYS]),
   })
@@ -431,7 +437,7 @@ export function useCancelMaintenance() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) => api<MaintenanceDto>('POST', `/api/app/maintenance-window/${id}/cancel`).then(toMaintenance),
+    mutationFn: (id: string) => api<MaintenanceDto>('PATCH', `/api/app/maintenance-windows/${id}`, { lifecycle: 'cancelled' }).then(toMaintenance),
     onSettled: () => invalidate([['maintenance'], ['maintenance-window']]),
   })
 }
@@ -486,26 +492,33 @@ function useEstateMutation<TInput>(fn: (api: ReturnType<typeof useApi>, input: T
 
 export const useSaveBuilding = () =>
   useEstateMutation<{ id?: string; body: BuildingInput }>((api, { id, body }) =>
-    id ? api<Building>('PUT', `/api/app/building/${id}`, body) : api<Building>('POST', '/api/app/building', body))
+    id ? api<Building>('PUT', `/api/app/buildings/${id}`, body) : api<Building>('POST', '/api/app/buildings', body))
 
 export const useSaveFloor = () =>
   useEstateMutation<{ id?: string; body: FloorInput }>((api, { id, body }) =>
-    id ? api<Floor>('PUT', `/api/app/floor/${id}`, body) : api<Floor>('POST', '/api/app/floor', body))
+    id ? api<Floor>('PUT', `/api/app/floors/${id}`, body) : api<Floor>('POST', '/api/app/floors', body))
 
 export const useSaveSpace = () =>
   useEstateMutation<{ id?: string; body: SpaceInput }>((api, { id, body }) =>
-    id ? api<Space>('PUT', `/api/app/space/${id}`, body) : api<Space>('POST', '/api/app/space', body))
+    id ? api<Space>('PUT', `/api/app/spaces/${id}`, body) : api<Space>('POST', '/api/app/spaces', body))
 
 export type EstateKind = 'building' | 'floor' | 'space'
 
+/* The collection each estate kind lives in, e.g. 'building' -> /api/app/buildings. */
+const ESTATE_PATH: Record<EstateKind, string> = { building: 'buildings', floor: 'floors', space: 'spaces' }
+
 export const useSetBookable = () =>
   useEstateMutation<{ kind: EstateKind; id: string; isBookable: boolean }>((api, { kind, id, isBookable }) =>
-    api('POST', `/api/app/${kind}/${id}/set-bookable`, { isBookable }))
+    api('PATCH', `/api/app/${ESTATE_PATH[kind]}/${id}`, { isBookable }))
 
 export interface EstateScope {
   scopeType: MaintenanceScopeType
   scopeId: string
 }
+
+/* A scope's upcoming bookings, e.g. /api/app/floors/{id}/upcoming-bookings. */
+const SCOPE_PATH: Record<MaintenanceScopeType, string> = { Building: 'buildings', Floor: 'floors', Space: 'spaces' }
+const upcomingPath = (s: EstateScope) => `/api/app/${SCOPE_PATH[s.scopeType]}/${s.scopeId}/upcoming-bookings`
 
 /* Bookings in a space, floor or building that have not started yet (admin only). */
 export function useUpcomingCount(scope: EstateScope | null) {
@@ -513,7 +526,7 @@ export function useUpcomingCount(scope: EstateScope | null) {
   const ok = useEnabled()
   return useQuery({
     queryKey: ['upcoming-count', scope],
-    queryFn: () => api<number>('GET', '/api/app/booking/upcoming-count', undefined, { ScopeType: scope!.scopeType, ScopeId: scope!.scopeId }),
+    queryFn: () => api<number>('GET', `${upcomingPath(scope!)}/count`),
     enabled: ok && !!scope,
   })
 }
@@ -523,15 +536,15 @@ export function useCancelUpcoming() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('POST', '/api/app/booking/cancel-upcoming', scope),
+    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('PATCH', upcomingPath(scope), { lifecycle: 'cancelled' }),
     onSettled: () => invalidate([...BOOKING_KEYS, ['upcoming-count']]),
   })
 }
 
 export const useSaveSpaceType = () =>
   useEstateMutation<{ id?: string; name: string; translations: Translation[] }>((api, { id, ...body }) =>
-    id ? api<SpaceType>('PUT', `/api/app/space-type/${id}`, body) : api<SpaceType>('POST', '/api/app/space-type', body))
+    id ? api<SpaceType>('PUT', `/api/app/space-types/${id}`, body) : api<SpaceType>('POST', '/api/app/space-types', body))
 
 /* Only allowed when no space uses the type; the server answers space_type.in_use otherwise. */
 export const useDeleteSpaceType = () =>
-  useEstateMutation<string>((api, id) => api('DELETE', `/api/app/space-type/${id}`))
+  useEstateMutation<string>((api, id) => api('DELETE', `/api/app/space-types/${id}`))

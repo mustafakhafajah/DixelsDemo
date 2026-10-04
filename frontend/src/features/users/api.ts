@@ -4,7 +4,7 @@ import { useAuth } from 'react-oidc-context'
 import { useApi } from '../../api/client'
 
 /* Users are managed in ABP's own Users page; the directory only reads them. Each filter and page change is one
- * request to /api/app/user-directory, which runs the search and the role / status / lock filters in the
+ * request to /api/app/users, which runs the search and the role / status / lock filters in the
  * database through ABP's user repository (ABP's public /api/identity/users only takes a search text). */
 
 /* A role's name, e.g. 'admin' or 'employee'; any role the server has. */
@@ -41,7 +41,7 @@ export interface UserDirectoryQuery {
   isLocked?: boolean
 }
 
-/* What /api/app/user-directory and ABP's /api/identity/roles/all send. */
+/* What /api/app/users and ABP's /api/identity/roles/all send. */
 interface UserDirectoryDto {
   id: string
   name: string
@@ -72,13 +72,13 @@ export function useUserDirectory(q: UserDirectoryQuery) {
   return useQuery({
     queryKey: ['users', 'directory', q],
     queryFn: async () => {
-      const page = await api<PagedResult<UserDirectoryDto>>('GET', '/api/app/user-directory', undefined, {
-        Filter: q.filter,
-        RoleId: q.roleId,
-        IsActive: q.isActive === undefined ? undefined : String(q.isActive),
-        IsLocked: q.isLocked === undefined ? undefined : String(q.isLocked),
-        SkipCount: String((q.page - 1) * q.pageSize),
-        MaxResultCount: String(q.pageSize),
+      const page = await api<PagedResult<UserDirectoryDto>>('GET', '/api/app/users', undefined, {
+        filter: q.filter,
+        roleId: q.roleId,
+        isActive: q.isActive === undefined ? undefined : String(q.isActive),
+        isLocked: q.isLocked === undefined ? undefined : String(q.isLocked),
+        skipCount: String((q.page - 1) * q.pageSize),
+        maxResultCount: String(q.pageSize),
       })
       return {
         totalCount: page.totalCount,

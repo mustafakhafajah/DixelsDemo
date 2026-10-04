@@ -4,10 +4,12 @@ import { useAuth } from 'react-oidc-context'
 import { SplashScreen } from '../components/SplashScreen'
 import { useSession } from './session'
 
+/* Signed out: to sign-in, remembering the page asked for (with its filters), so a shared link opens after signing in. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
+  const { pathname, search } = useLocation()
   if (auth.isLoading) return <SplashScreen />
-  if (!auth.isAuthenticated) return <Navigate to="/" replace />
+  if (!auth.isAuthenticated) return <Navigate to="/" replace state={{ returnTo: pathname + search }} />
   return <>{children}</>
 }
 

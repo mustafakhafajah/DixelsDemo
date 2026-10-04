@@ -10,7 +10,7 @@ namespace Dixels.Portal.Controllers.SpaceTypes;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/space-type")]
+[Route("api/app/space-types")]
 public class SpaceTypeController : PortalController, ISpaceTypeAppService
 {
     private readonly ISpaceTypeAppService _types;

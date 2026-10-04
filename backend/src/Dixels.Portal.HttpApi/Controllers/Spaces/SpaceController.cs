@@ -10,7 +10,7 @@ namespace Dixels.Portal.Controllers.Spaces;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/space")]
+[Route("api/app/spaces")]
 public class SpaceController : PortalController, ISpaceAppService
 {
     private readonly ISpaceAppService _spaces;
@@ -20,17 +20,10 @@ public class SpaceController : PortalController, ISpaceAppService
         _spaces = spaces;
     }
 
-    /* Spaces for pickers; BuildingId / FloorId narrow it to one building or floor. */
+    /* The one space collection. Registry: ?buildingId&floorId&name&typeIds&skipCount&maxResultCount.
+     * "Find a space": ?bookable=true plus its filters, and freeFromUtc / freeToUtc for "Free only". */
     [HttpGet]
     public Task<PagedResultDto<SpaceDto>> GetListAsync([FromQuery] GetSpaceListInput input) => _spaces.GetListAsync(input);
-
-    /* "Find a space": bookable spaces matching the filters. */
-    [HttpGet("bookable-list")]
-    public Task<ListResultDto<SpaceDto>> GetBookableListAsync([FromQuery] FindSpacesInput input) => _spaces.GetBookableListAsync(input);
-
-    /* One page of the admin registry. */
-    [HttpGet("paged-list")]
-    public Task<SpaceRegistryPageDto> GetPagedListAsync([FromQuery] GetSpacesInput input) => _spaces.GetPagedListAsync(input);
 
     [HttpGet("{id}")]
     public Task<SpaceDto> GetAsync(Guid id) => _spaces.GetAsync(id);
@@ -41,7 +34,8 @@ public class SpaceController : PortalController, ISpaceAppService
     [HttpPut("{id}")]
     public Task<SpaceDto> UpdateAsync(Guid id, [FromBody] CreateUpdateSpaceDto input) => _spaces.UpdateAsync(id, input);
 
-    [HttpPost("{id}/set-bookable")]
+    /* Partial update; the only field that can change this way is isBookable. */
+    [HttpPatch("{id}")]
     public Task<SpaceDto> SetBookableAsync(Guid id, [FromBody] SetBookableDto input) => _spaces.SetBookableAsync(id, input);
 
     /* Deleting a space isn't offered: untick "Bookable" instead, so its booking history stays. */

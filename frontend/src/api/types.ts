@@ -88,6 +88,8 @@ export interface Space {
   canCurrentUserBook: boolean
   /* Why it cannot be booked right now, e.g. "HQ North is not bookable ..."; null when it can. */
   notBookableReason: string | null
+  /* Confirmed bookings on it that have not ended yet. */
+  upcomingBookingCount: number
 }
 
 export interface BookingDto {
@@ -114,7 +116,7 @@ export interface Booking extends Omit<BookingDto, 'startUtc' | 'endUtc' | 'lifec
   busy?: true
 }
 
-/* What the server tells a non-admin about other people's bookings (GET /api/app/booking/busy). */
+/* What the server tells a non-admin about other people's bookings (GET /api/app/busy-windows). */
 export interface BusyWindowDto {
   spaceId: string
   startUtc: string
@@ -167,11 +169,6 @@ export interface ListResult<T> {
 
 export interface PagedResult<T> extends ListResult<T> {
   totalCount: number
-}
-
-/* One page of the admin space registry (GET /api/app/space/paged-list). */
-export interface SpaceRegistryPage extends PagedResult<Space> {
-  upcomingBookingCounts: Record<string, number>
 }
 
 export interface Window {

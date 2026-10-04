@@ -10,7 +10,7 @@ namespace Dixels.Portal.Controllers.Buildings;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/building")]
+[Route("api/app/buildings")]
 public class BuildingController : PortalController, IBuildingAppService
 {
     private readonly IBuildingAppService _buildings;
@@ -32,7 +32,8 @@ public class BuildingController : PortalController, IBuildingAppService
     [HttpPut("{id}")]
     public Task<BuildingDto> UpdateAsync(Guid id, [FromBody] CreateUpdateBuildingDto input) => _buildings.UpdateAsync(id, input);
 
-    [HttpPost("{id}/set-bookable")]
+    /* Partial update; the only field that can change this way is isBookable. */
+    [HttpPatch("{id}")]
     public Task<BuildingDto> SetBookableAsync(Guid id, [FromBody] SetBookableDto input) => _buildings.SetBookableAsync(id, input);
 
     /* Deleting a building isn't offered: it would leave floors, spaces and bookings behind. */

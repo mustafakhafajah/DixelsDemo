@@ -8,7 +8,6 @@ namespace Dixels.Portal.Controllers.Profiles;
 
 [RemoteService(Name = "Default")]
 [Area("app")]
-[Route("api/app/profile-lookup")]
 public class ProfileLookupController : PortalController, IProfileLookupAppService
 {
     private readonly IProfileLookupAppService _profiles;
@@ -19,10 +18,10 @@ public class ProfileLookupController : PortalController, IProfileLookupAppServic
     }
 
     /* The signed-in user: name, email and whether they are an admin. */
-    [HttpGet("current")]
+    [HttpGet("api/app/users/me")]
     public Task<CurrentUserProfileDto> GetCurrentAsync() => _profiles.GetCurrentAsync();
 
-    /* Admin: every user, for pickers. */
-    [HttpGet("users")]
+    /* Admin: every user as id + name, for pickers. The full, paged user list is GET /api/app/users. */
+    [HttpGet("api/app/user-summaries")]
     public Task<ListResultDto<UserLookupDto>> GetUsersAsync() => _profiles.GetUsersAsync();
 }

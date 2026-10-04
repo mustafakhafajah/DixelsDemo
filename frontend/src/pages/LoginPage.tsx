@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
+import { useLocation } from 'react-router-dom'
 import {
   ArrowRightIcon, CalendarCheck2Icon, LockIcon, MailIcon, ShieldCheckIcon,
   UserCheckIcon, ZapIcon,
@@ -134,6 +135,8 @@ function FitPanel({ className, children }: { className: string; children: ReactN
  * decides the admin or user interface. */
 function LoginPage() {
   const auth = useAuth()
+  /* Where a signed-out visitor was going (RequireAuth passes it), so sign-in brings them back there. */
+  const returnTo = (useLocation().state as { returnTo?: string } | null)?.returnTo
   const { t } = useTranslation()
   const now = useNow()
   const today = new Intl.DateTimeFormat(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(now)
@@ -175,7 +178,7 @@ function LoginPage() {
               <p className="subtitle">{t('login.subtitle')}</p>
             </div>
             <div className="signin-actions">
-              <button type="button" className="signin-btn" onClick={() => auth.signinRedirect()}>
+              <button type="button" className="signin-btn" onClick={() => auth.signinRedirect({ state: { returnTo } })}>
                 <MailIcon className="signin-mail" aria-hidden="true" />
                 {t('login.button')}
                 <ArrowRightIcon className="flip-rtl" aria-hidden="true" />

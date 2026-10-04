@@ -174,13 +174,13 @@ public class MultilingualNamesTests : PortalEntityFrameworkCoreTestBase
 
         using (CultureHelper.Use("en"))
         {
-            var found = (await _spaces.GetBookableListAsync(new FindSpacesInput { Name = $"conference room 4 {tag}" })).Items.ShouldHaveSingleItem();
+            var found = (await _spaces.GetListAsync(new GetSpaceListInput { Bookable = true, Name = $"conference room 4 {tag}" })).Items.ShouldHaveSingleItem();
             found.Name.ShouldBe($"Conference room 4 {tag}");
             found.Note.ShouldBe("Seats 10");
         }
         using (CultureHelper.Use("ar"))
         {
-            var found = (await _spaces.GetPagedListAsync(new GetSpacesInput { Name = $"غرفة الاجتماعات 4 {tag}", MaxResultCount = 10 })).Items.ShouldHaveSingleItem();
+            var found = (await _spaces.GetListAsync(new GetSpaceListInput { Name = $"غرفة الاجتماعات 4 {tag}", MaxResultCount = 10 })).Items.ShouldHaveSingleItem();
             found.Name.ShouldBe($"غرفة الاجتماعات 4 {tag}");
             found.Note.ShouldBe("يتسع لعشرة");
         }

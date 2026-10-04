@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
@@ -6,9 +5,8 @@ import { initials, LoadError, Loading } from '../../components/bits'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
-import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useServerPaging, useStayOnRealPage } from '../../lib/useServerPaging'
-import { useScheduleStore } from '../../state/scheduleStore'
+import { urlParam, useDropUnknown, useUrlSearchBox, useUrlState } from '../../lib/useUrlState'
 import { roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
 import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
 import './users.css'
@@ -46,31 +44,46 @@ export function UserDirectoryPage() {
   const { t } = useTranslation()
   const { userId, isAdmin } = useSession()
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<UserDirectoryFilterValues>(EMPTY_USER_FILTERS)
+  /* Every filter and the page live in the address (?q=…&role=…&status=…&lock=…&page=…), so a copied link shows
+   * the same list. The typed search reaches the address (and the server) once typing pauses; dropdowns at once. */
+  const [url, setUrl] = useUrlState({
+    search: urlParam.text('q'),
+    role: urlParam.text('role'),
+    status: urlParam.oneOf('status', ['', 'active', 'inactive'], ''),
+    lock: urlParam.oneOf('lock', ['', 'locked', 'unlocked'], ''),
+  })
   const paging = useServerPaging()
   const { page, pageSize, setPage } = paging
-  /* Only the typed search is debounced; dropdowns apply at once. Every filter and page goes to the server. */
-  const search = useDebouncedValue(filters.search.trim())
+  const [searchText, setSearchText] = useUrlSearchBox(url.search, (search) => { setUrl({ search }); setPage(1) })
+  const filters: UserDirectoryFilterValues = { ...url, search: searchText }
 
   const roles = useUserRoles().data
+  /* A shared link with a role that no longer exists falls back to every role. */
+  useDropUnknown(url.role, roles?.map((r) => r.id), () => setUrl({ role: '' }))
 
   const q = useUserDirectory({
-    page, pageSize, filter: search || undefined,
-    roleId: filters.role || undefined,
-    isActive: filters.status ? filters.status === 'active' : undefined,
-    isLocked: filters.lock ? filters.lock === 'locked' : undefined,
+    page, pageSize, filter: url.search || undefined,
+    roleId: url.role || undefined,
+    isActive: url.status ? url.status === 'active' : undefined,
+    isLocked: url.lock ? url.lock === 'locked' : undefined,
   })
   const total = q.data?.totalCount ?? 0
   useStayOnRealPage(paging, q.data?.totalCount)
 
-  const changeFilters = (v: UserDirectoryFilterValues) => { setFilters(v); setPage(1) }
+  const changeFilters = (v: UserDirectoryFilterValues) => {
+    setSearchText(v.search)
+    if (v.role !== url.role || v.status !== url.status || v.lock !== url.lock || (!v.search && url.search)) {
+      setUrl({ role: v.role, status: v.status as typeof url.status, lock: v.lock as typeof url.lock, ...(v.search ? {} : { search: '' }) })
+      setPage(1)
+    }
+  }
   const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
 
   const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin
     ? [{
         label: t('users.viewBookings'),
-        onClick: () => { useScheduleStore.getState().patch('my', { userId: u.id }); navigate('/app/bookings') },
+        onClick: () => navigate(`/app/bookings?user=${encodeURIComponent(u.id)}`),
       }]
     : []
 

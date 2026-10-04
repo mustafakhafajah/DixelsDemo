@@ -14,8 +14,6 @@ export interface UserDirectoryRole {
   id: string
   name: UserRole
   displayName: string
-  /* ABP's admin role. */
-  isAdmin: boolean
 }
 
 export interface UserDirectoryItem {
@@ -23,7 +21,7 @@ export interface UserDirectoryItem {
   name: string
   userName: string
   email: string
-  /* The main role (admin wins), or null when the user has none. */
+  /* The first role by name, or null when the user has none. */
   role: UserRole | null
   roles: UserRole[]
   isActive: boolean
@@ -56,15 +54,12 @@ interface AbpRole { id: string; name: string }
 interface ListResult<T> { items: T[] }
 interface PagedResult<T> extends ListResult<T> { totalCount: number }
 
-const ADMIN_ROLE = 'admin'
-
 function useEnabled() {
   return !!useAuth().user?.access_token
 }
 
-/* Admin first, then by name. */
-const byRole = (a: string, b: string) =>
-  (a.toLowerCase() === ADMIN_ROLE ? -1 : b.toLowerCase() === ADMIN_ROLE ? 1 : a.localeCompare(b))
+/* Roles by name; no role is special. */
+const byRole = (a: string, b: string) => a.localeCompare(b)
 
 /* One page of the directory, searched and filtered on the server. */
 export function useUserDirectory(q: UserDirectoryQuery) {
@@ -94,7 +89,7 @@ export function useUserDirectory(q: UserDirectoryQuery) {
   })
 }
 
-/* Every role, admin first, from ABP. */
+/* Every role, by name, from ABP. */
 export function useUserRoles() {
   const api = useApi()
   return useQuery({
@@ -102,7 +97,7 @@ export function useUserRoles() {
     queryFn: async (): Promise<UserDirectoryRole[]> =>
       (await api<ListResult<AbpRole>>('GET', '/api/identity/roles/all')).items
         .sort((a, b) => byRole(a.name, b.name))
-        .map((r) => ({ id: r.id, name: r.name, displayName: roleLabel(r.name), isAdmin: r.name.toLowerCase() === ADMIN_ROLE })),
+        .map((r) => ({ id: r.id, name: r.name, displayName: roleLabel(r.name) })),
     enabled: useEnabled(),
   })
 }

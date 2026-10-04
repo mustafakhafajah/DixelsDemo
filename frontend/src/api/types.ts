@@ -148,20 +148,29 @@ export interface Maintenance extends Omit<MaintenanceDto, 'startUtc' | 'endUtc' 
 
 export type ScheduleItem = Booking | Maintenance
 
-export interface Profile {
-  id: string
-  name: string
+/* The signed-in user as ABP's application-configuration reports it (ICurrentUser). */
+export interface CurrentUser {
+  isAuthenticated: boolean
+  id: string | null
+  userName: string | null
+  name: string | null
+  surName: string | null
   email: string | null
-  isAdmin: boolean
   /* Role names from the identity database, e.g. ["admin"]. */
   roles: string[]
 }
 
+/* The parts of one ABP user (GET /api/identity/users) the person filter shows. */
 export interface UserLookup {
   id: string
-  name: string
-  isAdmin: boolean
+  userName: string
+  name: string | null
+  surname: string | null
 }
+
+/* "Name Surname", falling back to the user name - the same rule the server uses for owner names. */
+export const displayName = (name: string | null, surname: string | null, userName: string | null) =>
+  [name, surname].filter(Boolean).join(' ') || userName || ''
 
 export interface ListResult<T> {
   items: T[]

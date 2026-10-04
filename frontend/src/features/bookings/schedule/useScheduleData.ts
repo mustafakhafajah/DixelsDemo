@@ -2,13 +2,14 @@ import { useMemo } from 'react'
 import { useBookings, useBuildings, useMaintenance, useSpaces } from '../../../api/hooks'
 import type { ScheduleItem, Space } from '../../../api/types'
 import { useSession } from '../../../app/session'
+import { P } from '../../../auth/permissions'
 import type { ClosedRules } from '../../../lib/closedDays'
 import { addDays, dayAt } from '../../../lib/dateUtils'
 import type { ScheduleId } from '../../../state/modalStore'
 import { EVERYONE, useScheduleConfig } from '../../../state/scheduleStore'
 
-/* Items a schedule instance shows (mock: scopeBookings). Admins: everyone's bookings (or one person's) plus the
- * blocked time in the chosen building / floor / space. Employees: their own bookings plus blocked time on those spaces. */
+/* Items a schedule instance shows (mock: scopeBookings). With Bookings.ViewAll: everyone's bookings (or one person's)
+ * plus the blocked time in the chosen building / floor / space. Without it: your own bookings plus blocked time on those spaces. */
 export function useScheduleData(id: ScheduleId) {
   const [cfg] = useScheduleConfig(id)
   const session = useSession()
@@ -16,13 +17,14 @@ export function useScheduleData(id: ScheduleId) {
   const buildingsQ = useBuildings()
   const from = useMemo(() => dayAt(cfg.from), [cfg.from])
   const to = useMemo(() => addDays(dayAt(cfg.to), 1), [cfg.to])
-  /* Employees have no space picker: they always see all of their own bookings. */
-  const multiSpace = !session.isAdmin || cfg.spaceId === 'all'
+  /* Without Bookings.ViewAll there is no space picker: you always see all of your own bookings. */
+  const seesAll = session.can(P.Bookings.ViewAll)
+  const multiSpace = !seesAll || cfg.spaceId === 'all'
   const singleSpaceId = multiSpace ? '' : cfg.spaceId
-  /* Admins: no owner filter for "Everyone", otherwise the chosen person. Employees: the server only ever sends
-   * their own, and the request says so too. */
-  const everyone = session.isAdmin && cfg.userId === EVERYONE
-  const ownerId = !session.isAdmin ? session.userId : everyone ? undefined : cfg.userId
+  /* With ViewAll: no owner filter for "Everyone", otherwise the chosen person. Without it the server only ever
+   * sends your own, and the request says so too. */
+  const everyone = seesAll && cfg.userId === EVERYONE
+  const ownerId = !seesAll ? session.userId : everyone ? undefined : cfg.userId
 
   const ready = !!session.userId
   /* Every filter is sent to the server, so each pick is a new request; the current items stay on screen
@@ -38,10 +40,10 @@ export function useScheduleData(id: ScheduleId) {
   return useMemo(() => {
     const spaces = spacesQ.data ?? []
     const mine = scoped.data ?? []
-    /* Admins see all the blocked time the server sent for the filters; "My Schedule" shows it only on the
-     * spaces the employee booked. */
+    /* With ViewAll, all the blocked time the server sent for the filters; "My Schedule" shows it only on the
+     * spaces you booked. */
     const bookedSpaces = new Set(mine.map((b) => b.spaceId))
-    const cleaning = session.isAdmin ? maint.data ?? [] : (maint.data ?? []).filter((m) => bookedSpaces.has(m.spaceId))
+    const cleaning = seesAll ? maint.data ?? [] : (maint.data ?? []).filter((m) => bookedSpaces.has(m.spaceId))
     const spaceIds = multiSpace ? [...new Set([...bookedSpaces, ...cleaning.map((m) => m.spaceId)])] : [cfg.spaceId]
     const items: ScheduleItem[] = [...mine, ...cleaning].sort((a, b) => a.start.getTime() - b.start.getTime())
     const busyOnSpace: ScheduleItem[] = singleSpaceId ? [...(everyone ? mine : spaceAll.data ?? []), ...cleaning] : items
@@ -66,7 +68,7 @@ export function useScheduleData(id: ScheduleId) {
       retry: () => { spacesQ.refetch(); scoped.refetch(); spaceAll.refetch(); maint.refetch() },
       spaces,
     }
-  }, [spacesQ, buildingsQ, scoped, spaceAll, maint, cfg, multiSpace, everyone, singleSpaceId, session.isAdmin])
+  }, [spacesQ, buildingsQ, scoped, spaceAll, maint, cfg, multiSpace, everyone, singleSpaceId, seesAll])
 }
 
 export type ScheduleData = ReturnType<typeof useScheduleData>

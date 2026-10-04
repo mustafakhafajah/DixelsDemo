@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { create } from 'zustand'
 import { addDays, dayAt, dayKey, minLabel, minOfDay, roundUp30, todayKey } from '../../lib/dateUtils'
 import { urlParam, useUrlState, type UrlParam } from '../../lib/useUrlState'
 
@@ -17,6 +18,10 @@ const timeParam = (name: string, fallback: number | null): UrlParam<number | nul
 
 const DURATIONS = ['30', '60', '120', 'custom'] as const
 const toDuration = (v: (typeof DURATIONS)[number]): FindDuration => (v === 'custom' ? v : (Number(v) as FindDuration))
+
+/* Counts the Clear filters clicks, so the filter panel can start over (e.g. close a custom capacity box).
+ * Only for this visit; it is not part of a shared link. */
+const useClears = create<{ count: number; bump: () => void }>((set) => ({ count: 0, bump: () => set((s) => ({ count: s.count + 1 })) }))
 
 function nowFields() {
   const n = roundUp30(new Date())
@@ -41,6 +46,7 @@ export function useFindFilters() {
     types: urlParam.list('type'),
     query: urlParam.text('q'),
   })
+  const clears = useClears()
   const time = v.time ?? now.time
   const duration = toDuration(v.length)
 
@@ -67,6 +73,12 @@ export function useFindFilters() {
     now: () => patch(nowFields()),
     today: () => patch({ date: todayKey() }),
     shiftDay: (dir: 1 | -1) => patch({ date: dayKey(addDays(dayAt(v.date), dir)) }),
+    /* Clear filters: every room criterion and Free only go back to "any"; the date, time and length stay. */
+    clearCriteria: () => {
+      patch({ buildingId: '', floorId: '', minCapacity: 0, types: [], query: '', freeOnly: false })
+      clears.bump()
+    },
+    criteriaVersion: clears.count,
     toggleType: (t: string) => patch({ types: v.types.includes(t) ? v.types.filter((x) => x !== t) : [...v.types, t] }),
   }
 }

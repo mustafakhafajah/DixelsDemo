@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
+import { P } from '../../auth/permissions'
 import { initials, LoadError, Loading } from '../../components/bits'
+import { EmptyState } from '../../components/EmptyState'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
@@ -22,14 +24,11 @@ function LockCell({ user }: { user: UserDirectoryItem }) {
   return <span className="lock-on" title={open ? t('users.untilUnlocked') : t('users.timeInUtc')}>{open ? t('users.locked') : t('users.lockedUntil', { date: formatDate(end, LOCK_LABEL) })}</span>
 }
 
-const isAdminRole = (role: UserRole | null, roles?: UserDirectoryRole[]) =>
-  !!role && (role.toLowerCase() === 'admin' || !!roles?.find((r) => r.name.toLowerCase() === role.toLowerCase())?.isAdmin)
-
-/* Admin-type roles get the accent pill; every other role is grey. */
+/* Every role looks the same; the pill only names it. */
 function RolePill({ role, roles }: { role: UserRole | null; roles?: UserDirectoryRole[] }) {
   const { t } = useTranslation()
   if (!role) return <span className="lock-off">{t('nav.noRole')}</span>
-  return <span className={`pill ${isAdminRole(role, roles) ? 'pill-confirmed' : 'pill-ended'}`}><span className="dot" />{roleLabel(role, roles)}</span>
+  return <span className="pill pill-ended"><span className="dot" />{roleLabel(role, roles)}</span>
 }
 
 function StatusPill({ active }: { active: boolean }) {
@@ -42,7 +41,9 @@ function StatusPill({ active }: { active: boolean }) {
 /* Roles, permissions and accounts are changed in ABP's administration site; this page only shows them. */
 export function UserDirectoryPage() {
   const { t } = useTranslation()
-  const { userId, isAdmin } = useSession()
+  const { userId, can } = useSession()
+  /* "View bookings" opens the Schedule on that person: reading their bookings, so Bookings.ViewAll. */
+  const seesBookings = can(P.Bookings.ViewAll)
   const navigate = useNavigate()
   /* Every filter and the page live in the address (?q=…&role=…&status=…&lock=…&page=…), so a copied link shows
    * the same list. The typed search reaches the address (and the server) once typing pauses; dropdowns at once. */
@@ -80,7 +81,7 @@ export function UserDirectoryPage() {
   const changePageSize = paging.setPageSize
   const filtered = Object.values(filters).some((v) => v !== '')
 
-  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => isAdmin
+  const menuItems = (u: UserDirectoryItem): RowMenuItem[] => seesBookings
     ? [{
         label: t('users.viewBookings'),
         onClick: () => navigate(`/app/bookings?user=${encodeURIComponent(u.id)}`),
@@ -92,15 +93,15 @@ export function UserDirectoryPage() {
       <div className="card" style={{ overflow: 'hidden' }}>
         <UserDirectoryFilters value={filters} onChange={changeFilters} />
         {q.isError ? <LoadError what={t('load.users')} error={q.error} onRetry={() => q.refetch()} /> : !q.data ? <Loading /> : !q.data.items.length ? (
-          <p className="empty-note">
-            {filtered ? t('users.noMatch') : t('users.none')}
-            {filtered && <button type="button" className="btn btn-sm" style={{ marginInlineStart: 10 }} onClick={() => changeFilters(EMPTY_USER_FILTERS)}>{t('common.clearFilters')}</button>}
-          </p>
+          filtered
+            ? <EmptyState art="user" title={t('empty.usersFiltered.title')} text={t('empty.usersFiltered.text')}
+                action={{ label: t('common.clearFilters'), onClick: () => changeFilters(EMPTY_USER_FILTERS) }} />
+            : <EmptyState art="user" title={t('empty.users.title')} text={t('empty.users.text')} />
         ) : (
           <div className="table-scroll">
             <table className="grid" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
               <thead>
-                <tr><th>{t('users.col.user')}</th><th>{t('users.col.userName')}</th><th>{t('users.col.role')}</th><th>{t('users.col.status')}</th><th>{t('users.col.lock')}</th>{isAdmin && <th style={{ textAlign: 'end' }}>{t('common.actions')}</th>}</tr>
+                <tr><th>{t('users.col.user')}</th><th>{t('users.col.userName')}</th><th>{t('users.col.role')}</th><th>{t('users.col.status')}</th><th>{t('users.col.lock')}</th>{seesBookings && <th style={{ textAlign: 'end' }}>{t('common.actions')}</th>}</tr>
               </thead>
               <tbody>
                 {q.data.items.map((u) => {
@@ -109,7 +110,7 @@ export function UserDirectoryPage() {
                     <tr key={u.id}>
                       <td>
                         <div className="user-cell">
-                          <span className={`avatar${isAdminRole(u.role, roles) ? ' admin' : ''}`} aria-hidden="true">{initials(u.name || u.userName)}</span>
+                          <span className="avatar" aria-hidden="true">{initials(u.name || u.userName)}</span>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 600 }}><bdi>{u.name || u.userName}</bdi>{u.id === userId && <span className="lock-off" style={{ fontWeight: 400 }}> {t('users.youMark')}</span>}</div>
                             <div className="user-email"><bdi>{u.email}</bdi></div>
@@ -120,7 +121,7 @@ export function UserDirectoryPage() {
                       <td><RolePill role={u.role} roles={roles} /></td>
                       <td><StatusPill active={u.isActive} /></td>
                       <td><LockCell user={u} /></td>
-                      {isAdmin && (
+                      {seesBookings && (
                         <td style={{ textAlign: 'end' }}>
                           <div style={{ display: 'inline-block' }}>{items.length > 0 && <RowMenu items={items} />}</div>
                         </td>

@@ -18,7 +18,11 @@ function BookingDetail({ b }: { b: Booking }) {
   const space = spaces.data?.find((s) => s.id === b.spaceId)
   const state = lifecycleOf(b)
   const mine = b.ownerUserId === session.userId
-  const may = mine || session.isAdmin
+  /* Mirrors the server: someone else's booking needs ViewAll to see who made it, EditAll to change it and
+   * DeleteAll to cancel it, on top of the own-booking Edit / Delete. */
+  const seesOwner = mine || session.can(P.Bookings.ViewAll)
+  const mayEdit = session.can(P.Bookings.Edit) && (mine || session.can(P.Bookings.EditAll))
+  const mayCancel = session.can(P.Bookings.Delete) && (mine || session.can(P.Bookings.DeleteAll))
   const series = useBookings({ from: b.start }, !!b.seriesId)
   const laterInSeries = b.seriesId ? (series.data ?? []).filter((x) => x.seriesId === b.seriesId && x.id !== b.id).length : 0
   const [askSeries, setAskSeries] = useState(false)
@@ -27,13 +31,13 @@ function BookingDetail({ b }: { b: Booking }) {
   if (state === 'ended') note = t('detail.note.ended')
   else if (state === 'cancelled') note = t('detail.note.cancelled')
   else if (state === 'in_progress') note = t('detail.note.inProgress')
-  else if (!mine && session.isAdmin) note = t('detail.note.ownedBy', { name: b.ownerName })
+  else if (!mine && seesOwner) note = t('detail.note.ownedBy', { name: b.ownerName })
   else if (!mine) note = t('detail.note.someoneElse')
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
-  const showReschedule = may && session.can(P.Bookings.Edit) && state === 'scheduled'
-  const showEndNow = may && session.can(P.Bookings.Edit) && state === 'in_progress'
-  const showCancel = may && session.can(P.Bookings.Delete) && (state === 'scheduled' || state === 'in_progress')
+  const showReschedule = mayEdit && state === 'scheduled'
+  const showEndNow = mayEdit && state === 'in_progress'
+  const showCancel = mayCancel && (state === 'scheduled' || state === 'in_progress')
 
   return (
     <>
@@ -45,7 +49,7 @@ function BookingDetail({ b }: { b: Booking }) {
         <dt>{t('common.space')}</dt>
         <dd><bdi>{b.spaceName}</bdi>{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{t('detail.spacePlace', { building: space.buildingName, floor: space.floorName, tz: space.timeZone })}</div>}</dd>
         <dt>{t('detail.bookedBy')}</dt>
-        <dd><bdi>{may ? b.ownerName : t('detail.someoneElse')}</bdi></dd>
+        <dd><bdi>{seesOwner ? b.ownerName : t('detail.someoneElse')}</bdi></dd>
         <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(b.start)}</dd>
         <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(b.end)}</dd>
         <dt>{t('detail.duration')}</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>

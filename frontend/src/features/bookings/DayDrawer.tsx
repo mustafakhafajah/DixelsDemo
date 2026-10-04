@@ -21,14 +21,14 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
   const d = dayAt(key)
   const items = data.items.filter((i) => dayKey(i.start) === key)
   const canBook = session.can(P.Bookings.Create)
-  const canEdit = session.can(P.Bookings.Edit)
-  const canDelete = session.can(P.Bookings.Delete)
+  /* Someone else's booking also needs EditAll / DeleteAll, as on the server. */
+  const canEdit = (mine: boolean) => session.can(P.Bookings.Edit) && (mine || session.can(P.Bookings.EditAll))
+  const canDelete = (mine: boolean) => session.can(P.Bookings.Delete) && (mine || session.can(P.Bookings.DeleteAll))
 
   const row = (i: ScheduleItem) => {
     const state = lifecycleOf(i)
     const isMaint = i.kind === 'maintenance'
     const mine = !isMaint && i.ownerUserId === session.userId
-    const may = !isMaint && (mine || session.isAdmin)
     const blocked = t('schedule.blocked')
     const you = t('common.you')
     const primary = isMaint ? (multiSpace ? i.spaceName : i.note || blocked) : multiSpace ? i.spaceName : mine ? you : i.ownerName
@@ -48,9 +48,9 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
           {isMaint && session.can(P.Maintenance.Delete) && i.status === 'Active' && state !== 'ended' && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(i.id)}>{t('common.cancel')}</button>
           )}
-          {!isMaint && may && canEdit && state === 'scheduled' && <button type="button" className="btn btn-sm" onClick={() => modals.reschedule(i)}>{t('schedule.reschedule')}</button>}
-          {!isMaint && may && canEdit && state === 'in_progress' && <button type="button" className="btn btn-sm" disabled={actions.busy} onClick={() => actions.endEarly(i)}>{t('schedule.endNow')}</button>}
-          {!isMaint && may && canDelete && (state === 'scheduled' || state === 'in_progress') && (
+          {!isMaint && canEdit(mine) && state === 'scheduled' && <button type="button" className="btn btn-sm" onClick={() => modals.reschedule(i)}>{t('schedule.reschedule')}</button>}
+          {!isMaint && canEdit(mine) && state === 'in_progress' && <button type="button" className="btn btn-sm" disabled={actions.busy} onClick={() => actions.endEarly(i)}>{t('schedule.endNow')}</button>}
+          {!isMaint && canDelete(mine) && (state === 'scheduled' || state === 'in_progress') && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy}
               onClick={() => (i.seriesId ? openItem(i) : actions.cancel(i))}>{t('common.cancel')}</button>
           )}

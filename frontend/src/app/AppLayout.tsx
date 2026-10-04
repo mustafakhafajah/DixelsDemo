@@ -85,7 +85,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   const { theme, setTheme } = useThemeStore()
   const today = useMemo(() => dayAt(todayKey()), [])
   const seesBookings = session.can(P.Bookings.Default)
-  const bookings = useBookings({ from: today, ownerUserId: session.isAdmin ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
+  const bookings = useBookings({ from: today, ownerUserId: session.can(P.Bookings.ViewAll) ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
   const now = Date.now()
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
   const showEstate = Object.fromEntries(ESTATE_PAGES.map((p) => [p.path, manageAny(p.area).some(session.can)]))
@@ -107,7 +107,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           <div>
             <NavLink to="/app/bookings" className={navClass}>
               {Icon.bookings}
-              <span>{session.isAdmin ? t('nav.schedule') : t('nav.mySchedule')}</span>
+              <span>{session.can(P.Bookings.ViewAll) ? t('nav.schedule') : t('nav.mySchedule')}</span>
               <span className="nav-count">{upcoming ?? ''}</span>
             </NavLink>
           </div>
@@ -132,7 +132,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
-              <div className={`avatar${session.isAdmin ? ' admin' : ''}`}>{initials(session.name)}</div>
+              <div className="avatar">{initials(session.name)}</div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
                 <div style={{ fontSize: 11, color: 'var(--slate)' }}>
@@ -184,10 +184,10 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
 function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivElement | null) => void }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
-  const { isAdmin, can } = useSession()
+  const { can } = useSession()
   const view = pathname.split('/')[2] || 'bookings'
   const meta = PAGE_META[view as keyof typeof PAGE_META] ?? PAGE_META.bookings
-  const title = view === 'bookings' ? (isAdmin ? t('nav.schedule') : t('nav.mySchedule')) : t(meta[0])
+  const title = view === 'bookings' ? (can(P.Bookings.ViewAll) ? t('nav.schedule') : t('nav.mySchedule')) : t(meta[0])
   const { theme, toggle } = useThemeStore()
   const dark = theme === 'dark'
   const themeLabel = dark ? t('nav.themeLight') : t('nav.themeDark')

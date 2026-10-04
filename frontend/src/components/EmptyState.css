@@ -1,0 +1,14 @@
+/* The empty-list block (EmptyState.tsx): picture, title, one sentence, at most one button. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 44px 20px 48px;
+  background: linear-gradient(to bottom, var(--surface-2), var(--surface));
+}
+.empty-state-art { width: 200px; max-width: 100%; height: auto; margin-bottom: 18px; }
+.empty-state-card { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .08)); }
+.empty-state-title { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
+.empty-state-text { font-size: 13px; line-height: 1.55; color: var(--slate); max-width: 46ch; margin: 0 0 20px; text-wrap: pretty; }
+.empty-state-text:last-child { margin-bottom: 0; }

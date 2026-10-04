@@ -269,12 +269,6 @@
     "blockTime": "Block time",
     "makeBookable": "Make bookable",
     "makeNotBookable": "Make not bookable",
-    "noBuildings": "No buildings yet.",
-    "noFloors": "No floors yet.",
-    "buildingHasNoFloors": "This building has no floors yet.",
-    "noSpaces": "No spaces yet.",
-    "noSpacesMatch": "No spaces match these filters.",
-    "noSpaceTypes": "No space types yet.",
     "noDescription": "No description",
     "spaceName": "Space name",
     "ownRules": "own rules",
@@ -625,7 +619,6 @@
     "allSpacesOnFloor": "All spaces on this floor",
     "user": "User",
     "everyone": "Everyone",
-    "userAdmin": "{{name}} (admin)",
     "hint": {
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
       "notBookable": "This space cannot be booked, so slots are inert",
@@ -696,12 +689,8 @@
     "spaceType": "Space type",
     "search": "Search rooms",
     "searchPlaceholder": "Room name…",
-    "noRooms": "No rooms match these filters",
-    "noRoomsHint": "Widen the room criteria, or pick a different building or floor.",
     "freeOnly": "Free only",
     "freeOnlyHint": "Show only rooms free for this time and length.",
-    "noFreeRooms": "No room is free for this time",
-    "noFreeRoomsHint": "Turn off Free only, or try another time or length.",
     "roomsFree_one": "{{rooms}} · {{count, number}} free",
     "roomsFree_other": "{{rooms}} · {{count, number}} free",
     "seats_one": "{{count, number}} seat",
@@ -726,14 +715,54 @@
     "timeInUtc": "Time in UTC",
     "youMark": "(you)",
     "viewBookings": "View bookings",
-    "noMatch": "No users match these filters.",
-    "none": "No users yet.",
     "col": {
       "user": "User",
       "userName": "Username",
       "role": "Role",
       "status": "Status",
       "lock": "Lock"
+    }
+  },
+  "empty": {
+    "buildings": {
+      "title": "No buildings yet",
+      "text": "Buildings hold every floor and space people can book. Add the first one to get started."
+    },
+    "floors": {
+      "title": "No floors yet",
+      "text": "Floors sit inside a building and hold its spaces. Add the first floor to start placing spaces."
+    },
+    "buildingFloors": {
+      "title": "{{building}} has no floors yet",
+      "text": "Pick another building, or clear the filter to see every floor."
+    },
+    "spaces": {
+      "title": "No spaces yet",
+      "text": "Spaces are the rooms, desks and kit people book. Add the first one and it can be booked straight away."
+    },
+    "spacesFiltered": {
+      "title": "No spaces match these filters",
+      "text": "Try a different name, building, floor or type, or clear the filters to see every space."
+    },
+    "spaceTypes": {
+      "title": "No space types yet",
+      "text": "Types like Meeting room or Desk describe what a space is. Add the first one, then use it when you add spaces."
+    },
+    "users": {
+      "title": "No users yet",
+      "text": "People appear here once they have an account. Accounts are managed in the administration site."
+    },
+    "usersFiltered": {
+      "title": "No users match these filters",
+      "text": "Try a different name, role, status or lock, or clear the filters to see everyone."
+    },
+    "rooms": {
+      "title": "No rooms match these filters",
+      "text": "Try a different building, floor, capacity or type, or clear the filters to see every room."
+    },
+    "roomsFree": {
+      "title": "No room is free at this time",
+      "text": "Try another time or length, or clear the filters to see every room."
     }
   }
 }

@@ -1,6 +1,7 @@
 import { useAuth } from 'react-oidc-context'
 import i18n from 'i18next'
-import { useGrantedPolicies, useProfile } from '../api/hooks'
+import { useCurrentUser, useGrantedPolicies } from '../api/hooks'
+import { displayName } from '../api/types'
 import { DEFAULT_EMPLOYEE_POLICIES, P } from '../auth/permissions'
 import { extractRoles } from '../auth/roles'
 
@@ -27,23 +28,24 @@ function homePath(can: Can) {
   return can(P.Users.Default) ? '/app/users' : '/app/find'
 }
 
-/* The token's role claim decides routing instantly; the server profile confirms it. */
+/* Who is signed in and what they may do, straight from ABP: its current user and its granted permissions, from one
+ * request. What the user may do is always a named permission: can(P.Bookings.ViewAll), can(P.Bookings.EditAll), ...
+ * There is no "admin" flag - ABP's grants decide, whatever role they come from. */
 export function useSession() {
   const auth = useAuth()
-  const profile = useProfile()
+  const user = useCurrentUser().data
   const policies = useGrantedPolicies()
   const granted = policies.data
-  const roleAdmin = extractRoles(auth.user?.profile.role).includes('admin')
   const claims = auth.user?.profile
-  const isAdmin = profile.data?.isAdmin ?? roleAdmin
-  /* The roles stored for this user; the token's role claim until the profile arrives. */
-  const roles = profile.data?.roles ?? extractRoles(auth.user?.profile.role)
-  /* Until the server's grants arrive, admins are assumed to hold everything and others the employee set. */
-  const can: Can = (name) => (granted ? !!granted[name] : isAdmin || DEFAULT_EMPLOYEE_POLICIES.has(name))
+  /* The roles stored for this user; the token's role claim until ABP's configuration arrives. */
+  const roles = user?.roles ?? extractRoles(claims?.role)
+  /* Until the server's grants arrive, everyone is given the employee set; the pages wait for the real grants
+   * (RequirePermission), and the server checks every call against them anyway. */
+  const can: Can = (name) => (granted ? !!granted[name] : DEFAULT_EMPLOYEE_POLICIES.has(name))
   return {
-    userId: profile.data?.id ?? (claims?.sub as string | undefined) ?? '',
-    name: profile.data?.name ?? (claims?.name as string | undefined) ?? (claims?.preferred_username as string | undefined) ?? i18n.t('common.you'),
-    isAdmin,
+    userId: user?.id ?? (claims?.sub as string | undefined) ?? '',
+    name: (user && displayName(user.name, user.surName, user.userName))
+      || (claims?.name as string | undefined) || (claims?.preferred_username as string | undefined) || i18n.t('common.you'),
     roles,
     can,
     /* A failed load counts as loaded, so the guards fall back to the defaults above instead of waiting forever. */

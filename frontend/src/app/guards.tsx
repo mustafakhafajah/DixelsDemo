@@ -13,13 +13,6 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-/* Mirrors the mock's go() guard: admin-only views fall back to the schedule. */
-export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { isAdmin } = useSession()
-  if (!isAdmin) return <Navigate to="/app/bookings" replace />
-  return <>{children}</>
-}
-
 /* A page for holders of any of these permissions; everyone else lands on the first page they can see.
  * Waits for the real grants so a stale default never flashes a page (or a redirect) at the user. */
 export function RequirePermission({ any, children }: { any: readonly string[]; children: ReactNode }) {

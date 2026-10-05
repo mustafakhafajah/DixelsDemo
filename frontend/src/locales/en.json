@@ -743,21 +743,19 @@
     "firstName": "First name",
     "surname": "Surname",
     "roles": "Roles",
-    "tenant": "Tenant",
-    "host": "Host (no tenant)",
     "signInMethod": "Sign-in method",
     "password": "Password",
     "external": "External account",
-    "twoFactor": "Two-step verification",
-    "on": "On",
-    "off": "Off",
     "memberSince": "Member since",
     "lastSignIn": "Last sign-in",
     "passwordChanged": "Password last changed",
-    "verified": "Verified",
-    "notVerified": "Not verified",
     "notProvided": "Not provided",
     "never": "Never",
+    "passport": {
+      "label": "Member passport",
+      "heading": "{{name}}'s information",
+      "intro": "Change your details where they are shown. Your email and roles are set by an administrator."
+    },
     "photo": {
       "upload": "Upload photo",
       "change": "Change photo",
@@ -780,8 +778,7 @@
       "emailMissing": "Type an email address.",
       "emailInvalid": "Type an email address like name@example.com.",
       "phoneInvalid": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
-      "setByAdministrator": "Only an administrator can change this.",
-      "phoneReverify": "A new phone number shows as not verified until it is confirmed."
+      "setByAdministrator": "Only an administrator can change this."
     },
     "changePassword": {
       "title": "Change password",

@@ -46,25 +46,19 @@ function When({ iso, options }: { iso: string | null; options: Intl.DateTimeForm
   return iso ? <span>{formatDate(parseUtc(iso), options)}</span> : <Missing text={t('profile.never')} />
 }
 
-function VerifiedPill({ verified }: { verified: boolean }) {
-  const { t } = useTranslation()
-  return verified
-    ? <span className="pill pill-confirmed"><span className="dot" />{t('profile.verified')}</span>
-    : <span className="pill pill-cancelled"><span className="dot" />{t('profile.notVerified')}</span>
-}
-
-/* An email or phone number reads left to right in any language; with its verified pill beside it. */
-function Contact({ value, verified }: { value: string | null; verified: boolean }) {
+/* An email or phone number reads left to right in any language. */
+function Contact({ value }: { value: string | null }) {
   if (!value?.trim()) return <Missing />
-  return <><bdi dir="ltr">{value}</bdi><VerifiedPill verified={verified} /></>
+  return <bdi dir="ltr">{value}</bdi>
 }
 
+/* A group of rows under a strong rule, rather than a boxed card. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="card">
-      <div className="card-head"><h2 className="card-title">{title}</h2></div>
+    <section className="profile-section">
+      <h2 className="profile-section-title">{title}</h2>
       <dl className="kv">{children}</dl>
-    </div>
+    </section>
   )
 }
 
@@ -114,6 +108,13 @@ function ProfileView({ me }: { me: MyProfile }) {
       serverField={SERVER_FIELD[key]} hint={hint} input={input} />
   )
 
+  /* Newest first. */
+  const activity: [string, string | null, Intl.DateTimeFormatOptions][] = [
+    [t('profile.lastSignIn'), me.lastSignInTime, MOMENT],
+    [t('profile.passwordChanged'), me.lastPasswordChangeTime, MOMENT],
+    [t('profile.memberSince'), me.creationTime, DAY],
+  ]
+
   return (
     <>
       <PageActions>
@@ -122,58 +123,85 @@ function ProfileView({ me }: { me: MyProfile }) {
       </PageActions>
       {changingPassword && <ChangePasswordModal me={me} onClose={() => setChangingPassword(false)} />}
 
-      <div className="card profile-head">
-        <MyAvatar name={name} className="avatar" />
-        <div style={{ minWidth: 0 }}>
-          <p className="profile-name"><bdi>{name}</bdi></p>
-          <p className="profile-sub"><bdi dir="ltr">@{profile.userName}</bdi></p>
-          <ProfilePhoto me={me} />
+      <div className="profile-layout">
+        {/* Who you are at a glance, laid out like a member's passport, with what happened lately beneath it. */}
+        <aside className="profile-side">
+          <div className="card passport">
+            <div className="passport-top">
+              <span className="passport-label mono">{t('profile.passport.label')}</span>
+              <bdi className="passport-label mono" dir="ltr">@{profile.userName}</bdi>
+            </div>
+            <div className="passport-id">
+              <div className="passport-photo">
+                <MyAvatar name={name} className="avatar" />
+                <ProfilePhoto me={me} />
+              </div>
+              <div className="passport-name">
+                <p className="profile-name"><bdi>{name}</bdi></p>
+                <p className="profile-sub mono"><bdi dir="ltr">{profile.email}</bdi></p>
+              </div>
+              <div className="passport-tags">
+                {me.roles.map((r) => <span key={r} className="passport-tag strong mono">{roleLabel(r)}</span>)}
+              </div>
+            </div>
+          </div>
+
+          <section className="card profile-activity">
+            <h2 className="profile-section-title plain">{t('profile.activity')}</h2>
+            <ol className="timeline">
+              {activity.map(([label, iso, options], i) => (
+                <li key={label} className={i === 0 && iso ? 'latest' : undefined}>
+                  <span className="timeline-title">{label}</span>
+                  <span className="timeline-date mono"><When iso={iso} options={options} /></span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </aside>
+
+        <div className="profile-details">
+          <header className="profile-intro">
+            <h2 className="profile-intro-title">{t('profile.passport.heading', { name })}</h2>
+            <p className="profile-intro-sub">{t('profile.passport.intro')}</p>
+          </header>
+
+          <Section title={t('profile.contact')}>
+            <Field label={t('profile.email')}>
+              <Contact value={profile.email} />
+              <span className="profile-hint">{t('profile.edit.setByAdministrator')}</span>
+            </Field>
+            {editable('phoneNumber', t('profile.phone'), <Contact value={profile.phoneNumber} />,
+              { type: 'tel', maxLength: PHONE_MAX, dir: 'ltr', autoComplete: 'tel', placeholder: '+962790000000' })}
+            {editable('address', t('profile.address'), <Text value={current.address} />, { maxLength: ADDRESS_MAX, autoComplete: 'street-address' })}
+          </Section>
+
+          <Section title={t('profile.account')}>
+            {userNameLocked
+              ? <Field label={t('profile.userName')}><bdi dir="ltr">{profile.userName}</bdi><span className="profile-hint">{t('profile.edit.setByAdministrator')}</span></Field>
+              : editable('userName', t('profile.userName'), <bdi dir="ltr">{profile.userName}</bdi>, { maxLength: USER_NAME_MAX, dir: 'ltr', autoComplete: 'username' })}
+            {editable('name', t('profile.firstName'), <Text value={profile.name} />, { maxLength: NAME_MAX, autoComplete: 'given-name' })}
+            {editable('surname', t('profile.surname'), <Text value={profile.surname} />, { maxLength: NAME_MAX, autoComplete: 'family-name' })}
+            <Field label={t('profile.roles')}>
+              {me.roles.length
+                ? me.roles.map((r) => <span key={r} className="pill pill-ended"><span className="dot" />{roleLabel(r)}</span>)
+                : <Missing text={t('nav.noRole')} />}
+            </Field>
+              <Field label={t('profile.signInMethod')}>{profile.isExternal ? t('profile.external') : t('profile.password')}</Field>
+          </Section>
+
+          {details.length > 0 && (
+            <Section title={t('profile.additional')}>
+              {details.map(([label, value]) => <Field key={label} label={label}><bdi>{value}</bdi></Field>)}
+            </Section>
+          )}
         </div>
       </div>
-
-      <Section title={t('profile.contact')}>
-        <Field label={t('profile.email')}>
-          <Contact value={profile.email} verified={me.emailConfirmed} />
-          <span className="profile-hint">{t('profile.edit.setByAdministrator')}</span>
-        </Field>
-        {editable('phoneNumber', t('profile.phone'), <Contact value={profile.phoneNumber} verified={me.phoneNumberConfirmed} />,
-          { type: 'tel', maxLength: PHONE_MAX, dir: 'ltr', autoComplete: 'tel', placeholder: '+962790000000' }, t('profile.edit.phoneReverify'))}
-        {editable('address', t('profile.address'), <Text value={current.address} />, { maxLength: ADDRESS_MAX, autoComplete: 'street-address' })}
-      </Section>
-
-      <Section title={t('profile.account')}>
-        {userNameLocked
-          ? <Field label={t('profile.userName')}><bdi dir="ltr">{profile.userName}</bdi><span className="profile-hint">{t('profile.edit.setByAdministrator')}</span></Field>
-          : editable('userName', t('profile.userName'), <bdi dir="ltr">{profile.userName}</bdi>, { maxLength: USER_NAME_MAX, dir: 'ltr', autoComplete: 'username' })}
-        {editable('name', t('profile.firstName'), <Text value={profile.name} />, { maxLength: NAME_MAX, autoComplete: 'given-name' })}
-        {editable('surname', t('profile.surname'), <Text value={profile.surname} />, { maxLength: NAME_MAX, autoComplete: 'family-name' })}
-        <Field label={t('profile.roles')}>
-          {me.roles.length
-            ? me.roles.map((r) => <span key={r} className="pill pill-ended"><span className="dot" />{roleLabel(r)}</span>)
-            : <Missing text={t('nav.noRole')} />}
-        </Field>
-        <Field label={t('profile.tenant')}>{me.tenantName ? <bdi>{me.tenantName}</bdi> : t('profile.host')}</Field>
-        <Field label={t('profile.signInMethod')}>{profile.isExternal ? t('profile.external') : t('profile.password')}</Field>
-        <Field label={t('profile.twoFactor')}>{me.twoFactorEnabled ? t('profile.on') : t('profile.off')}</Field>
-      </Section>
-
-      <Section title={t('profile.activity')}>
-        <Field label={t('profile.memberSince')}><When iso={me.creationTime} options={DAY} /></Field>
-        <Field label={t('profile.lastSignIn')}><When iso={me.lastSignInTime} options={MOMENT} /></Field>
-        <Field label={t('profile.passwordChanged')}><When iso={me.lastPasswordChangeTime} options={MOMENT} /></Field>
-      </Section>
-
-      {details.length > 0 && (
-        <Section title={t('profile.additional')}>
-          {details.map(([label, value]) => <Field key={label} label={label}><bdi>{value}</bdi></Field>)}
-        </Section>
-      )}
     </>
   )
 }
 
 /* The signed-in user's own record. Anyone signed in may open it and change their own details where they are
- * shown, and their password; email, roles and tenant are only shown, since an administrator sets them. */
+ * shown, and their password; email and roles are only shown, since an administrator sets them. */
 export function MyProfilePage() {
   const { t } = useTranslation()
   const q = useMyProfile()

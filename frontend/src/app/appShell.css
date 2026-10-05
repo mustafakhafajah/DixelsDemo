@@ -50,8 +50,6 @@
   --shadow-toast: 0 12px 34px rgba(0,0,0,.5); --shadow-modal: 0 30px 70px rgba(0,0,0,.6);
   --shadow-side: rgba(0,0,0,.6);
   --glow: rgba(201,162,209,.25);
-  /* The black tile behind the white Dixels mark (sidebar logo). */
-  --logo-tile: #000000;
 }
 .app-shell {
   color-scheme: var(--scheme);
@@ -88,18 +86,16 @@
 .app-shell .nav-link.active svg { color: var(--accent-dark); }
 .app-shell .nav-count { margin-inline-start: auto; font-size: 11px; color: var(--slate-2); font-family: 'IBM Plex Mono', monospace; }
 /* flex-shrink: 0 keeps the logo from being squeezed to nothing on short screens. */
-.app-shell .sidebar-logo { display: inline-flex; align-self: flex-start; flex-shrink: 0; padding: 2px 6px; }
-.app-shell .sidebar-logo .logo-light { height: 40px; width: auto; display: block; }
-/* Dark theme: the Dixels black tile with the white mark, then the name. The mark is the logo file's
- * hexagon only (the left ~30%, as on the splash screen), turned white. Both are rendered; CSS picks one. */
-.app-shell .sidebar-logo .logo-dark { display: none; align-items: center; gap: 10px; }
-:root[data-theme="dark"] .app-shell .sidebar-logo .logo-light { display: none; }
-:root[data-theme="dark"] .app-shell .sidebar-logo .logo-dark { display: flex; }
-.app-shell .logo-tile { width: 40px; height: 40px; border-radius: 10px; background: var(--logo-tile); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-/* ltr: the crop keeps the image's left part (the hexagon) in right-to-left languages too. */
-.app-shell .logo-mark { width: 17px; height: 22px; overflow: hidden; direction: ltr; }
-.app-shell .logo-mark img { height: 22px; width: auto; display: block; filter: brightness(0) invert(1); }
-.app-shell .logo-word { font-size: 16px; font-weight: 400; letter-spacing: .16em; color: var(--ink); }
+/* ltr: the mark stays before the wordmark, and each crop keeps its part of the file, in right-to-left languages too. */
+.app-shell .sidebar-logo { display: inline-flex; align-items: center; gap: 11px; align-self: flex-start; flex-shrink: 0; padding: 5px 8px; direction: ltr; }
+/* The logo file's hexagon: its left ~30%. Also the whole logo when the sidebar is collapsed. */
+.app-shell .logo-mark { width: 23px; height: 30px; overflow: hidden; direction: ltr; flex-shrink: 0; }
+.app-shell .logo-mark img { height: 30px; width: auto; display: block; }
+/* The file's wordmark: from a third of the way across, the middle 40% of its height. */
+.app-shell .logo-word { width: 71px; height: 17px; overflow: hidden; flex-shrink: 0; }
+.app-shell .logo-word img { height: 42.5px; width: auto; display: block; margin: -12.75px 0 0 -35.7px; max-width: none; }
+/* Dark: turned white, so the purple wordmark doesn't sink into the dark sidebar. */
+:root[data-theme="dark"] .app-shell .logo-mark img, :root[data-theme="dark"] .app-shell .logo-word img { filter: brightness(0) invert(1); }
 .app-shell .nav-primary { font-size: 14.5px; padding: 10px 11px; }
 /* The links under a menu heading, indented behind a thin rule. */
 .app-shell .nav-sub { margin-inline-start: 6px; padding-inline-start: 9px; border-inline-start: 1px solid var(--line); display: flex; flex-direction: column; gap: 1px; margin-bottom: 8px; }

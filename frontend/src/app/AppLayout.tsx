@@ -124,17 +124,14 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   return (
     <aside className={`sidebar${open ? ' open' : ''}`} id="app-nav">
       <div className="sidebar-head">
-        {/* Light: the purple wordmark. Dark: the black tile with the white mark (appShell.css shows one). */}
-        <div className="sidebar-logo">
-          <img className="logo-light" src={dixelsLogo} alt="Dixels" />
-          <span className="logo-dark" role="img" aria-label="Dixels">
-            <span className="logo-tile"><span className="logo-mark"><img src={dixelsLogo} alt="" /></span></span>
-            <span className="logo-word" aria-hidden="true">DIXELS</span>
-          </span>
+        {/* The mark and the wordmark, both cut from the logo file and spaced apart: in colour when light, white when dark (appShell.css). */}
+        <div className="sidebar-logo" role="img" aria-label="Dixels">
+          <span className="logo-mark"><img src={dixelsLogo} alt="" /></span>
+          <span className="logo-word"><img src={dixelsLogo} alt="" /></span>
         </div>
-        {/* Collapsed: only the tile with the mark. */}
+        {/* Collapsed: only the mark, cut from the same file. */}
         <span className="logo-rail" role="img" aria-label="Dixels">
-          <span className="logo-tile"><span className="logo-mark"><img src={dixelsLogo} alt="" /></span></span>
+          <span className="logo-mark"><img src={dixelsLogo} alt="" /></span>
         </span>
         <button type="button" className="sidebar-toggle" onClick={toggle} aria-controls="app-nav" aria-expanded={!collapsed}
           aria-label={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')} title={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')}>

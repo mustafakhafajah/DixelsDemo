@@ -1,27 +1,62 @@
-/* My Profile page (view only): a header card, then one card per group of fields. */
-.app-shell .my-profile { display: flex; flex-direction: column; gap: 16px; max-width: 820px; }
-.app-shell .my-profile .profile-head { display: flex; align-items: center; gap: 16px; padding: 20px 18px; }
-.app-shell .my-profile .profile-head .avatar { width: 64px; height: 64px; font-size: 22px; }
-.app-shell .my-profile .profile-name { font-size: 18px; font-weight: 600; color: var(--ink); margin: 0; overflow-wrap: anywhere; }
-.app-shell .my-profile .profile-sub { font-size: 12.5px; color: var(--slate); margin: 3px 0 0; overflow-wrap: anywhere; }
-.app-shell .my-profile .kv { grid-template-columns: 190px 1fr; gap: 12px 16px; padding: 16px 18px; font-size: 13px; }
-.app-shell .my-profile .kv dd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; overflow-wrap: anywhere; }
-.app-shell .my-profile .missing { color: var(--slate); font-weight: 400; }
-/* Upload / Change and Remove under the name in the header. */
-.app-shell .my-profile .profile-photo { margin-top: 10px; }
-.app-shell .my-profile .profile-photo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+/* My Profile page: a member's passport on one side, the details in groups on the other. */
+.app-shell .my-profile { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; }
+.app-shell .my-profile .profile-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 36px; align-items: start; }
+
+/* ── PASSPORT, with Activity beneath; the pair stays in view while the details scroll ── */
+.app-shell .my-profile .profile-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; min-width: 0; }
+.app-shell .my-profile .passport { display: flex; flex-direction: column; overflow: hidden; border-radius: 18px; }
+.app-shell .my-profile .passport-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 22px 0; }
+.app-shell .my-profile .passport-label { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--slate-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.app-shell .my-profile .passport-id { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px 24px; }
+.app-shell .my-profile .passport-photo { display: flex; align-items: center; gap: 14px; }
+.app-shell .my-profile .passport-photo .avatar { width: 64px; height: 64px; font-size: 22px; }
+.app-shell .my-profile .profile-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .app-shell .my-profile .profile-photo-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
 .app-shell .my-profile .profile-photo-actions svg { width: 14px; height: 14px; }
+.app-shell .my-profile .profile-name { font-size: 40px; font-weight: 600; line-height: 1.15; color: var(--ink); margin: 0; overflow-wrap: anywhere; }
+.app-shell .my-profile .profile-sub { font-size: 12.5px; color: var(--slate); margin: 6px 0 0; overflow-wrap: anywhere; }
+.app-shell .my-profile .passport-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell .my-profile .passport-tag { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--slate); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; }
+.app-shell .my-profile .passport-tag.strong { background: var(--neutral-soft); border-color: transparent; color: var(--ink-2); }
+/* Arabic letters join up, so spacing them out would break every word apart. */
+.app-shell .my-profile :is(.passport-label, .passport-tag, .profile-intro-title):lang(ar) { letter-spacing: normal; }
+
+/* ── DETAILS ── */
+.app-shell .my-profile .profile-details { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.app-shell .my-profile .profile-intro-title { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
+.app-shell .my-profile .profile-intro-sub { font-size: 14.5px; color: var(--slate); margin-top: 8px; }
+.app-shell .my-profile .profile-section-title { display: flex; align-items: center; gap: 12px; font-size: 14.5px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
+.app-shell .my-profile .profile-section-title.plain { border-bottom: none; padding-bottom: 14px; }
+/* Each row is a label and a value with a rule beneath, the pencil at the far end. */
+/* No column gap, so the rule runs unbroken under label and value; the label's own padding spaces them. */
+.app-shell .my-profile .kv { grid-template-columns: 196px minmax(0, 1fr); gap: 0; font-size: 14px; }
+.app-shell .my-profile .kv dt, .app-shell .my-profile .kv dd { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.app-shell .my-profile .kv dt { padding-inline-end: 16px; }
+.app-shell .my-profile .kv dd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; overflow-wrap: anywhere; }
+.app-shell .my-profile .missing { color: var(--slate-2); font-weight: 400; font-style: italic; }
+
+/* Activity under the passport: a rail of dots, the latest filled. */
+.app-shell .my-profile .profile-activity { padding: 18px 22px 22px; border-radius: 18px; }
+.app-shell .my-profile .timeline { list-style: none; margin: 0; padding: 0; }
+.app-shell .my-profile .timeline li { position: relative; display: flex; flex-direction: column; gap: 3px; padding-inline-start: 26px; padding-bottom: 18px; }
+.app-shell .my-profile .timeline li:last-child { padding-bottom: 0; }
+.app-shell .my-profile .timeline li::before { content: ''; position: absolute; inset-inline-start: 0; top: 3px; width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid var(--slate-2); background: var(--paper); }
+.app-shell .my-profile .timeline li::after { content: ''; position: absolute; inset-inline-start: 5px; top: 17px; bottom: 0; width: 1px; background: var(--line); }
+.app-shell .my-profile .timeline li:last-child::after { display: none; }
+.app-shell .my-profile .timeline li.latest::before { background: var(--accent); border-color: var(--accent); }
+.app-shell .my-profile .timeline-title { font-size: 14px; font-weight: 500; color: var(--ink); }
+.app-shell .my-profile .timeline-date { font-size: 11.5px; color: var(--slate); }
 
 /* A quiet note: why a value can't be changed, or what changing it means. */
 .app-shell .profile-hint { font-size: 11.5px; font-weight: 400; color: var(--slate); margin: 0; }
 .app-shell .my-profile .kv dd .profile-hint { flex-basis: 100%; }
 
-/* Change in place: a pencil after the value; editing, an input with Save and Cancel where the value was. */
-.app-shell .my-profile .inline-edit-btn { display: inline-flex; padding: 4px; margin-inline-start: 2px; color: var(--slate-2); }
+/* Change in place: a pencil at the end of the row; editing, an input with Save and Cancel where the value was. */
+.app-shell .my-profile .inline-edit-btn { display: inline-flex; padding: 4px; margin-inline-start: auto; color: var(--slate-2); }
 .app-shell .my-profile .inline-edit-btn:hover { color: var(--ink); }
 .app-shell .my-profile .inline-edit-btn svg { width: 14px; height: 14px; }
-.app-shell .my-profile .kv dd.inline-editing { display: block; }
+.app-shell .my-profile .kv dd.inline-editing { display: block; padding: 8px 0; }
 .app-shell .my-profile .inline-edit-row { display: flex; align-items: center; gap: 6px; }
 .app-shell .my-profile .inline-edit-row .inp { flex: 1; min-width: 0; padding: 7px 10px; font-size: 13px; }
 .app-shell .my-profile .inline-edit-action { display: inline-flex; align-items: center; justify-content: center; padding: 7px; }
@@ -29,10 +64,17 @@
 .app-shell .my-profile .inline-editing .profile-hint { margin-top: 5px; }
 .app-shell .my-profile .kv dt label { font: inherit; color: inherit; }
 /* The label lines up with the input's text, not the top of its box. */
-.app-shell .my-profile .kv dt:has(+ dd.inline-editing) { padding-top: 7px; }
+.app-shell .my-profile .kv dt:has(+ dd.inline-editing) { padding-top: 16px; }
 
+/* Narrower screens: the passport sits above the details. */
+@media (max-width: 1100px) {
+  .app-shell .my-profile .profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .app-shell .my-profile .profile-side { position: static; max-width: 460px; }
+}
 /* Phones: each label sits above its value. */
 @media (max-width: 640px) {
-  .app-shell .my-profile .kv { grid-template-columns: 1fr; gap: 2px; }
-  .app-shell .my-profile .kv dd { margin-bottom: 10px; }
+  .app-shell .my-profile .kv { grid-template-columns: 1fr; }
+  .app-shell .my-profile .kv dt { padding-bottom: 0; border-bottom: none; }
+  .app-shell .my-profile .kv dd { padding-top: 4px; }
+  .app-shell .my-profile .profile-name { font-size: 32px; }
 }

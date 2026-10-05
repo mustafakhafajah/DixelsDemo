@@ -19,8 +19,6 @@
     "Permission:Bookings.EditAll": "Change everyone's bookings",
     "Permission:Bookings.DeleteAll": "Cancel everyone's bookings",
     "Permission:Bookings.MultipleSpaces": "Hold several spaces at once",
-    "Permission:Emailing": "Email",
-    "Permission:Emailing.SendTest": "Send a test email",
 
     "DisplayName:Address": "Address",
 
@@ -106,17 +104,6 @@
     "Error:VersionMismatch": "This booking changed since you loaded it. Reload and try again.",
     "Error:BookingNotInProgress": "Only a booking that has already started can be ended early.",
     "Error:EndedCannotCancel": "An ended booking cannot be cancelled.",
-    "Error:MaintenanceNotFound": "No blocked time with that ID.",
-
-    "Email:TestSubject": "Dixels Portal test email",
-    "Email:TestBody": "This is a test email from Dixels Portal, sent at {0} (UTC). If you can read it, sending email works.",
-    "Email:Hint:Disabled": "Sending is switched off. Set ExchangeOnline.Enabled to \"true\" in the server's settings.",
-    "Email:Hint:5.7.139": "Microsoft 365 refused the sign-in. Check that SMTP AUTH is turned on for the service mailbox and the organisation, and that the tenant ID, client ID and client secret are right.",
-    "Email:Hint:5.7.60": "The sign-in worked but this address may not be used as the sender. Send from the service mailbox, or ask IT to give the app access to this address.",
-    "Email:Hint:4.3.2": "Too many connections at once. Queued emails are retried automatically; if it keeps happening, lower the sending rate.",
-    "Email:Hint:5.2.0": "The mailbox has reached a sending limit. Wait and try again, or ask IT to check the mailbox.",
-    "Email:Hint:EntraId": "Microsoft Entra ID refused the app's sign-in. Check the tenant ID, client ID and client secret (secrets expire), and that admin consent was granted.",
-    "Email:Hint:Setting": "A setting is missing or wrong; the message above names it.",
-    "Email:Hint:Other": "See the server reply, and the diagnostics section of docs/DEPLOYMENT.md."
+    "Error:MaintenanceNotFound": "No blocked time with that ID."
   }
 }

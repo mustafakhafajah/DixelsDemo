@@ -24,7 +24,6 @@ COPY src/Dixels.Portal.Application.Contracts/Dixels.Portal.Application.Contracts
 COPY src/Dixels.Portal.Application/Dixels.Portal.Application.csproj src/Dixels.Portal.Application/
 COPY src/Dixels.Portal.EntityFrameworkCore/Dixels.Portal.EntityFrameworkCore.csproj src/Dixels.Portal.EntityFrameworkCore/
 COPY src/Dixels.Portal.HttpApi/Dixels.Portal.HttpApi.csproj src/Dixels.Portal.HttpApi/
-COPY src/Dixels.Portal.Infrastructure/Dixels.Portal.Infrastructure.csproj src/Dixels.Portal.Infrastructure/
 COPY src/Dixels.Portal.Web/Dixels.Portal.Web.csproj src/Dixels.Portal.Web/
 COPY src/Dixels.Portal.DbMigrator/Dixels.Portal.DbMigrator.csproj src/Dixels.Portal.DbMigrator/
 RUN dotnet restore src/Dixels.Portal.Web/Dixels.Portal.Web.csproj \

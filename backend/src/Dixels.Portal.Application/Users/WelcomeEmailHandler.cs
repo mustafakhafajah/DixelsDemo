@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Dixels.Portal.Common;
-using Dixels.Portal.Emailing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Volo.Abp.DependencyInjection;
@@ -12,7 +11,7 @@ using Volo.Abp.Identity;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.Users;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Users;
 
 /* Welcomes every new account: ABP raises this event for any user created through its user manager, which covers both
  * an admin adding someone (Identity > Users) and self sign-up on the Register page.

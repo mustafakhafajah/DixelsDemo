@@ -63,11 +63,4 @@ public static class PortalPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
     }
-
-    /* SendTest = send a test email and see the mail server's exact reply (for whoever sets up email). */
-    public static class Emailing
-    {
-        public const string Default = GroupName + ".Emailing";
-        public const string SendTest = Default + ".SendTest";
-    }
 }

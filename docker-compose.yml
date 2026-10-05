@@ -3,7 +3,7 @@
 #   web app   http://localhost:8080
 #   API       https://localhost:8443   (sign-in pages, Swagger at /swagger)
 #   database  localhost:5433           (5432 is left to the Postgres already installed on this machine)
-#   mailbox   http://localhost:8025    (Mailpit: every email the portal sends lands here, nothing leaves the machine)
+#   mailbox   http://localhost:5000    (smtp4dev: every email the portal sends lands here, nothing leaves the machine)
 
 name: dixels-portal
 
@@ -55,14 +55,13 @@ services:
       App__ClientUrl: http://localhost:8080
       App__CorsOrigins: http://localhost:8080
       ConnectionStrings__Default: *connection-string
-      # Email goes to Mailpit instead of Microsoft 365: plain SMTP, no sign-in (Basic with no user name).
-      # The real server uses OAuth2 and Exchange Online; see docs/DEPLOYMENT.md.
-      Settings__ExchangeOnline.Enabled: "true"
-      Settings__ExchangeOnline.AuthType: Basic
-      Settings__ExchangeOnline.ServiceMailbox: noreply@dixels.local
-      Settings__Abp.Mailing.Smtp.Host: mailpit
-      Settings__Abp.Mailing.Smtp.Port: "1025"
+      # ABP's own mail settings: email goes to smtp4dev instead of Microsoft 365 (plain SMTP; UseDefaultCredentials
+      # stays at ABP's default "true", so no sign-in). The real server's settings: docs/DEPLOYMENT.md.
+      Settings__Abp.Mailing.Smtp.Host: smtp4dev
+      Settings__Abp.Mailing.Smtp.Port: "25"
       Settings__Abp.Mailing.Smtp.EnableSsl: "false"
+      Settings__Abp.Mailing.DefaultFromAddress: noreply@dixels.local
+      Settings__Abp.Mailing.DefaultFromDisplayName: Dixels Portal
     ports:
       - "8443:8443"
     volumes:
@@ -71,14 +70,14 @@ services:
     depends_on:
       migrator:
         condition: service_completed_successfully
-      mailpit:
+      smtp4dev:
         condition: service_started
 
-  # A fake mailbox: accepts any email on SMTP port 1025 and shows it at http://localhost:8025.
-  mailpit:
-    image: axllent/mailpit:latest
+  # A fake mailbox: accepts any email on SMTP port 25 (inside Docker) and shows it at http://localhost:5000.
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
     ports:
-      - "8025:8025"
+      - "5000:80"
 
   web:
     build:

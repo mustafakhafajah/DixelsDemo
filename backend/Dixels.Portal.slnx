@@ -19,7 +19,6 @@
     
     
     <Project Path="src/Dixels.Portal.HttpApi/Dixels.Portal.HttpApi.csproj" />
-    <Project Path="src/Dixels.Portal.Infrastructure/Dixels.Portal.Infrastructure.csproj" />
     
     
     <Project Path="src/Dixels.Portal.Web/Dixels.Portal.Web.csproj" />
@@ -29,7 +28,6 @@
     <Project Path="test/Dixels.Portal.Domain.Tests/Dixels.Portal.Domain.Tests.csproj" />
     <Project Path="test/Dixels.Portal.EntityFrameworkCore.Tests/Dixels.Portal.EntityFrameworkCore.Tests.csproj" />
     <Project Path="test/Dixels.Portal.HttpApi.Client.ConsoleTestApp/Dixels.Portal.HttpApi.Client.ConsoleTestApp.csproj" />
-    <Project Path="test/Dixels.Portal.Infrastructure.Tests/Dixels.Portal.Infrastructure.Tests.csproj" />
     
     <Project Path="test/Dixels.Portal.TestBase/Dixels.Portal.TestBase.csproj" />
     <Project Path="test/Dixels.Portal.Web.Tests/Dixels.Portal.Web.Tests.csproj" />

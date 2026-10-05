@@ -1,7 +1,7 @@
 using Shouldly;
 using Xunit;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Users;
 
 public class WelcomeEmailsTests
 {

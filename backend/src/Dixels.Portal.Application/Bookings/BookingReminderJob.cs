@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Dixels.Portal.Bookings;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
@@ -8,7 +7,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Timing;
 using Volo.Abp.Uow;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Bookings;
 
 /* Queued when a booking is made or moved, to run 10 minutes before it starts (ABP keeps it in the background-job
  * table until then). Version = the booking's version at that moment: a booking that was changed or cancelled since

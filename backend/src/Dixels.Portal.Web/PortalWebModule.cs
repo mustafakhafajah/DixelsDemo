@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Dixels.Portal.Emailing;
 using Dixels.Portal.EntityFrameworkCore;
 using Dixels.Portal.Localization;
 using Dixels.Portal.MultiTenancy;
@@ -53,7 +52,6 @@ namespace Dixels.Portal.Web;
     typeof(PortalHttpApiModule),
     typeof(PortalApplicationModule),
     typeof(PortalEntityFrameworkCoreModule),
-    typeof(PortalInfrastructureModule),
     typeof(AbpAutofacModule),
     typeof(AbpIdentityWebModule),
     typeof(AbpSettingManagementWebModule),

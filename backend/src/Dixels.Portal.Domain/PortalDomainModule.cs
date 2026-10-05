@@ -6,6 +6,7 @@ using Volo.Abp.Emailing;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
+using Volo.Abp.MailKit;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.OpenIddict;
@@ -28,7 +29,8 @@ namespace Dixels.Portal;
     typeof(AbpPermissionManagementDomainIdentityModule),
     typeof(AbpSettingManagementDomainModule),
     typeof(AbpTenantManagementDomainModule),
-    typeof(AbpEmailingModule)
+    typeof(AbpEmailingModule),
+    typeof(AbpMailKitModule)
 )]
 public class PortalDomainModule : AbpModule
 {
@@ -66,7 +68,8 @@ public class PortalDomainModule : AbpModule
             options.Kind = DateTimeKind.Utc;
         });
 
-        /* No NullEmailSender for debug builds: the Exchange Online sender (Dixels.Portal.Infrastructure) only logs
-         * emails until ExchangeOnline.Enabled is switched on, which covers the same need on every build. */
+        /* Email is ABP's MailKit sender (AbpMailKitModule), sending wherever ABP's Abp.Mailing.Smtp.* settings point:
+         * the local smtp4dev on a developer machine, Microsoft 365 on the server (docs/DEPLOYMENT.md). No NullEmailSender
+         * for debug builds, so emails can be tried locally in smtp4dev. */
     }
 }

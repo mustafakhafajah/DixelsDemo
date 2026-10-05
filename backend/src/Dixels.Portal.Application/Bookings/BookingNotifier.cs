@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Portal.Bookings;
 using Dixels.Portal.Common;
-using Dixels.Portal.Emailing;
 using Dixels.Portal.Spaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,7 +14,7 @@ using Volo.Abp.Timing;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.Users;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Bookings;
 
 /* Emails the person who booked when their booking is made, changed or cancelled, and schedules the reminder
  * 10 minutes before it starts. Called by the booking and blocked-time services right after they save.

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Portal.Profiles;
 using Dixels.Portal.Users;
@@ -337,18 +335,10 @@ public class MyProfileTests : PortalEntityFrameworkCoreTestBase
 
     private Task<MyProfileDto> GetAsAsync(IdentityUser user) => AsAsync(user, _myProfile.GetAsync);
 
-    /* Runs a call the way the signed-in user would make it: their id (and tenant) in the claims. */
+    /* Runs a call the way the signed-in user would make it. */
     private async Task<T> AsAsync<T>(IdentityUser user, Func<Task<T>> call)
     {
-        var claims = new List<Claim>
-        {
-            new(AbpClaimTypes.UserId, user.Id.ToString()),
-            new(AbpClaimTypes.UserName, user.UserName),
-        };
-        if (user.TenantId.HasValue)
-            claims.Add(new Claim(AbpClaimTypes.TenantId, user.TenantId.Value.ToString()));
-
-        using (_principal.Change(new ClaimsPrincipal(new ClaimsIdentity(claims))))
+        using (_principal.As(user))
         {
             return await call();
         }

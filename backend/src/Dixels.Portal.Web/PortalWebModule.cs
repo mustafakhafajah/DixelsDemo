@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Dixels.Portal.EntityFrameworkCore;
 using Dixels.Portal.Localization;
 using Dixels.Portal.MultiTenancy;
+using Dixels.Portal.Profiles;
 using Dixels.Portal.Web.Components.AppPath;
 using Dixels.Portal.Web.Menus;
 using Microsoft.OpenApi;
@@ -30,6 +31,8 @@ using Volo.Abp.Ui.LayoutHooks;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.FileSystem;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity.Web;
@@ -59,7 +62,8 @@ namespace Dixels.Portal.Web;
     typeof(AbpAspNetCoreMvcUiLeptonXLiteThemeModule),
     typeof(AbpTenantManagementWebModule),
     typeof(AbpAspNetCoreSerilogModule),
-    typeof(AbpSwashbuckleModule)
+    typeof(AbpSwashbuckleModule),
+    typeof(AbpBlobStoringFileSystemModule)
     )]
 public class PortalWebModule : AbpModule
 {
@@ -111,6 +115,7 @@ public class PortalWebModule : AbpModule
 
         ConfigureAuthentication(context);
         ConfigureDataProtection(context, hostingEnvironment);
+        ConfigureBlobStoring(hostingEnvironment);
         ConfigureUrls(configuration);
         ConfigureBundles();
         ConfigureLayoutHooks();
@@ -135,6 +140,20 @@ public class PortalWebModule : AbpModule
             .SetApplicationName("Dixels.Portal")
             .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(hostingEnvironment.ContentRootPath, "App_Data", "DataProtection-Keys")));
         if (OperatingSystem.IsWindows()) keys.ProtectKeysWithDpapi(protectToLocalMachine: true);
+    }
+
+    /* Profile pictures are files under App_Data/blobs next to the app (no database tables). Deploys never copy over
+     * App_Data, so pictures survive them; that folder needs to be in the server's backups. */
+    private void ConfigureBlobStoring(IWebHostEnvironment hostingEnvironment)
+    {
+        var root = Path.Combine(hostingEnvironment.ContentRootPath, "App_Data", "blobs");
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.Configure<ProfilePictureContainer>(container =>
+            {
+                container.UseFileSystem(fileSystem => fileSystem.BasePath = root);
+            });
+        });
     }
 
     private void ConfigureErrorStatusCodes()

@@ -28,12 +28,7 @@ export interface MyProfile {
     /* Sent back with a change, so one made elsewhere in the meantime is not overwritten. */
     concurrencyStamp: string
   }
-  emailConfirmed: boolean
-  phoneNumberConfirmed: boolean
-  twoFactorEnabled: boolean
   roles: string[]
-  /* Null for a user of the host. */
-  tenantName: string | null
   /* UTC instants as ISO strings; null when it never happened. */
   creationTime: string
   lastSignInTime: string | null

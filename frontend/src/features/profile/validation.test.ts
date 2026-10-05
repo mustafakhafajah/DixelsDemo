@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import en from '../../locales/en.json'
 import type { FieldErrors } from '../../lib/useFieldErrors'
 import type { ProfileChanges } from './api'
-import { checkPassword, checkProfile, missingPasswordRules, PASSWORD_FIELDS, passwordPolicyFrom, PROFILE_FIELDS } from './validation'
+import { checkPassword, checkPictureFile, checkProfile, missingPasswordRules, PASSWORD_FIELDS, PICTURE_MAX_CHOSEN_MB, passwordPolicyFrom, PROFILE_FIELDS } from './validation'
 
 /* The live checks must agree with the server (PortalProfileAppService, ASP.NET Identity), field by field.
  * Codes are compared, not wording, so the tests hold in every language. */
@@ -115,5 +115,25 @@ describe('checkPassword', () => {
 
   it('needs no current password from someone who has none yet', () => {
     expect(codes(checkPassword({ ...good, current: '' }, abpDefaults, false))).toEqual({})
+  })
+})
+
+describe('checkPictureFile', () => {
+  const MB = 1024 * 1024
+
+  it('takes a JPEG, PNG or WebP picture', () => {
+    for (const type of ['image/jpeg', 'image/png', 'image/webp']) expect(checkPictureFile({ type, size: 300_000 })).toBeUndefined()
+  })
+
+  it('refuses anything that is not one of those pictures', () => {
+    for (const type of ['image/gif', 'image/svg+xml', 'application/pdf', 'text/plain', ''])
+      expect(checkPictureFile({ type, size: 1000 })?.code).toBe('validation.picture_not_image')
+  })
+
+  it('refuses a file too big to shrink, and says how big it may be', () => {
+    expect(checkPictureFile({ type: 'image/jpeg', size: PICTURE_MAX_CHOSEN_MB * MB })).toBeUndefined()
+    const problem = checkPictureFile({ type: 'image/jpeg', size: PICTURE_MAX_CHOSEN_MB * MB + 1 })
+    expect(problem?.code).toBe('validation.picture_too_large')
+    expect(problem?.message).toBe(`Choose a picture smaller than ${PICTURE_MAX_CHOSEN_MB} MB.`)
   })
 })

@@ -758,6 +758,18 @@
     "notVerified": "Not verified",
     "notProvided": "Not provided",
     "never": "Never",
+    "photo": {
+      "upload": "Upload photo",
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "saving": "Saving…",
+      "added": "Photo added",
+      "changed": "Photo changed",
+      "removed": "Photo removed",
+      "notImage": "Choose a JPEG, PNG or WebP picture.",
+      "tooLarge": "Choose a picture smaller than {{mb}} MB.",
+      "unreadable": "That picture couldn't be read. Try another one."
+    },
     "edit": {
       "editField": "Edit {{field}}",
       "save": "Save",

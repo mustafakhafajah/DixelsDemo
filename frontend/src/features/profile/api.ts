@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useApi } from '../../api/client'
+import { useApi, useApiBlob } from '../../api/client'
+import { blobToDataUrl } from '../../lib/image'
 import { PERMISSION_KEYS, useEnabled, useInvalidate } from '../../api/hooks'
 
 /* The signed-in user's own record from /api/app/my-profile: ABP's own profile, plus what ABP's profile leaves
@@ -37,6 +38,8 @@ export interface MyProfile {
   creationTime: string
   lastSignInTime: string | null
   lastPasswordChangeTime: string | null
+  /* Changes whenever the profile picture does; null when there is none. */
+  pictureVersion: string | null
 }
 
 /* What the user may change about themselves. */
@@ -79,6 +82,48 @@ export function useUpdateMyProfile() {
         extraProperties: { ...current.profile.extraProperties, [ADDRESS_PROPERTY]: orNull(changes.address) },
       }),
     onSuccess: () => invalidate([MY_PROFILE_KEY, ...PERMISSION_KEYS]),
+  })
+}
+
+const PICTURE_PATH = '/api/app/my-profile/picture'
+
+/* The picture, fetched with the access token, as an address an <img> can show (null when there is none). Keyed by
+ * its version, so a new picture is fetched at once and an unchanged one is not fetched again. */
+export function useMyPicture(version: string | null | undefined) {
+  const blob = useApiBlob()
+  return useQuery({
+    queryKey: [...MY_PROFILE_KEY, 'picture', version],
+    queryFn: async () => {
+      const picture = await blob(PICTURE_PATH)
+      return picture ? blobToDataUrl(picture) : null
+    },
+    enabled: useEnabled() && !!version,
+    staleTime: Infinity,
+  })
+}
+
+/* The form field the server reads the picture from (ProfilePictureController). */
+const PICTURE_FIELD = 'picture'
+
+export function useSetMyPicture() {
+  const api = useApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (picture: Blob) => {
+      const form = new FormData()
+      form.append(PICTURE_FIELD, picture, 'profile-picture.jpg')
+      return api('PUT', PICTURE_PATH, form)
+    },
+    onSuccess: () => invalidate([MY_PROFILE_KEY]),
+  })
+}
+
+export function useRemoveMyPicture() {
+  const api = useApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: () => api('DELETE', PICTURE_PATH),
+    onSuccess: () => invalidate([MY_PROFILE_KEY]),
   })
 }
 

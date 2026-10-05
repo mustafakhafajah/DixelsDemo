@@ -52,11 +52,11 @@ function Contact({ value }: { value: string | null }) {
   return <bdi dir="ltr">{value}</bdi>
 }
 
-/* A numbered group of rows under a strong rule, rather than a boxed card. */
-function Section({ index, title, children }: { index: string; title: string; children: ReactNode }) {
+/* A group of rows under a strong rule, rather than a boxed card. */
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="profile-section">
-      <h2 className="profile-section-title"><span className="profile-index mono">{index}</span>{title}</h2>
+      <h2 className="profile-section-title">{title}</h2>
       <dl className="kv">{children}</dl>
     </section>
   )
@@ -165,7 +165,7 @@ function ProfileView({ me }: { me: MyProfile }) {
             <p className="profile-intro-sub">{t('profile.passport.intro')}</p>
           </header>
 
-          <Section index="01" title={t('profile.contact')}>
+          <Section title={t('profile.contact')}>
             <Field label={t('profile.email')}>
               <Contact value={profile.email} />
               <span className="profile-hint">{t('profile.edit.setByAdministrator')}</span>
@@ -175,7 +175,7 @@ function ProfileView({ me }: { me: MyProfile }) {
             {editable('address', t('profile.address'), <Text value={current.address} />, { maxLength: ADDRESS_MAX, autoComplete: 'street-address' })}
           </Section>
 
-          <Section index="02" title={t('profile.account')}>
+          <Section title={t('profile.account')}>
             {userNameLocked
               ? <Field label={t('profile.userName')}><bdi dir="ltr">{profile.userName}</bdi><span className="profile-hint">{t('profile.edit.setByAdministrator')}</span></Field>
               : editable('userName', t('profile.userName'), <bdi dir="ltr">{profile.userName}</bdi>, { maxLength: USER_NAME_MAX, dir: 'ltr', autoComplete: 'username' })}
@@ -190,7 +190,7 @@ function ProfileView({ me }: { me: MyProfile }) {
           </Section>
 
           {details.length > 0 && (
-            <Section index="03" title={t('profile.additional')}>
+            <Section title={t('profile.additional')}>
               {details.map(([label, value]) => <Field key={label} label={label}><bdi>{value}</bdi></Field>)}
             </Section>
           )}

@@ -1,4 +1,4 @@
-/* My Profile page: a member's passport on one side, the details in numbered groups on the other. */
+/* My Profile page: a member's passport on one side, the details in groups on the other. */
 .app-shell .my-profile { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; }
 .app-shell .my-profile .profile-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 36px; align-items: start; }
 
@@ -28,7 +28,6 @@
 .app-shell .my-profile .profile-intro-sub { font-size: 14.5px; color: var(--slate); margin-top: 8px; }
 .app-shell .my-profile .profile-section-title { display: flex; align-items: center; gap: 12px; font-size: 14.5px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
 .app-shell .my-profile .profile-section-title.plain { border-bottom: none; padding-bottom: 14px; }
-.app-shell .my-profile .profile-index { font-size: 10.5px; font-weight: 500; letter-spacing: .1em; color: var(--slate-2); }
 /* Each row is a label and a value with a rule beneath, the pencil at the far end. */
 /* No column gap, so the rule runs unbroken under label and value; the label's own padding spaces them. */
 .app-shell .my-profile .kv { grid-template-columns: 196px minmax(0, 1fr); gap: 0; font-size: 14px; }

@@ -125,11 +125,13 @@ public partial class IdentityUserToMyProfileDtoMapper : MapperBase<IdentityUser,
     [MapperIgnoreTarget(nameof(MyProfileDto.Roles))]
     [MapperIgnoreTarget(nameof(MyProfileDto.TenantName))]
     [MapperIgnoreTarget(nameof(MyProfileDto.LastSignInTime))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.PictureVersion))]
     public override partial MyProfileDto Map(IdentityUser source);
 
     [MapperIgnoreTarget(nameof(MyProfileDto.Profile))]
     [MapperIgnoreTarget(nameof(MyProfileDto.Roles))]
     [MapperIgnoreTarget(nameof(MyProfileDto.TenantName))]
     [MapperIgnoreTarget(nameof(MyProfileDto.LastSignInTime))]
+    [MapperIgnoreTarget(nameof(MyProfileDto.PictureVersion))]
     public override partial void Map(IdentityUser source, MyProfileDto destination);
 }

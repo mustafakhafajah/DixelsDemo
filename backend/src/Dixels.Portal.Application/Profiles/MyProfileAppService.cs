@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Account;
+using Volo.Abp.Data;
 using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
@@ -36,6 +37,7 @@ public class MyProfileAppService : PortalAppService, IMyProfileAppService
         dto.Roles = (await _users.GetRolesAsync(user)).Order(StringComparer.OrdinalIgnoreCase).ToArray();
         dto.TenantName = CurrentTenant.Name;
         dto.LastSignInTime = await GetLastSignInTimeAsync(user);
+        dto.PictureVersion = user.GetProperty<string?>(ProfilePictureConsts.VersionPropertyName);
         return dto;
     }
 

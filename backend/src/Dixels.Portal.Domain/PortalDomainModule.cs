@@ -2,6 +2,7 @@
 using Dixels.Portal.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.BlobStoring;
 using Volo.Abp.Emailing;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
@@ -30,7 +31,8 @@ namespace Dixels.Portal;
     typeof(AbpSettingManagementDomainModule),
     typeof(AbpTenantManagementDomainModule),
     typeof(AbpEmailingModule),
-    typeof(AbpMailKitModule)
+    typeof(AbpMailKitModule),
+    typeof(AbpBlobStoringModule)
 )]
 public class PortalDomainModule : AbpModule
 {

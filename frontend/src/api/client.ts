@@ -53,55 +53,39 @@ interface AbpErrorBody {
   }
 }
 
-async function toApiError(res: Response): Promise<ApiError> {
-  const parsed = (await res.json().catch(() => null)) as AbpErrorBody | null
-  const e = parsed?.error
-  const validation = e?.validationErrors?.map((v) => v.message).join(' ')
-  const code = e?.code || (res.status === 400 ? 'validation.invalid_request' : res.status === 401 ? 'auth.unauthorized'
-    : res.status === 403 ? 'access.forbidden' : `http.${res.status}`)
-  const message = validation || e?.message || res.statusText
-  const data = e?.data ?? {}
-  const fieldErrors: ServerFieldError[] = typeof data.field === 'string'
-    ? [{ field: data.field, code, message }]
-    : (e?.validationErrors ?? []).filter((v) => v.members?.length).map((v) => ({ field: fieldKey(v.members![0]), code, message: v.message }))
-  return new ApiError(res.status, code, message, data, fieldErrors)
-}
-
-/* One request; throws ApiError when the server refuses. A FormData body (a file upload) is sent as it is, and the
- * browser sets its multipart type; any other body goes as JSON. accept: what answer is wanted (JSON, or a file). */
-async function send(token: string | undefined, method: string, path: string, body?: unknown, query?: Query, accept = 'application/json'): Promise<Response> {
-  const form = body instanceof FormData
+export async function apiRequest<T>(token: string | undefined, method: string, path: string, body?: unknown, query?: Query): Promise<T> {
   const res = await fetch(buildUrl(path, query), {
     method,
     /* The access token is the only credential. When the portal and the server share one address, the browser
      * would also send the server's sign-in cookie, and the server then demands an anti-forgery token. */
     credentials: 'omit',
     headers: {
-      Accept: accept,
+      Accept: 'application/json',
       /* The server answers in this language: names, notes and error messages. */
       'Accept-Language': i18n.language,
-      ...(body !== undefined && !form ? { 'Content-Type': 'application/json' } : {}),
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw await toApiError(res)
-  return res
-}
 
-export async function apiRequest<T>(token: string | undefined, method: string, path: string, body?: unknown, query?: Query): Promise<T> {
-  const res = await send(token, method, path, body, query)
+  if (!res.ok) {
+    const parsed = (await res.json().catch(() => null)) as AbpErrorBody | null
+    const e = parsed?.error
+    const validation = e?.validationErrors?.map((v) => v.message).join(' ')
+    const code = e?.code || (res.status === 400 ? 'validation.invalid_request' : res.status === 401 ? 'auth.unauthorized'
+      : res.status === 403 ? 'access.forbidden' : `http.${res.status}`)
+    const message = validation || e?.message || res.statusText
+    const data = e?.data ?? {}
+    const fieldErrors: ServerFieldError[] = typeof data.field === 'string'
+      ? [{ field: data.field, code, message }]
+      : (e?.validationErrors ?? []).filter((v) => v.members?.length).map((v) => ({ field: fieldKey(v.members![0]), code, message: v.message }))
+    throw new ApiError(res.status, code, message, data, fieldErrors)
+  }
+
   if (res.status === 204) return undefined as T
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
-}
-
-/* A file the server sends back, e.g. a picture; null when there is none (204, or an empty body). */
-export async function apiBlob(token: string | undefined, path: string): Promise<Blob | null> {
-  const res = await send(token, 'GET', path, undefined, undefined, '*/*')
-  if (res.status === 204) return null
-  const blob = await res.blob()
-  return blob.size > 0 ? blob : null
 }
 
 /* Request function bound to the signed-in user's access token. */
@@ -112,13 +96,6 @@ export function useApi() {
     <T,>(method: string, path: string, body?: unknown, query?: Query) => apiRequest<T>(token, method, path, body, query),
     [token],
   )
-}
-
-/* Fetches a file with the signed-in user's access token (an <img src> could not send it). */
-export function useApiBlob() {
-  const auth = useAuth()
-  const token = auth.user?.access_token
-  return useCallback((path: string) => apiBlob(token, path), [token])
 }
 
 export function errorText(e: unknown): { code: string; message: string; field?: string } {

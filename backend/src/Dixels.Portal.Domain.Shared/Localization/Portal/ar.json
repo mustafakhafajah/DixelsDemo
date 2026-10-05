@@ -47,8 +47,6 @@
     "Error:UserNameMissing": "أدخل اسم المستخدم.",
     "Error:EmailMissing": "أدخل البريد الإلكتروني.",
     "Error:InvalidPhone": "أدخل رقم الهاتف من 6 إلى 15 رقماً، ويمكن أن يبدأ بـ +، مثل +962790000000.",
-    "Error:PictureTooLarge": "اختر صورة أصغر من {0} ميغابايت.",
-    "Error:PictureNotImage": "اختر صورة بصيغة JPEG أو PNG أو WebP.",
     "Error:TranslationTwice": "اللغة {0} مُضافة مرتين. أبقِ واحدة فقط.",
     "Error:TranslationNameMissing": "أدخل الاسم باللغة {0}، أو احذف هذه اللغة.",
     "Error:NameTooLong": "يجب ألا يتجاوز الاسم {0} حرفاً.",

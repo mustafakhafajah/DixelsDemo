@@ -23,8 +23,6 @@ public static class PortalDomainErrorCodes
     public const string TooLong = "validation.too_long";
     public const string WrongScript = "validation.wrong_script";
     public const string InvalidPhone = "validation.invalid_phone";
-    public const string PictureTooLarge = "validation.picture_too_large";
-    public const string PictureNotImage = "validation.picture_not_image";
     /* ABP Identity refused a profile change or a password (taken user name, wrong current password, password rules). */
     public const string IdentityRejected = "validation.identity_rejected";
 
@@ -70,8 +68,6 @@ public static class PortalDomainErrorCodes
         [TooLong] = HttpStatusCode.BadRequest,
         [WrongScript] = HttpStatusCode.BadRequest,
         [InvalidPhone] = HttpStatusCode.BadRequest,
-        [PictureTooLarge] = HttpStatusCode.BadRequest,
-        [PictureNotImage] = HttpStatusCode.BadRequest,
         [IdentityRejected] = HttpStatusCode.BadRequest,
         [SpaceNotFound] = HttpStatusCode.NotFound,
         [SpaceNotBookable] = HttpStatusCode.Conflict,

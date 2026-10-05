@@ -41,7 +41,6 @@
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
-    <PackageReference Include="Volo.Abp.BlobStoring.FileSystem" Version="10.6.1" />
   </ItemGroup>
 
   <ItemGroup>

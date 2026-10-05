@@ -47,8 +47,6 @@
     "Error:UserNameMissing": "Type a username.",
     "Error:EmailMissing": "Type an email address.",
     "Error:InvalidPhone": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
-    "Error:PictureTooLarge": "Choose a picture smaller than {0} MB.",
-    "Error:PictureNotImage": "Choose a JPEG, PNG or WebP picture.",
     "Error:TranslationTwice": "{0} is listed twice. Keep one.",
     "Error:TranslationNameMissing": "Type the {0} name, or remove that language.",
     "Error:NameTooLong": "Keep the name to {0} characters.",

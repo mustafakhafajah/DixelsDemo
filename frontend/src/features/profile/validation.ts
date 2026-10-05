@@ -79,19 +79,6 @@ export function missingPasswordRules(password: string, policy: PasswordPolicy): 
   return needs
 }
 
-/* Picture types the server stores (PictureFormat on the server reads the bytes; this is the first, quick check). */
-export const PICTURE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
-/* The chosen file may be large, since it is shrunk in the browser before it is sent (the server takes 2 MB). */
-export const PICTURE_MAX_CHOSEN_MB = 10
-const BYTES_PER_MB = 1024 * 1024
-
-/* The problem with a file someone picked as their profile picture, if any. */
-export function checkPictureFile(file: { type: string; size: number }): FieldError | undefined {
-  if (!(PICTURE_TYPES as readonly string[]).includes(file.type)) return problem('validation.picture_not_image', i18n.t('profile.photo.notImage'))
-  if (file.size > PICTURE_MAX_CHOSEN_MB * BYTES_PER_MB) return problem('validation.picture_too_large', i18n.t('profile.photo.tooLarge', { mb: PICTURE_MAX_CHOSEN_MB }))
-  return undefined
-}
-
 /* Field ids of the Change password form. */
 export const PASSWORD_FIELDS = { current: 'pw-current', next: 'pw-new', repeat: 'pw-repeat' } as const
 

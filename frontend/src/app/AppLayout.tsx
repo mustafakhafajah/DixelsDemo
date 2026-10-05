@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
+import { initials } from '../components/bits'
 import { Toasts } from '../components/Toasts'
-import { MyAvatar } from '../features/profile/MyAvatar'
 import { roleLabel } from '../features/users/api'
 import { setLanguage } from '../i18n'
 import { LANGUAGES } from '../i18n/languages'
@@ -173,7 +173,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="user-chip" aria-label={t('nav.accountMenu', { name: session.name })}>
-              <MyAvatar name={session.name} className="avatar" />
+              <div className="avatar">{initials(session.name)}</div>
               <div className="user-chip-text" style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><bdi>{session.name}</bdi></div>
                 <div style={{ fontSize: 11, color: 'var(--slate)' }}>
@@ -186,7 +186,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           {/* The menu is drawn outside the app shell, so it uses the shadcn colours rather than the shell's. */}
           <DropdownMenuContent side="top" align="start" className="tw:w-(--radix-dropdown-menu-trigger-width)">
             <DropdownMenuLabel className="tw:flex tw:items-center tw:gap-2.5 tw:font-normal">
-              <MyAvatar name={session.name} className="tw:flex tw:size-8 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-primary tw:text-xs tw:font-bold tw:text-primary-foreground" />
+              <span className="tw:flex tw:size-8 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-primary tw:text-xs tw:font-bold tw:text-primary-foreground">{initials(session.name)}</span>
               <span className="tw:min-w-0">
                 <span className="tw:block tw:truncate tw:text-sm tw:font-semibold"><bdi>{session.name}</bdi></span>
                 <span className="tw:block tw:truncate tw:text-xs tw:text-muted-foreground">

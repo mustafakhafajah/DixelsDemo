@@ -1,3 +1,0 @@
-/* The picture fills its circle, cropped to the middle. */
-.my-avatar { overflow: hidden; }
-.my-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }

@@ -3,13 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useAbpSettings } from '../../api/hooks'
 import { displayName } from '../../api/types'
 import { PageActions } from '../../app/pageActions'
-import { LoadError, Loading } from '../../components/bits'
+import { initials, LoadError, Loading } from '../../components/bits'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
 import { roleLabel } from '../users/api'
 import { ADDRESS_MAX, ADDRESS_PROPERTY, useMyProfile, useUpdateMyProfile, type MyProfile, type ProfileChanges } from './api'
 import { InlineField } from './InlineField'
-import { MyAvatar } from './MyAvatar'
-import { ProfilePhoto } from './ProfilePhoto'
 import { ChangePasswordModal } from './ProfileForms'
 import { checkProfile, PROFILE_FIELDS } from './validation'
 import './profile.css'
@@ -123,11 +121,10 @@ function ProfileView({ me }: { me: MyProfile }) {
       {changingPassword && <ChangePasswordModal me={me} onClose={() => setChangingPassword(false)} />}
 
       <div className="card profile-head">
-        <MyAvatar name={name} className="avatar" />
+        <div className="avatar" aria-hidden="true">{initials(name)}</div>
         <div style={{ minWidth: 0 }}>
           <p className="profile-name"><bdi>{name}</bdi></p>
           <p className="profile-sub"><bdi dir="ltr">@{profile.userName}</bdi></p>
-          <ProfilePhoto me={me} />
         </div>
       </div>
 

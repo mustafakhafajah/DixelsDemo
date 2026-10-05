@@ -26,7 +26,4 @@ public class MyProfileDto
 
     /* Null when the password was never changed, or the user has none (external sign-in only). */
     public DateTimeOffset? LastPasswordChangeTime { get; set; }
-
-    /* Changes whenever the profile picture does, so the SPA fetches the new one at once; null when there is none. */
-    public string? PictureVersion { get; set; }
 }

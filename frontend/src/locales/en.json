@@ -759,8 +759,9 @@
     "notProvided": "Not provided",
     "never": "Never",
     "edit": {
-      "title": "Edit profile",
-      "subtitle": "Your roles and tenant are set by an administrator.",
+      "editField": "Edit {{field}}",
+      "save": "Save",
+      "fieldSaved": "{{field}} saved",
       "firstNameMissing": "Type your first name.",
       "userNameMissing": "Type a username.",
       "userNameInvalid": "Use only English letters, digits and - . _ @ +, with no spaces.",
@@ -768,9 +769,7 @@
       "emailInvalid": "Type an email address like name@example.com.",
       "phoneInvalid": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
       "setByAdministrator": "Only an administrator can change this.",
-      "reverifyNote": "A new email address or phone number shows as not verified until it is confirmed.",
-      "saved": "Profile saved",
-      "savedMessage": "Your changes are saved."
+      "phoneReverify": "A new phone number shows as not verified until it is confirmed."
     },
     "changePassword": {
       "title": "Change password",

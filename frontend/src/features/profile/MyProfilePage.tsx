@@ -1,17 +1,33 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAbpSettings } from '../../api/hooks'
 import { displayName } from '../../api/types'
 import { PageActions } from '../../app/pageActions'
 import { initials, LoadError, Loading } from '../../components/bits'
 import { formatDate, parseUtc } from '../../lib/dateUtils'
 import { roleLabel } from '../users/api'
-import { ADDRESS_PROPERTY, useMyProfile, type MyProfile } from './api'
-import { ChangePasswordModal, EditProfileModal } from './ProfileForms'
+import { ADDRESS_MAX, ADDRESS_PROPERTY, useMyProfile, useUpdateMyProfile, type MyProfile, type ProfileChanges } from './api'
+import { InlineField } from './InlineField'
+import { ChangePasswordModal } from './ProfileForms'
+import { checkProfile, PROFILE_FIELDS } from './validation'
 import './profile.css'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }
 /* "4 October 2026, 14:05 UTC": the app shows every time in UTC, so it says so. */
 const MOMENT: Intl.DateTimeFormatOptions = { ...DAY, hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' }
+
+/* ABP's limits (IdentityUserConsts), so a field stops where the server would refuse. */
+const USER_NAME_MAX = 256
+const NAME_MAX = 64
+const PHONE_MAX = 16
+
+/* ABP's switch for whether people may change their own user name (shown to clients; on unless turned off). */
+const USER_NAME_UPDATE = 'Abp.Identity.User.IsUserNameUpdateEnabled'
+
+/* The server's name for each field, so a refusal it ties to one lands under it. */
+const SERVER_FIELD: Record<keyof ProfileChanges, string> = {
+  name: 'name', surname: 'surname', userName: 'userName', email: 'email', phoneNumber: 'phoneNumber', address: 'address',
+}
 
 /* Any value a field may be missing shows a quiet "Not provided" (or "Never" for a date) instead of a blank. */
 function Missing({ text }: { text?: string }) {
@@ -61,26 +77,48 @@ function otherDetails(extra: MyProfile['profile']['extraProperties']): [string, 
     .map(([name, value]) => [name, String(value)])
 }
 
-type Editing = 'profile' | 'password' | null
+/* What the user may change, as it is now. */
+function changesOf(me: MyProfile): ProfileChanges {
+  const address = me.profile.extraProperties?.[ADDRESS_PROPERTY]
+  return {
+    userName: me.profile.userName,
+    email: me.profile.email,
+    name: me.profile.name ?? '',
+    surname: me.profile.surname ?? '',
+    phoneNumber: me.profile.phoneNumber ?? '',
+    address: typeof address === 'string' ? address : '',
+  }
+}
 
 function ProfileView({ me }: { me: MyProfile }) {
   const { t } = useTranslation()
-  const [editing, setEditing] = useState<Editing>(null)
-  const close = () => setEditing(null)
+  const update = useUpdateMyProfile()
+  const settings = useAbpSettings().data ?? {}
+  const [changingPassword, setChangingPassword] = useState(false)
+  /* One field is edited at a time; opening another leaves the first unchanged. */
+  const [editing, setEditing] = useState<keyof ProfileChanges | null>(null)
   const { profile } = me
+  const current = changesOf(me)
   const name = displayName(profile.name, profile.surname, profile.userName)
-  const address = profile.extraProperties?.[ADDRESS_PROPERTY]
   const details = otherDetails(profile.extraProperties)
+  const userNameLocked = settings[USER_NAME_UPDATE]?.toLowerCase() === 'false'
+
+  /* A row the user can change in place: the same checks as the server, as they type, and the server's own word on save. */
+  const editable = (key: keyof ProfileChanges, label: string, display: ReactNode, input: Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'value' | 'onChange' | 'onKeyDown'>, hint?: string) => (
+    <InlineField id={PROFILE_FIELDS[key]} label={label} value={current[key]} display={display}
+      editing={editing === key} onEdit={() => setEditing(key)} onClose={() => setEditing(null)}
+      check={(draft) => checkProfile({ ...current, [key]: draft })[PROFILE_FIELDS[key]]}
+      onSave={(draft) => update.mutateAsync({ current: me, changes: { ...current, [key]: draft } })}
+      serverField={SERVER_FIELD[key]} hint={hint} input={input} />
+  )
 
   return (
     <>
       <PageActions>
         {/* Someone who signs in through another provider has no password here to change. */}
-        {!profile.isExternal && <button type="button" className="btn" onClick={() => setEditing('password')}>{t('profile.changePassword.title')}</button>}
-        <button type="button" className="btn btn-primary" onClick={() => setEditing('profile')}>{t('profile.edit.title')}</button>
+        {!profile.isExternal && <button type="button" className="btn" onClick={() => setChangingPassword(true)}>{t('profile.changePassword.title')}</button>}
       </PageActions>
-      {editing === 'profile' && <EditProfileModal me={me} onClose={close} />}
-      {editing === 'password' && <ChangePasswordModal me={me} onClose={close} />}
+      {changingPassword && <ChangePasswordModal me={me} onClose={() => setChangingPassword(false)} />}
 
       <div className="card profile-head">
         <div className="avatar" aria-hidden="true">{initials(name)}</div>
@@ -91,15 +129,21 @@ function ProfileView({ me }: { me: MyProfile }) {
       </div>
 
       <Section title={t('profile.contact')}>
-        <Field label={t('profile.email')}><Contact value={profile.email} verified={me.emailConfirmed} /></Field>
-        <Field label={t('profile.phone')}><Contact value={profile.phoneNumber} verified={me.phoneNumberConfirmed} /></Field>
-        <Field label={t('profile.address')}><Text value={typeof address === 'string' ? address : null} /></Field>
+        <Field label={t('profile.email')}>
+          <Contact value={profile.email} verified={me.emailConfirmed} />
+          <span className="profile-hint">{t('profile.edit.setByAdministrator')}</span>
+        </Field>
+        {editable('phoneNumber', t('profile.phone'), <Contact value={profile.phoneNumber} verified={me.phoneNumberConfirmed} />,
+          { type: 'tel', maxLength: PHONE_MAX, dir: 'ltr', autoComplete: 'tel', placeholder: '+962790000000' }, t('profile.edit.phoneReverify'))}
+        {editable('address', t('profile.address'), <Text value={current.address} />, { maxLength: ADDRESS_MAX, autoComplete: 'street-address' })}
       </Section>
 
       <Section title={t('profile.account')}>
-        <Field label={t('profile.userName')}><bdi dir="ltr">{profile.userName}</bdi></Field>
-        <Field label={t('profile.firstName')}><Text value={profile.name} /></Field>
-        <Field label={t('profile.surname')}><Text value={profile.surname} /></Field>
+        {userNameLocked
+          ? <Field label={t('profile.userName')}><bdi dir="ltr">{profile.userName}</bdi><span className="profile-hint">{t('profile.edit.setByAdministrator')}</span></Field>
+          : editable('userName', t('profile.userName'), <bdi dir="ltr">{profile.userName}</bdi>, { maxLength: USER_NAME_MAX, dir: 'ltr', autoComplete: 'username' })}
+        {editable('name', t('profile.firstName'), <Text value={profile.name} />, { maxLength: NAME_MAX, autoComplete: 'given-name' })}
+        {editable('surname', t('profile.surname'), <Text value={profile.surname} />, { maxLength: NAME_MAX, autoComplete: 'family-name' })}
         <Field label={t('profile.roles')}>
           {me.roles.length
             ? me.roles.map((r) => <span key={r} className="pill pill-ended"><span className="dot" />{roleLabel(r)}</span>)
@@ -125,8 +169,8 @@ function ProfileView({ me }: { me: MyProfile }) {
   )
 }
 
-/* The signed-in user's own record. Anyone signed in may open it and change their own details and password;
- * roles and tenant are only shown, since an administrator sets them. */
+/* The signed-in user's own record. Anyone signed in may open it and change their own details where they are
+ * shown, and their password; email, roles and tenant are only shown, since an administrator sets them. */
 export function MyProfilePage() {
   const { t } = useTranslation()
   const q = useMyProfile()

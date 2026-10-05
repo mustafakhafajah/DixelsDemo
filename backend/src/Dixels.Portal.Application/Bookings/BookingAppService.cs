@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Maintenance;
-using Dixels.Portal.Notifications;
 using Dixels.Portal.Permissions;
 using Dixels.Portal.Spaces;
 using Microsoft.AspNetCore.Authorization;

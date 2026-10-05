@@ -1,4 +1,4 @@
-namespace Dixels.Portal.Emailing;
+namespace Dixels.Portal;
 
 /* Names of the addresses registered in ABP's AppUrlOptions (PortalWebModule.ConfigureUrls), used for links in emails.
  * Mvc = this server (sign-in and set-password pages, App:SelfUrl); Spa = the portal itself (App:ClientUrl). */

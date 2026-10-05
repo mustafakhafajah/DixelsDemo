@@ -7,7 +7,7 @@ using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Xunit;
 
-namespace Dixels.Portal.EntityFrameworkCore.Notifications;
+namespace Dixels.Portal.EntityFrameworkCore.Users;
 
 /* A new account gets a welcome email, however it was created (here through ABP's user manager, which both the admin
  * Users page and self sign-up use). Tests don't run background jobs, so the queued email is read from the job table. */

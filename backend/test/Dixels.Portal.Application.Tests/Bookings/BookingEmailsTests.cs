@@ -1,9 +1,9 @@
 using System;
-using Dixels.Portal.Bookings;
+using Dixels.Portal.Common;
 using Shouldly;
 using Xunit;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Bookings;
 
 /* The email texts are pure, so these need no database or ABP base class. */
 public class BookingEmailsTests

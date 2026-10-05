@@ -1,6 +1,7 @@
-using static Dixels.Portal.Notifications.PortalEmailLayout;
+using Dixels.Portal.Common;
+using static Dixels.Portal.Common.PortalEmailLayout;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Users;
 
 /* The welcome email for a new account, in English. Pure, like BookingEmails. */
 public static class WelcomeEmails

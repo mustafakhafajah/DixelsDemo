@@ -51,7 +51,6 @@
     <ProjectReference Include="..\Dixels.Portal.Application\Dixels.Portal.Application.csproj" />
     <ProjectReference Include="..\Dixels.Portal.HttpApi\Dixels.Portal.HttpApi.csproj" />
     <ProjectReference Include="..\Dixels.Portal.EntityFrameworkCore\Dixels.Portal.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\Dixels.Portal.Infrastructure\Dixels.Portal.Infrastructure.csproj" />
     <PackageReference Include="Volo.Abp.Autofac" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.Swashbuckle" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="10.6.1" />

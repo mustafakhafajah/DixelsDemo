@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Dixels.Portal.Common;
 using Dixels.Portal.Estate;
-using static Dixels.Portal.Notifications.PortalEmailLayout;
+using static Dixels.Portal.Common.PortalEmailLayout;
 
-namespace Dixels.Portal.Notifications;
+namespace Dixels.Portal.Bookings;
 
 /* One booking as an email shows it: where, and when in the building's own time zone. */
 public record BookingEmailLine(string SpaceName, string Place, DateTime StartUtc, DateTime EndUtc, string TimeZoneId);

@@ -6,7 +6,6 @@ using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
-using Dixels.Portal.Notifications;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
 using Shouldly;
@@ -16,7 +15,7 @@ using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Xunit;
 
-namespace Dixels.Portal.EntityFrameworkCore.Notifications;
+namespace Dixels.Portal.EntityFrameworkCore.Bookings;
 
 /* Through the real booking service: each change queues the right email for the person who booked, and a reminder
  * job 10 minutes before the start. Tests don't run background jobs, so the queued jobs are read from the job table. */

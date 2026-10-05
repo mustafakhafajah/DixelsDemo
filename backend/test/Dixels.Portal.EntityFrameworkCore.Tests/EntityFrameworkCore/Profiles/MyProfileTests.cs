@@ -170,7 +170,6 @@ public class MyProfileTests : PortalEntityFrameworkCoreTestBase
         input.UserName = tag + ".renamed";
         input.Name = "Ammar";
         input.Surname = "Safwan";
-        input.Email = $"{tag}.new@example.com";
         input.PhoneNumber = "+962790000001";
         input.SetProperty(PortalUserConsts.AddressPropertyName, "7 New Street, Irbid");
         await AsAsync(user, () => _profile.UpdateAsync(input));
@@ -179,13 +178,27 @@ public class MyProfileTests : PortalEntityFrameworkCoreTestBase
         profile.Profile.UserName.ShouldBe(tag + ".renamed");
         profile.Profile.Name.ShouldBe("Ammar");
         profile.Profile.Surname.ShouldBe("Safwan");
-        profile.Profile.Email.ShouldBe($"{tag}.new@example.com");
         profile.Profile.PhoneNumber.ShouldBe("+962790000001");
         profile.Profile.GetProperty<string>(PortalUserConsts.AddressPropertyName).ShouldBe("7 New Street, Irbid");
-        /* A new address has not been confirmed yet. */
-        profile.EmailConfirmed.ShouldBeFalse();
+        /* A new phone number has not been confirmed yet. */
+        profile.PhoneNumberConfirmed.ShouldBeFalse();
         profile.Roles.ShouldBe(new[] { $"{tag}-crew" });
         profile.TenantName.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_user_cannot_change_their_own_email()
+    {
+        var tag = NewTag();
+        var user = await CreateUserAsync(tag, u => { u.Name = "Ammar"; u.SetEmailConfirmed(true); });
+
+        var input = await CurrentProfileInputAsync(user);
+        input.Email = $"{tag}.new@example.com";
+        await AsAsync(user, () => _profile.UpdateAsync(input));
+
+        var profile = await GetAsAsync(user);
+        profile.Profile.Email.ShouldBe(user.Email);
+        profile.EmailConfirmed.ShouldBeTrue();
     }
 
     [Fact]

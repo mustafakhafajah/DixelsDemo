@@ -96,27 +96,25 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
 
         var note = string.IsNullOrWhiteSpace(input.Note) ? L["Blocked"] : input.Note.Trim();
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
-        var created = 0;
         var affected = 0;
         var cancelledBookings = new List<Booking>();
+        var windows = new List<MaintenanceWindow>();
         foreach (var o in input.Occurrences)
         {
             var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             affected += await CountAffectedAsync(spaceIds, s, e);
             if (input.CancelAffectedBookings) cancelledBookings.AddRange(await CancelAffectedAsync(spaceIds, s, e));
-            foreach (var spaceId in spaceIds)
+            windows.AddRange(spaceIds.Select(spaceId => new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
             {
-                var m = new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
-                {
-                    Note = note,
-                    SeriesId = seriesId,
-                    ScopeType = input.ScopeType,
-                    ScopeId = input.ScopeId,
-                };
-                await _maintenance.InsertAsync(m, autoSave: true);
-                created++;
-            }
+                Note = note,
+                SeriesId = seriesId,
+                ScopeType = input.ScopeType,
+                ScopeId = input.ScopeId,
+            }));
         }
+        /* One save for every row: a whole building over a long series is thousands of rows, not thousands of round trips. */
+        await _maintenance.InsertManyAsync(windows, autoSave: true);
+        var created = windows.Count;
 
         /* Each person gets one email listing all their bookings this blocked time cancelled. */
         await _notifier.BookingsCancelledAsync(cancelledBookings, "the space is blocked at that time");

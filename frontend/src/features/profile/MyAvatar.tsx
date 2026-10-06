@@ -1,4 +1,4 @@
-import { initials } from '../../components/bits'
+import { initials } from '../../lib/initials'
 import { useMyPicture, useMyProfile } from './api'
 import './MyAvatar.css'
 

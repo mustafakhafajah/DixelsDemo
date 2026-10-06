@@ -9,7 +9,8 @@ import { generateOccurrences } from '../../lib/recurrence'
 import { useFieldErrors, type FieldErrors } from '../../lib/useFieldErrors'
 import { modals, type MaintenanceTarget } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
-import { defaultRecurrence, OccurrenceList, recurrenceErrors, RecurrenceFields, toRule } from '../bookings/Recurrence'
+import { OccurrenceList, RecurrenceFields } from '../bookings/Recurrence'
+import { defaultRecurrence, recurrenceErrors, toRule } from '../bookings/recurrenceState'
 
 /* The reason is stored as the window's note (in the language in use) and shown on calendars instead of a generic label. */
 const REASONS = ['cleaning', 'renovation', 'outOfService', 'privateEvent'] as const
@@ -48,17 +49,16 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
   }
   const shown: FieldErrors = { ...liveErrors, ...fields.errors }
   const edited = () => fields.clear('mt-start', 'mt-end', 'mt-occurrences')
-  const startMs = start?.getTime()
-  const endMs = end?.getTime()
   const note = reason === OTHER ? otherReason.trim() : t(`maintenance.reasons.${reason}`)
 
+  /* Read from the form's own values (dates and times), so it is only worked out again when those change. */
   const generated = useMemo(() => {
-    if (startMs === undefined || endMs === undefined || endMs <= startMs) return { occurrences: [], truncated: false }
-    const s = new Date(startMs)
-    const e = new Date(endMs)
+    const s = fromDateTime(startDate, startTime)
+    const e = fromDateTime(endDate, endTime)
+    if (!s || !e || e <= s) return { occurrences: [], truncated: false }
     const rule = toRule(recur, s)
     return rule ? generateOccurrences(s, e, rule) : { occurrences: [{ start: s, end: e }], truncated: false }
-  }, [startMs, endMs, recur])
+  }, [startDate, startTime, endDate, endTime, recur])
 
   const windows = generated.occurrences.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() }))
   const preview = usePreviewMaintenance(bad ? null : { scopeType: target.scopeType, scopeId: target.scopeId, occurrences: windows })

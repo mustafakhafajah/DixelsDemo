@@ -6,8 +6,6 @@ import {
   ArrowRightIcon, CalendarCheck2Icon, LockIcon, MailIcon, ShieldCheckIcon,
   UserCheckIcon, ZapIcon,
 } from 'lucide-react'
-import '@fontsource-variable/inter-tight'
-import '@fontsource-variable/jetbrains-mono'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { intlLocale } from '../i18n/languages'

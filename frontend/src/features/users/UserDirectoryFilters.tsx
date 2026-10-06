@@ -12,8 +12,6 @@ export interface UserDirectoryFilterValues {
   lock: string
 }
 
-export const EMPTY_USER_FILTERS: UserDirectoryFilterValues = { search: '', role: '', status: '', lock: '' }
-
 export function UserDirectoryFilters({ value, onChange }: {
   value: UserDirectoryFilterValues
   onChange: (v: UserDirectoryFilterValues) => void

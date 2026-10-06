@@ -11,7 +11,7 @@ import { EVERYONE, useScheduleConfig, type ScheduleConfig, type ScheduleMode } f
 
 /* "Wed 30 Sept 2026" for a day, "1–30 Sept 2026" or "28 Sept – 4 Oct 2026" for a range: Intl leaves out
  * whatever the two ends share, in the chosen language's own order. */
-export function periodLabel(cfg: ScheduleConfig): string {
+function periodLabel(cfg: ScheduleConfig): string {
   const a = dayAt(cfg.from)
   const b = dayAt(cfg.to)
   if (cfg.mode === 'day') return formatDate(a, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })

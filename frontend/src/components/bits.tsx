@@ -63,12 +63,6 @@ export function Loading({ label }: { label?: string }) {
   return <p style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12.5, color: 'var(--slate)', margin: 0 }}>{label ?? t('common.loading')}</p>
 }
 
-export function initials(name: string): string {
-  const parts = name.replace(/[^\p{L}\s.]/gu, ' ').split(/[\s.]+/).filter(Boolean)
-  if (!parts.length) return '?'
-  return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
 /* Shown instead of "Loading…" when a request failed, so the screen never waits forever.
  * what: the thing that failed, e.g. t('load.buildings') ("the buildings"). */
 export function LoadError({ what, error, onRetry }: { what: string; error: unknown; onRetry: () => void }) {

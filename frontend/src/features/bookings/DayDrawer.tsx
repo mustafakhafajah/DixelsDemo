@@ -7,9 +7,10 @@ import { Drawer } from '../../components/Sheet'
 import { isClosedDay } from '../../lib/closedDays'
 import { dayAt, dayKey, durationLabel, formatDate, hm, minLabel } from '../../lib/dateUtils'
 import { computeFree, resourceDayBounds } from '../../lib/laneLayout'
+import { pressable } from '../../lib/pressable'
 import { modals, type ScheduleId } from '../../state/modalStore'
 import { useScheduleData } from './schedule/useScheduleData'
-import { openItem } from './schedule/ScheduleCalendar'
+import { openItem, opens } from './schedule/scheduleItems'
 import { useBookingActions } from './useBookingActions'
 
 export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: string; scheduleId: ScheduleId }) {
@@ -37,7 +38,7 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
       : multiSpace ? (mine ? you : i.ownerName) : i.spaceName
     return (
       <div key={i.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
-        onClick={() => openItem(i)}>
+        onClick={() => openItem(i)} {...(opens(i) ? pressable(() => openItem(i)) : {})}>
         <span className="mono" style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{hm(i.start)}–{hm(i.end)}</span>
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 13, fontWeight: 600 }}><bdi>{primary}</bdi></span>

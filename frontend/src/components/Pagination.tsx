@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { intlLocale } from '../i18n/languages'
+import { PAGE_SIZES } from '../lib/useServerPaging'
 import { Dropdown } from './pickers'
-
-export const PAGE_SIZES = [10, 25, 50, 100] as const
 
 /* What a list counts, as a key under "count" in the locale files (e.g. count.space_one / _other). */
 export type PagerNoun = 'building' | 'floor' | 'space' | 'spaceType' | 'user'
 
 /* Page numbers to show: always the first and last, plus the current page and its neighbours. */
-export function pageWindow(page: number, pageCount: number): (number | 'gap')[] {
+function pageWindow(page: number, pageCount: number): (number | 'gap')[] {
   const pages = new Set([1, pageCount, page - 1, page, page + 1].filter((p) => p >= 1 && p <= pageCount))
   const sorted = [...pages].sort((a, b) => a - b)
   const out: (number | 'gap')[] = []

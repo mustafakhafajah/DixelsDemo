@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAuth } from 'react-oidc-context'
 import i18n from 'i18next'
+import { renewSession, signInAgain } from '../auth/renewal'
 import { API_URL } from '../config'
 
 /* One message the server tied to a request field, e.g. { field: 'name', message: 'Give the space a name.' }. */
@@ -66,10 +67,25 @@ async function toApiError(res: Response): Promise<ApiError> {
 }
 
 /* One request; throws ApiError when the server refuses. A FormData body (a file upload) is sent as it is, and the
- * browser sets its multipart type; any other body goes as JSON. accept: what answer is wanted (JSON, or a file). */
+ * browser sets its multipart type; any other body goes as JSON. accept: what answer is wanted (JSON, or a file).
+ * A signed-in request refused with 401 (the access token ran out) renews the session once and is sent again;
+ * when that fails too, the user is sent to sign in and comes back to the same page afterwards. */
 async function send(token: string | undefined, method: string, path: string, body?: unknown, query?: Query, accept = 'application/json'): Promise<Response> {
+  const res = await sendOnce(token, method, path, body, query, accept)
+  if (res.status === 401 && token) {
+    const renewed = await renewSession()
+    const retry = renewed ? await sendOnce(renewed, method, path, body, query, accept) : res
+    if (retry.status === 401) signInAgain()
+    if (!retry.ok) throw await toApiError(retry)
+    return retry
+  }
+  if (!res.ok) throw await toApiError(res)
+  return res
+}
+
+function sendOnce(token: string | undefined, method: string, path: string, body: unknown, query: Query | undefined, accept: string): Promise<Response> {
   const form = body instanceof FormData
-  const res = await fetch(buildUrl(path, query), {
+  return fetch(buildUrl(path, query), {
     method,
     /* The access token is the only credential. When the portal and the server share one address, the browser
      * would also send the server's sign-in cookie, and the server then demands an anti-forgery token. */
@@ -83,8 +99,6 @@ async function send(token: string | undefined, method: string, path: string, bod
     },
     body: body === undefined ? undefined : form ? body : JSON.stringify(body),
   })
-  if (!res.ok) throw await toApiError(res)
-  return res
 }
 
 export async function apiRequest<T>(token: string | undefined, method: string, path: string, body?: unknown, query?: Query): Promise<T> {

@@ -16,7 +16,8 @@ import { generateOccurrences } from '../../lib/recurrence'
 import { useFieldErrors, type FieldError, type FieldErrors } from '../../lib/useFieldErrors'
 import { modals, type BookingPrefill } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
-import { defaultRecurrence, OccurrenceList, recurrenceErrors, RecurrenceFields, toRule, type OccurrenceRow } from './Recurrence'
+import { OccurrenceList, RecurrenceFields, type OccurrenceRow } from './Recurrence'
+import { defaultRecurrence, recurrenceErrors, toRule } from './recurrenceState'
 
 const newKey = () => `idem-${crypto.randomUUID()}`
 
@@ -99,15 +100,15 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const hasWindow = !!start && !!end && end > start
 
   const rule = !editing && hasWindow ? toRule(recur, start) : null
-  const ruleKey = JSON.stringify(rule)
-  const startMs = start?.getTime()
-  const endMs = end?.getTime()
+  /* The memos below read the window from the form's own values (date and times), so they are only worked out
+   * again when those change, not on every render. */
   const generated = useMemo(() => {
-    const r = JSON.parse(ruleKey)
-    if (!r || startMs === undefined || endMs === undefined) return null
-    if (r.end.mode === 'until') r.end.until = new Date(r.end.until)
-    return generateOccurrences(new Date(startMs), new Date(endMs), r)
-  }, [ruleKey, startMs, endMs])
+    const s = fromDateTime(date, startTime)
+    const e = fromDateTime(date, endTime)
+    if (editing || !s || !e || e <= s) return null
+    const r = toRule(recur, s)
+    return r ? generateOccurrences(s, e, r) : null
+  }, [editing, date, startTime, endTime, recur])
 
   const rangeFrom = start ? dayAt(dayKey(start)) : undefined
   const lastOcc = generated?.occurrences.at(-1)?.end ?? end
@@ -132,6 +133,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       const s = spaces.find((x) => x.id === editing.spaceId)
       return s ? [{ space: s, reason: '' as KeptReason }] : []
     }
+    const start = fromDateTime(date, startTime)
+    const end = fromDateTime(date, endTime)
+    const hasWindow = !!start && !!end && end > start
     const free = (s: Space) => !hasWindow ||
       (!findOverlap(bookings, s.id, start!, end!) && !validateWindowLocal(s.constraints, s.name, start, end, true))
     if (!floorId) return []
@@ -143,7 +147,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         : closedReason(kept.constraints, start!, end!) ? 'closed' : 'hours' })
     }
     return list
-  }, [editing, spaces, eligible, floorId, bookings, hasWindow, start, end, chosenSpaceId])
+  }, [editing, spaces, eligible, floorId, bookings, date, startTime, endTime, chosenSpaceId])
 
   const spaceId = options.some((o) => o.space.id === chosenSpaceId) ? chosenSpaceId : ''
   const space = spaces.find((s) => s.id === spaceId) ?? null
@@ -165,6 +169,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   /* t is a dependency so the notes follow a change of language. */
   const occurrences: OccurrenceRow[] = useMemo(() => {
     if (!generated || !spaceId) return []
+    const space = spaces.find((s) => s.id === spaceId)
     return generated.occurrences.map((o) => {
       const clash = findOverlap(bookings, spaceId, o.start, o.end)
       /* Without Bookings.MultipleSpaces you can't hold two spaces at once, so your other bookings count. */
@@ -185,7 +190,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
             : (seesAll ? t('booking.occurrence.takenBy', { name: hit.ownerName }) : t('booking.occurrence.alreadyBooked'))) : undefined,
       }
     })
-  }, [generated, bookings, spaceId, space, session.userId, seesAll, multipleSpaces, skipOverrides, t])
+  }, [generated, bookings, spaceId, spaces, session.userId, seesAll, multipleSpaces, skipOverrides, t])
 
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()

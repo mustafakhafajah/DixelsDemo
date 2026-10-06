@@ -175,6 +175,10 @@
 .app-shell .seg button { border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--slate); padding: 7px 14px; cursor: pointer; border-radius: 8px; }
 .app-shell .seg button.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
 .app-shell a:focus-visible, .app-shell button:focus-visible, .app-shell input:focus-visible, .app-shell select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Clickable calendar cells, bookings and occurrence rows: the ring is drawn inside, so a scrolling grid never clips it. */
+.app-shell [role='button']:focus-visible, .app-shell [role='checkbox']:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* An opened sheet takes the focus itself when it has no field; it needs no ring for that. */
+.app-shell .modal:focus, .app-shell .drawer:focus { outline: none; }
 .app-shell ::-webkit-scrollbar { width: 10px; height: 10px; }
 .app-shell ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
 

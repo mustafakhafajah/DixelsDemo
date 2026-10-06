@@ -9,8 +9,6 @@ export interface SpaceRegistryFilterValues {
   typeId: string
 }
 
-export const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { buildingId: '', floorId: '', name: '', typeId: '' }
-
 export function SpaceRegistryFilters({ value, onChange, buildings, floors, types }: {
   value: SpaceRegistryFilterValues
   onChange: (v: SpaceRegistryFilterValues) => void

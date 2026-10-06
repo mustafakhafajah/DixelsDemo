@@ -1,15 +1,11 @@
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import i18n from 'i18next'
 import { errorText } from '../../api/client'
-import { useCancelUpcoming, useSetBookable, useUpcomingCount, type EstateKind, type EstateScope } from '../../api/hooks'
-import type { MaintenanceScopeType } from '../../api/types'
+import { useSetBookable, useUpcomingCount, type EstateKind, type EstateScope } from '../../api/hooks'
 import { Modal } from '../../components/Sheet'
 import { modals, type BookableTarget } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
-
-export const scopeTypeOf = (kind: EstateKind): MaintenanceScopeType =>
-  kind === 'building' ? 'Building' : kind === 'floor' ? 'Floor' : 'Space'
+import { scopeTypeOf, useCancelUpcomingAfterSave } from './useCancelUpcomingAfterSave'
 
 /* What happens to bookings that already exist when something stops being bookable: they are kept,
  * and the admin can choose to cancel them. Shown in the forms and in the "Make not bookable" dialog. */
@@ -67,20 +63,6 @@ export function BookableField({ idPrefix, kind, value, onChange, existingId, was
       )}
     </div>
   )
-}
-
-/* After saving an item as not bookable: cancel its upcoming bookings if the admin asked to. */
-export function useCancelUpcomingAfterSave() {
-  const cancel = useCancelUpcoming()
-  return async (kind: EstateKind, id: string, label: string) => {
-    try {
-      const r = await cancel.mutateAsync({ scopeType: scopeTypeOf(kind), scopeId: id })
-      if (r.cancelledCount) toast('warn', i18n.t('bookable.toast.cancelled', { count: r.cancelledCount }), i18n.t('bookable.toast.cancelledIn', { name: label }))
-    } catch (e) {
-      const { code, message } = errorText(e)
-      toast('err', i18n.t('bookable.toast.notCancelled'), message, code)
-    }
-  }
 }
 
 /* The row menu's "Make not bookable": the same warning and choice as the forms, as a small dialog. */

@@ -104,6 +104,34 @@ public class BlockTimeTests : PortalEntityFrameworkCoreTestBase
         saved.ShouldAllBe(m => m.ScopeType == MaintenanceScopeType.Floor && m.ScopeId == room.FloorId);
     }
 
+    [Fact]
+    public async Task The_list_labels_each_window_by_the_space_floor_or_building_it_was_blocked_for()
+    {
+        var room = await CreateRoomAsync();
+        var roomName = room.GetName();
+        var buildingName = await WithUnitOfWorkAsync(async () => (await _buildings.GetAsync(room.BuildingId)).GetName());
+        await _service.ScheduleAsync(Block(room, Ten, Ten.AddHours(1), cancel: false));
+        await _service.ScheduleAsync(Scoped(MaintenanceScopeType.Floor, room.FloorId, Ten.AddHours(2)));
+        await _service.ScheduleAsync(Scoped(MaintenanceScopeType.Building, room.BuildingId, Ten.AddHours(4)));
+
+        var list = (await _service.GetListAsync(new MaintenanceListFilterDto { BuildingId = room.BuildingId })).Items;
+
+        list.Count.ShouldBe(3);
+        list.ShouldAllBe(m => m.SpaceName == roomName);
+        list.Single(m => m.ScopeType == MaintenanceScopeType.Space).ScopeLabel.ShouldBe(roomName);
+        list.Single(m => m.ScopeType == MaintenanceScopeType.Building).ScopeLabel.ShouldBe(buildingName);
+        var floorLabel = list.Single(m => m.ScopeType == MaintenanceScopeType.Floor).ScopeLabel;
+        floorLabel.ShouldContain(buildingName);
+        floorLabel.ShouldNotBe(buildingName);
+    }
+
+    private static ScheduleMaintenanceDto Scoped(MaintenanceScopeType type, Guid scopeId, DateTime start) => new()
+    {
+        ScopeType = type,
+        ScopeId = scopeId,
+        Occurrences = new List<TimeWindowDto> { new() { StartUtc = start, EndUtc = start.AddHours(1) } },
+    };
+
     private static ScheduleMaintenanceDto Block(Space room, DateTime start, DateTime end, bool cancel, string? note = null) => new()
     {
         ScopeType = MaintenanceScopeType.Space,

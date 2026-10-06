@@ -20,9 +20,12 @@ function useEscape(onClose: () => void) {
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-const FIELDS = 'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+/* Dropdowns are buttons (role="combobox") and date fields are buttons that open a calendar. */
+const FIELDS = 'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [role="combobox"]:not([disabled]), button[aria-haspopup]:not([disabled])'
 
-const visible = (el: HTMLElement) => el.getClientRects().length > 0
+/* Reachable with Tab and on screen. Leaves out the hidden native <select> a dropdown keeps for forms: it is
+ * aria-hidden with tabindex -1, and focusing it lost the focus to the page as soon as the dropdown redrew it. */
+const usable = (el: HTMLElement) => el.getClientRects().length > 0 && el.tabIndex >= 0 && !el.closest('[aria-hidden="true"]')
 
 /* Keyboard focus belongs to the open sheet: on opening it moves to the first field (or the sheet itself, so its
  * title is read out), Tab and Shift+Tab go round inside it, and on closing it goes back to what opened it.
@@ -37,12 +40,12 @@ function useDialogFocus(ref: RefObject<HTMLDivElement | null>) {
     /* Opened from something that is gone now (e.g. another sheet): return to whatever has the focus instead. */
     let back = opener?.isConnected ? opener : document.activeElement as HTMLElement | null
     if (!dialog.contains(document.activeElement)) {
-      const field = [...dialog.querySelectorAll<HTMLElement>(FIELDS)].find(visible)
+      const field = [...dialog.querySelectorAll<HTMLElement>(FIELDS)].find(usable)
       ;(field ?? dialog).focus()
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return
-      const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(visible)
+      const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(usable)
       if (!items.length) { e.preventDefault(); return }
       const first = items[0]
       const last = items[items.length - 1]

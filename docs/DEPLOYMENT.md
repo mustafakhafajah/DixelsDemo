@@ -1,3 +1,53 @@
+# Deploying to the shared server
+
+The portal runs on one Windows PC with IIS, at **https://192.168.2.164**:
+
+| Part | Address | Live folder |
+|---|---|---|
+| React app | https://192.168.2.164/portal | `C:\Publish\DixelsPortalWeb` |
+| API, sign-in pages, Swagger (`Dixels.Portal.Web`) | https://192.168.2.164/server | `C:\Publish\DixelsPortalDemo` |
+
+Deploy from `main` only, after the pull request is merged. The server keeps its **own configuration** in the live
+folder, so a deploy never copies these over it: `appsettings*.json`, `openiddict.pfx`, `web.config`, `App_Data`
+(sign-in cookie keys and profile pictures) and `Logs`.
+
+### Server configuration (kept on the server, not in git)
+
+| File in `C:\Publish\DixelsPortalDemo` | What it holds |
+|---|---|
+| `appsettings.json` | `App:SelfUrl` = `https://192.168.2.164/server`, `App:ClientUrl` = `https://192.168.2.164/portal`, `App:CorsOrigins` = `https://192.168.2.164` (plus the localhost dev origins) |
+| `appsettings.secrets.json` | The connection string and the `Abp.Mailing.*` settings (see the email part below) |
+| `openiddict.pfx` | The token-signing certificate |
+| `web.config` | IIS hosting settings for the app |
+
+The React app's server addresses are committed in `frontend/.env.production` (`VITE_API_URL`, `VITE_BASE`); each
+variable is explained in `frontend/.env.example`.
+
+### Steps
+
+1. **Back up** both live folders to `C:\Publish\_backup\<date>\`. Rolling back = copying them back.
+2. **Backend:**
+   1. `dotnet publish backend/src/Dixels.Portal.Web -c Release -o <staging folder>`.
+   2. Put an `app_offline.htm` in `C:\Publish\DixelsPortalDemo` (IIS stops the app and shows that page).
+   3. Copy without the server's own files:
+      `robocopy <staging folder> C:\Publish\DixelsPortalDemo /E /XF appsettings*.json openiddict.pfx web.config /XD App_Data Logs`
+      (robocopy exit codes 1 to 3 mean success).
+   4. If the change has a database migration or new permissions, run the DbMigrator now (next step), then remove
+      `app_offline.htm`.
+3. **Database (only when needed):** build `backend/src/Dixels.Portal.DbMigrator` in Release and run the exe from
+   its `bin\Release\net10.0` folder. Its git-ignored `appsettings.secrets.json` points at the live database. It also
+   re-seeds the sign-in clients' redirect addresses from its `appsettings.json` (`OpenIddict:Applications`), so
+   those addresses must stay exactly as they are or sign-in breaks.
+4. **Frontend:** in `frontend`, `npm ci` then `npm run build` (uses `.env.production`), then
+   `robocopy dist C:\Publish\DixelsPortalWeb /MIR`. `dist` includes `web.config`, which sends deep links to
+   `/portal/index.html`.
+5. Open https://192.168.2.164/portal, sign in and check a page that lists data.
+
+> Don't publish straight into the live folder from Visual Studio (a Folder publish profile pointing at
+> `C:\Publish\DixelsPortalDemo`): it would copy the repo's `appsettings.json` and `web.config` over the server's.
+
+---
+
 # Email through Microsoft 365: setup checklist
 
 The portal sends its emails (booking confirmations, changes, cancellations, reminders, welcome emails, ABP's

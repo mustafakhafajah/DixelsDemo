@@ -12,7 +12,8 @@ import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
 import { useDropUnknown, useUrlSearchBox } from '../../lib/useUrlState'
 import { modals } from '../../state/modalStore'
-import { itemClass, openItem } from '../bookings/schedule/ScheduleCalendar'
+import { pressable } from '../../lib/pressable'
+import { itemClass, openItem, opens } from '../bookings/schedule/scheduleItems'
 import { useFindFilters, type FindDuration } from './useFindFilters'
 
 const px = (min: number) => (min / 60) * RT_PX_PER_HOUR
@@ -311,13 +312,16 @@ export function FindSpacePage() {
                       )}
                       {cells.map((c) => (
                         <div key={c.start} className="rt-free" style={{ insetInlineStart: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
-                          onClick={() => cellPrefill(s, c, c.reg)} title={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })} />
+                          onClick={() => cellPrefill(s, c, c.reg)} {...pressable(() => cellPrefill(s, c, c.reg))}
+                          title={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })}
+                          aria-label={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })} />
                       ))}
                       {segs.map((g) => {
                         const it = g.item
                         const who = it.kind === 'maintenance' ? it.note || t('schedule.blocked') : it.busy ? t('schedule.busy') : it.ownerUserId === userId ? t('common.you') : it.ownerName
                         return (
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
+                            {...(opens(it) ? pressable(() => openItem(it)) : {})}
                             style={{ insetInlineStart: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
                             title={`${hm(it.start)}–${hm(it.end)} UTC · ${who}`}>
                             <b>{g.clipStart ? '↥' : ''}{hm(it.start)}{g.clipEnd ? ' ↧' : ''}</b>

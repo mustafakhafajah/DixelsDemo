@@ -111,14 +111,16 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             var appRootUrls = RootUrls(configurationSection["Portal_App:RootUrl"]).Select(u => u.EnsureEndsWith('/')).ToList();
 
             /* Public SPA client using Authorization Code + PKCE only (no client secret,
-             * no Implicit flow) — this is the client the React app authenticates through. */
+             * no Implicit flow) — this is the client the React app authenticates through.
+             * Refresh tokens (requested with the offline_access scope) let the app renew its access token
+             * in the background instead of failing once it runs out. */
             await CreateApplicationAsync(
                 name: appClientId!,
                 type: OpenIddictConstants.ClientTypes.Public,
                 consentType: OpenIddictConstants.ConsentTypes.Implicit,
                 displayName: "Portal SPA",
                 secret: null,
-                grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode },
+                grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.RefreshToken },
                 scopes: commonScopes,
                 redirectUris: appRootUrls.Select(u => $"{u}callback").ToList(),
                 clientUri: appRootUrls.First(),

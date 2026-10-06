@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
-import { initials, LoadError, Loading } from '../../components/bits'
+import { LoadError, Loading } from '../../components/bits'
+import { initials } from '../../lib/initials'
 import { EmptyState } from '../../components/EmptyState'
 import { Pagination } from '../../components/Pagination'
 import { RowMenu, type RowMenuItem } from '../../components/RowMenu'
@@ -10,7 +11,9 @@ import { formatDate, parseUtc } from '../../lib/dateUtils'
 import { useServerPaging, useStayOnRealPage } from '../../lib/useServerPaging'
 import { urlParam, useDropUnknown, useUrlSearchBox, useUrlState } from '../../lib/useUrlState'
 import { roleLabel, useUserDirectory, useUserRoles, type UserDirectoryItem, type UserDirectoryRole, type UserRole } from './api'
-import { EMPTY_USER_FILTERS, UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
+import { UserDirectoryFilters, type UserDirectoryFilterValues } from './UserDirectoryFilters'
+
+const EMPTY_USER_FILTERS: UserDirectoryFilterValues = { search: '', role: '', status: '', lock: '' }
 import './users.css'
 
 const LOCK_LABEL: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }

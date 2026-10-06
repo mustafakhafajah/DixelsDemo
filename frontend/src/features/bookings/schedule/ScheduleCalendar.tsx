@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { lifecycleOf, type ScheduleItem } from '../../../api/types'
+import type { ScheduleItem } from '../../../api/types'
 import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
 import { isClosedAt, isClosedDay } from '../../../lib/closedDays'
@@ -8,23 +8,10 @@ import { DEFAULT_MIN_MINUTES, PX_PER_HOUR, SLOT_MIN } from '../../../lib/constan
 import { WEEKDAYS } from '../../../lib/closedDays'
 import { addDays, dayAt, dayKey, formatDate, hm, minLabel, minOfDay, pad, todayKey, weekdayName } from '../../../lib/dateUtils'
 import { computeFree, daySegment, gridBounds, layoutLanes, type DaySegment } from '../../../lib/laneLayout'
+import { pressable } from '../../../lib/pressable'
 import { modals, type ScheduleId } from '../../../state/modalStore'
+import { itemClass, openItem, opens } from './scheduleItems'
 import type { ScheduleData } from './useScheduleData'
-
-export function itemClass(i: ScheduleItem, myId: string): string {
-  if (i.kind === 'maintenance') return 'cleaning'
-  if (i.busy) return 'busy'
-  const st = lifecycleOf(i)
-  if (st === 'in_progress') return 'inprog'
-  if (st === 'ended') return 'ended'
-  return i.ownerUserId === myId ? 'mine' : 'other'
-}
-
-/* A grey busy block is someone else's booking: there is nothing to open. */
-export const openItem = (i: ScheduleItem) => {
-  if (i.kind === 'booking' && i.busy) return
-  modals.detail(i.kind === 'booking' ? 'booking' : 'maintenance', i.id)
-}
 
 function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const { t } = useTranslation()
@@ -74,12 +61,14 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                    * before it was closed still open their detail. */
                   <div key={key} className={`day-cell${inRange ? '' : ' out'}${shut ? ' closed' : ''}${key === today ? ' today' : ''}`}
                     onClick={inRange && !shut ? () => modals.day(key, id) : undefined}
+                    {...(inRange && !shut ? pressable(() => modals.day(key, id)) : {})}
                     title={shut ? t('schedule.buildingClosedDay') : undefined}>
                     <span className="day-num">{i + 1}</span>
                     {shut && <span className="closed-label">{t('schedule.closed')}</span>}
                     {list.slice(0, 2).map((it) => (
                       <div key={it.id} className={`chip ${itemClass(it, userId)}`}
-                        onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}>{hm(it.start)} <bdi>{label(it)}</bdi></div>
+                        onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}
+                        {...(shut && opens(it) ? pressable(() => openItem(it)) : {})}>{hm(it.start)} <bdi>{label(it)}</bdi></div>
                     ))}
                     {list.length > 2 && <div className="more-link">{t('schedule.more', { count: list.length - 2 })}</div>}
                   </div>
@@ -239,6 +228,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                     moveDrag({ key: k, a: m, b: m })
                   }}
                   onClick={inert ? undefined : () => { if (!pressedWithMouse.current) slotPrefill(k, m) }}
+                  {...(inert ? {} : { ...pressable(() => slotPrefill(k, m)), 'aria-label': `${formatDate(dayAt(k), { weekday: 'short', day: 'numeric', month: 'short' })} · ${t('schedule.slotTitle', { time: minLabel(m) })}` })}
                   title={inert || dragging ? undefined : t('schedule.slotTitle', { time: minLabel(m) })} />
               )
             })
@@ -263,7 +253,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                   const h = Math.max(17, ((g.e - g.s) / 60) * pph - 1)
                   return (
                     <div key={`${it.id}-${k}`} className={`tg-block ${itemClass(it, userId)}${h < 30 ? ' compact' : ''}`}
-                      onClick={() => openItem(it)}
+                      onClick={() => openItem(it)} {...(opens(it) ? pressable(() => openItem(it)) : {})}
                       style={{ top: ((g.s - open) / 60) * pph, height: h, insetInlineStart: `calc(${w * g.lane}% + 2px)`, width: `calc(${w}% - 4px)` }}
                       title={`${hm(it.start)}–${hm(it.end)} UTC · ${it.spaceName} · ${who}`}>
                       <b>{g.clipStart ? '↥ ' : ''}{hm(it.start)}–{hm(it.end)}{g.clipEnd ? ' ↧' : ''}</b>

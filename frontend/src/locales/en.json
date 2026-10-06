@@ -269,6 +269,11 @@
   "splash": {
     "wait": "Please wait…"
   },
+  "crash": {
+    "title": "Something went wrong on this page",
+    "detail": "Reloading usually fixes it. Anything you already saved is safe.",
+    "reload": "Reload the page"
+  },
   "estate": {
     "addBuilding": "Add a building",
     "addFloor": "Add a floor",

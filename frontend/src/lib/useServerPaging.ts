@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
-import { PAGE_SIZES } from '../components/Pagination'
 import { urlParam, useUrlState, type UrlParam } from './useUrlState'
+
+/* The page sizes a list offers (the pager's "per page" choice). */
+export const PAGE_SIZES = [10, 25, 50, 100] as const
 
 export interface ServerPaging {
   page: number

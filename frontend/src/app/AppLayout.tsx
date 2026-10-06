@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { LanguagesIcon, MoonIcon, SunIcon, UserIcon } from 'lucide-react'
@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
+import { Loading } from '../components/bits'
 import { Toasts } from '../components/Toasts'
 import { MyAvatar } from '../features/profile/MyAvatar'
 import { roleLabel } from '../features/users/api'
@@ -19,11 +20,13 @@ import { modals } from '../state/modalStore'
 import { useSidebarStore } from '../state/sidebarStore'
 import { useNavCountStore } from '../state/navCountStore'
 import { useThemeStore, type Theme } from '../state/themeStore'
-import { Overlays } from './Overlays'
-import { PageActionsSlot } from './pageActions'
+import { PageActionsSlot } from './pageActionsSlot'
 import { ESTATE_PAGES, manageAny, useSession } from './session'
 import { P } from '../auth/permissions'
 import './appShell.css'
+
+/* The forms and drawers are downloaded separately, after the shell is up. */
+const Overlays = lazy(() => import('./Overlays').then((m) => ({ default: m.Overlays })))
 
 /* Each page's title and the line under it, as translation keys. */
 const PAGE_META = {
@@ -113,7 +116,12 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   const today = useMemo(() => dayAt(todayKey()), [])
   const seesBookings = session.can(P.Bookings.Default)
   const bookings = useBookings({ from: today, ownerUserId: session.can(P.Bookings.ViewAll) ? undefined : session.userId || undefined }, !!session.userId && seesBookings)
-  const now = Date.now()
+  /* The time, moved on every minute, so bookings drop out of the count as they end. */
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
   const upcoming = bookings.data?.filter((b) => b.end.getTime() > now).length
   const showEstate = Object.fromEntries(ESTATE_PAGES.map((p) => [p.path, manageAny(p.area).some(session.can)]))
   const { collapsed, toggle } = useSidebarStore()
@@ -275,11 +283,16 @@ export function AppLayout() {
         <Topbar onMenu={() => setNavOpen(true)} onSlot={setActionsSlot} />
         <main className="main">
           <PageActionsSlot.Provider value={actionsSlot}>
-            <Outlet />
+            {/* A page opened for the first time is downloaded first; the shell stays, with "Loading…" in its place. */}
+            <Suspense fallback={<Loading />}>
+              <Outlet />
+            </Suspense>
           </PageActionsSlot.Provider>
         </main>
       </div>
-      <Overlays />
+      <Suspense fallback={null}>
+        <Overlays />
+      </Suspense>
       <Toasts />
     </div>
   )

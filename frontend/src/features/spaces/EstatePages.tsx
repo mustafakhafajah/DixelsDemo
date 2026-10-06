@@ -22,7 +22,9 @@ import { urlParam, useDropUnknown, useUrlSearchBox, useUrlState } from '../../li
 import { modals } from '../../state/modalStore'
 import { useFilteredNavCount } from '../../state/navCountStore'
 import { toast } from '../../state/toastStore'
-import { EMPTY_SPACE_FILTERS, SpaceRegistryFilters, type SpaceRegistryFilterValues } from './SpaceRegistryFilters'
+import { SpaceRegistryFilters, type SpaceRegistryFilterValues } from './SpaceRegistryFilters'
+
+const EMPTY_SPACE_FILTERS: SpaceRegistryFilterValues = { buildingId: '', floorId: '', name: '', typeId: '' }
 
 /* The row menu item: "Make not bookable" asks first (it shows the bookings already made there);
  * "Make bookable" can't hurt anyone, so it applies straight away. */

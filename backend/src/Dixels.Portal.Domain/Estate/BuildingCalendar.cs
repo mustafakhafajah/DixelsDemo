@@ -16,16 +16,38 @@ public static class BuildingCalendar
         catch (InvalidTimeZoneException) { return TimeZoneInfo.Utc; }
     }
 
+    /* Only IANA names pass (and "UTC"): the browser knows no others, and on Windows the server would also
+     * accept a Windows name ("Arab Standard Time") the SPA then reads as UTC. */
     public static bool IsKnownZone(string id)
     {
         if (string.Equals(id, "UTC", StringComparison.OrdinalIgnoreCase)) return true;
-        try { TimeZoneInfo.FindSystemTimeZoneById(id); return true; }
+        try { return TimeZoneInfo.FindSystemTimeZoneById(id).HasIanaId; }
         catch (TimeZoneNotFoundException) { return false; }
         catch (InvalidTimeZoneException) { return false; }
     }
 
-    public static DateOnly LocalDay(DateTime utc, TimeZoneInfo zone)
-        => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone));
+    public static DateTime ToLocal(DateTime utc, TimeZoneInfo zone)
+        => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
+
+    public static DateOnly LocalDay(DateTime utc, TimeZoneInfo zone) => DateOnly.FromDateTime(ToLocal(utc, zone));
+
+    /* Opening hours are read on the building's own clock too: in Riyadh (UTC+3), 08:00-18:00 is 05:00-15:00 UTC,
+     * and in London the UTC times move by an hour with daylight saving. The window must start at or after opening
+     * and end by closing on the same local day; ending exactly at local midnight counts as the day before. */
+    public static bool IsWithinHours(ResolvedConstraints c, DateTime startUtc, DateTime endUtc)
+    {
+        var zone = Zone(c.TimeZone);
+        var start = ToLocal(startUtc, zone);
+        var end = ToLocal(endUtc, zone);
+        var endDay = end.Date;
+        var endMin = end.TimeOfDay.TotalMinutes;
+        if (endMin == 0 && end > start)
+        {
+            endDay = endDay.AddDays(-1);
+            endMin = 1440;
+        }
+        return endDay == start.Date && start.TimeOfDay.TotalMinutes >= c.OpenMinute && endMin <= c.CloseMinute;
+    }
 
     /* The first closed local day the window touches (a holiday, or a weekly closed day), or null when it is open.
      * Checks every local day the window touches: its start day and the day of its last minute. */

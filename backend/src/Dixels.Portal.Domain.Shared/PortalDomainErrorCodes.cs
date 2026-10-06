@@ -39,6 +39,10 @@ public static class PortalDomainErrorCodes
     public const string SpaceTypeNotFound = "space_type.not_found";
     public const string SpaceTypeDuplicate = "space_type.duplicate";
     public const string SpaceTypeInUse = "space_type.in_use";
+    /* Deleting something that still has floors, spaces or bookings that haven't ended under it. */
+    public const string BuildingNotEmpty = "building.not_empty";
+    public const string FloorNotEmpty = "floor.not_empty";
+    public const string SpaceHasBookings = "space.has_bookings";
 
     public const string AccessForbidden = "access.forbidden";
 
@@ -84,6 +88,9 @@ public static class PortalDomainErrorCodes
         [SpaceTypeNotFound] = HttpStatusCode.NotFound,
         [SpaceTypeDuplicate] = HttpStatusCode.Conflict,
         [SpaceTypeInUse] = HttpStatusCode.Conflict,
+        [BuildingNotEmpty] = HttpStatusCode.Conflict,
+        [FloorNotEmpty] = HttpStatusCode.Conflict,
+        [SpaceHasBookings] = HttpStatusCode.Conflict,
         [AccessForbidden] = HttpStatusCode.Forbidden,
         [BookingNotFound] = HttpStatusCode.NotFound,
         [BookingConflict] = HttpStatusCode.Conflict,

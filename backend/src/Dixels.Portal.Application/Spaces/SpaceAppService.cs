@@ -31,11 +31,12 @@ public class SpaceAppService
     private readonly IRepository<Booking, Guid> _bookings;
     private readonly IRepository<MaintenanceWindow, Guid> _maintenance;
     private readonly BookingManager _bookingManager;
+    private readonly IBookingLocks _locks;
 
     public SpaceAppService(IRepository<Space, Guid> repository, SpaceManager spaceManager,
         IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors,
         IRepository<SpaceType, Guid> types, IRepository<Booking, Guid> bookings,
-        IRepository<MaintenanceWindow, Guid> maintenance, BookingManager bookingManager)
+        IRepository<MaintenanceWindow, Guid> maintenance, BookingManager bookingManager, IBookingLocks locks)
         : base(repository)
     {
         _spaceManager = spaceManager;
@@ -45,6 +46,7 @@ public class SpaceAppService
         _bookings = bookings;
         _maintenance = maintenance;
         _bookingManager = bookingManager;
+        _locks = locks;
         LocalizationResource = typeof(PortalResource);
     }
 
@@ -76,8 +78,15 @@ public class SpaceAppService
     [Authorize(PortalPermissions.Spaces.Default)]
     public override Task<SpaceDto> GetAsync(Guid id) => base.GetAsync(id);
 
+    /* Locked like a booking on the space, so nobody books it between the check and the delete. */
     [Authorize(PortalPermissions.Spaces.Delete)]
-    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
+    public override async Task DeleteAsync(Guid id)
+    {
+        await _locks.LockSpacesAsync([id]);
+        var space = await GetEntityByIdAsync(id);
+        await _spaceManager.EnsureCanDeleteAsync(space);
+        await Repository.DeleteAsync(space, autoSave: true);
+    }
 
     [Authorize(PortalPermissions.Spaces.Create)]
     public override async Task<SpaceDto> CreateAsync(CreateUpdateSpaceDto input)

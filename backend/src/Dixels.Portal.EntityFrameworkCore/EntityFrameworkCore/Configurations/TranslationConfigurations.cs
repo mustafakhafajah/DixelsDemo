@@ -9,7 +9,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Dixels.Portal.EntityFrameworkCore.Configurations;
 
 /* One row per entity per language, keyed by (owner, language). Names are unique within a language;
- * the same name in two languages is fine. */
+ * the same name in two languages is fine.
+ * Buildings and spaces are only soft-deleted, so their name rows stay behind: a unique index here would stop
+ * anyone reusing a deleted building's or space's name. Their managers check uniqueness among the ones not
+ * deleted, and the index only speeds that up. Space types are really deleted (names and all), so theirs
+ * stays unique. */
 
 public class BuildingTranslationConfiguration : IEntityTypeConfiguration<BuildingTranslation>
 {
@@ -19,7 +23,7 @@ public class BuildingTranslationConfiguration : IEntityTypeConfiguration<Buildin
         b.HasKey(x => new { x.BuildingId, x.Language });
         b.Property(x => x.Language).HasMaxLength(PortalLanguages.MaxCodeLength);
         b.Property(x => x.Name).IsRequired().HasMaxLength(BuildingConsts.MaxNameLength);
-        b.HasIndex(x => new { x.Language, x.Name }).IsUnique();
+        b.HasIndex(x => new { x.Language, x.Name });
     }
 }
 
@@ -57,6 +61,6 @@ public class SpaceTranslationConfiguration : IEntityTypeConfiguration<SpaceTrans
         b.Property(x => x.Language).HasMaxLength(PortalLanguages.MaxCodeLength);
         b.Property(x => x.Name).IsRequired().HasMaxLength(SpaceConsts.MaxNameLength);
         b.Property(x => x.Note).HasMaxLength(SpaceConsts.MaxNoteLength);
-        b.HasIndex(x => new { x.Language, x.Name }).IsUnique();
+        b.HasIndex(x => new { x.Language, x.Name });
     }
 }

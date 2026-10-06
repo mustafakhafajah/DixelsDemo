@@ -1,7 +1,7 @@
 import i18n from 'i18next'
 import type { Constraints, ScheduleItem } from '../api/types'
 import { DEFAULT_CLOSE_MIN, DEFAULT_OPEN_MIN } from './constants'
-import { closedReason, withoutClosed } from './closedDays'
+import { closedReason, hoursSpan, isWithinHours, onlyOpen } from './closedDays'
 import { dayAt, dayKey, minOfDay } from './dateUtils'
 
 export interface DaySegment {
@@ -78,9 +78,9 @@ function widen(bounds: MinuteWindow, items: ScheduleItem[]): MinuteWindow {
   return { start: open, end: close }
 }
 
-/* One space's resolved hours, widened only by its own items that day. */
+/* One space's resolved hours (on the building's clock, so shifted on this UTC day), widened only by its own items that day. */
 export function resourceDayBounds(c: Constraints, spaceId: string, items: ScheduleItem[], key: string): MinuteWindow {
-  const w = widen({ start: c.openMinute, end: c.closeMinute }, itemsOnDay(items, spaceId, key))
+  const w = widen(hoursSpan(c, key), itemsOnDay(items, spaceId, key))
   const open = Math.max(0, w.start)
   return { start: open, end: Math.min(1440, Math.max(w.end, open + 60)) }
 }
@@ -90,7 +90,8 @@ export function candidatesDayBounds(spaces: { id: string; constraints: Constrain
   if (!spaces.length) return { start: DEFAULT_OPEN_MIN, end: DEFAULT_CLOSE_MIN }
   let w: MinuteWindow = { start: 1440, end: 0 }
   spaces.forEach((s) => {
-    w = { start: Math.min(w.start, s.constraints.openMinute), end: Math.max(w.end, s.constraints.closeMinute) }
+    const h = hoursSpan(s.constraints, key)
+    w = { start: Math.min(w.start, h.start), end: Math.max(w.end, h.end) }
   })
   const ids = new Set(spaces.map((s) => s.id))
   w = widen(w, items.filter((i) => ids.has(i.spaceId) && dayKey(i.start) === key))
@@ -100,13 +101,15 @@ export function candidatesDayBounds(spaces: { id: string; constraints: Constrain
   return { start: open, end: close }
 }
 
-/* Grid bounds for a time grid: union of the shown spaces' hours, widened by rendered segments. */
+/* Grid bounds for a time grid: union of the shown spaces' hours on the shown days (segsBy's keys), widened by rendered segments. */
 export function gridBounds(segsBy: Record<string, DaySegment[]>, constraints: Constraints[]): MinuteWindow {
   let open = DEFAULT_OPEN_MIN
   let close = DEFAULT_CLOSE_MIN
-  if (constraints.length) {
-    open = Math.min(...constraints.map((c) => c.openMinute))
-    close = Math.max(...constraints.map((c) => c.closeMinute))
+  const days = Object.keys(segsBy)
+  const spans = constraints.flatMap((c) => days.length ? days.map((k) => hoursSpan(c, k)) : [{ start: c.openMinute, end: c.closeMinute }])
+  if (spans.length) {
+    open = Math.min(...spans.map((h) => h.start))
+    close = Math.max(...spans.map((h) => h.end))
   }
   Object.values(segsBy).forEach((segs) => segs.forEach((g) => {
     open = Math.min(open, Math.floor(g.s / 60) * 60)
@@ -120,21 +123,19 @@ export function gridBounds(segsBy: Record<string, DaySegment[]>, constraints: Co
 
 /* Free windows for one space on one day inside [open, close] (mock: computeFree). */
 export function computeFree(c: Constraints, spaceId: string, items: ScheduleItem[], key: string, open: number, close: number): MinuteWindow[] {
-  const effOpen = Math.max(open, c.openMinute)
-  const effClose = Math.min(close, c.closeMinute)
-  if (effClose <= effOpen) return []
+  if (close <= open) return []
   const busy = itemsOnDay(items, spaceId, key)
     .map((i) => ({ s: minOfDay(i.start), e: endMin(i.end) }))
     .sort((a, b) => a.s - b.s)
   const out: MinuteWindow[] = []
-  let cursor = effOpen
+  let cursor = open
   busy.forEach(({ s, e }) => {
-    if (s > cursor) out.push({ start: cursor, end: Math.min(s, effClose) })
+    if (s > cursor) out.push({ start: cursor, end: Math.min(s, close) })
     cursor = Math.max(cursor, e)
   })
-  if (cursor < effClose) out.push({ start: cursor, end: effClose })
-  /* Time on a holiday or weekly closed day of the building (its own time zone) is never free. */
-  return withoutClosed(c, key, out.filter((w) => w.end > w.start))
+  if (cursor < close) out.push({ start: cursor, end: close })
+  /* Time outside opening hours, or on a holiday or weekly closed day, is never free (all on the building's own clock). */
+  return onlyOpen(c, key, out.filter((w) => w.end > w.start))
 }
 
 /* Client-side mirror of the server's window validation, for live form feedback only. */
@@ -146,9 +147,7 @@ export function validateWindowLocal(c: Constraints | null, spaceName: string, st
   if (!c) return null
   const closed = closedReason(c, start, end)
   if (closed) return { code: 'validation.holiday_closed', message: i18n.t('validation.buildingClosed', { space: spaceName, when: closed }) }
-  const sMin = minOfDay(start)
-  const eMin = endMin(end)
-  if (sMin < c.openMinute || eMin > c.closeMinute)
+  if (!isWithinHours(c, start, end))
     return {
       code: 'validation.outside_hours',
       message: i18n.t('validation.outsideHours', {

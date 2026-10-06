@@ -5,22 +5,36 @@ using System.Threading.Tasks;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Localization;
+using Dixels.Portal.Spaces;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.Portal.Floors;
 
 /* Floor rules: an English name, optional names in other languages, each unique within its building and
- * language; and overrides that only narrow the building's rules. */
+ * language; overrides that only narrow the building's rules; and only an empty floor can be deleted. */
 public class FloorManager : PortalDomainService
 {
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
+    private readonly IRepository<Space, Guid> _spaces;
 
-    public FloorManager(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors)
+    public FloorManager(IRepository<Building, Guid> buildings, IRepository<Floor, Guid> floors, IRepository<Space, Guid> spaces)
     {
         _buildings = buildings;
         _floors = floors;
+        _spaces = spaces;
+    }
+
+    /* Its spaces (and so their bookings) would point at a deleted floor; they move or go first. */
+    public async Task EnsureCanDeleteAsync(Floor floor)
+    {
+        if (await _spaces.AnyAsync(s => s.FloorId == floor.Id))
+        {
+            var building = await _buildings.FindAsync(floor.BuildingId);
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.FloorNotEmpty, message:
+                L["Error:FloorNotEmpty", building?.GetName() ?? "", floor.GetName()]);
+        }
     }
 
     public async Task<Floor> CreateAsync(Guid buildingId, string name, IEnumerable<NameTranslation>? translations, ConstraintOverrides overrides)

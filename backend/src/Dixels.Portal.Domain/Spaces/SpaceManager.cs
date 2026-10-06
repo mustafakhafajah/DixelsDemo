@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
 using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
@@ -13,22 +14,35 @@ using Volo.Abp.Domain.Repositories;
 namespace Dixels.Portal.Spaces;
 
 /* Space rules: an English name, optional names (and notes) in other languages, each name unique within its
- * language; a floor that belongs to the chosen building, an existing space type, and overrides that only
- * narrow the floor's rules. */
+ * language; a floor that belongs to the chosen building, an existing space type, overrides that only
+ * narrow the floor's rules; and no deleting a space people still have bookings on. */
 public class SpaceManager : PortalDomainService
 {
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<SpaceType, Guid> _types;
+    private readonly IRepository<Booking, Guid> _bookings;
 
     public SpaceManager(IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors,
-        IRepository<Building, Guid> buildings, IRepository<SpaceType, Guid> types)
+        IRepository<Building, Guid> buildings, IRepository<SpaceType, Guid> types, IRepository<Booking, Guid> bookings)
     {
         _spaces = spaces;
         _floors = floors;
         _buildings = buildings;
         _types = types;
+        _bookings = bookings;
+    }
+
+    /* A confirmed booking that hasn't ended (upcoming or under way) would be left on a space that no longer
+     * exists. The admin cancels them first, the way the "not bookable" switch offers; past and cancelled
+     * bookings stay as history. */
+    public async Task EnsureCanDeleteAsync(Space space)
+    {
+        var now = Clock.Now;
+        if (await _bookings.AnyAsync(b => b.SpaceId == space.Id && b.Status == BookingStatus.Confirmed && b.EndUtc > now))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.SpaceHasBookings, message:
+                L["Error:SpaceHasBookings", space.GetName()]);
     }
 
     /* name and note are the English ones. */

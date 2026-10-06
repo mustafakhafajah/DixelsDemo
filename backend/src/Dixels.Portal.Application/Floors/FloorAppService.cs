@@ -38,7 +38,12 @@ public class FloorAppService
     public override Task<FloorDto> GetAsync(Guid id) => base.GetAsync(id);
 
     [Authorize(PortalPermissions.Floors.Delete)]
-    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
+    public override async Task DeleteAsync(Guid id)
+    {
+        var floor = await GetEntityByIdAsync(id);
+        await _floorManager.EnsureCanDeleteAsync(floor);
+        await Repository.DeleteAsync(floor, autoSave: true);
+    }
 
     /* The building filter runs in the database. The order (building name, then floor number, "2" before "10")
      * is something the database can't sort by, so the filtered floors are ordered after mapping and then cut

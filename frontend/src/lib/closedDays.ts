@@ -11,6 +11,12 @@ export interface ClosedRules {
   timeZone: string
 }
 
+/* Opening hours are minutes of the building's local day too (a space's Constraints fit). */
+export interface OpeningRules extends ClosedRules {
+  openMinute: number
+  closeMinute: number
+}
+
 /* Weekday toggles, Monday first; the numbers are JS getDay() (0 = Sunday), as the server stores them.
  * Their names come from weekdayName(), in the chosen language. */
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0]
@@ -29,16 +35,39 @@ function formatter(tz: string): Intl.DateTimeFormat {
   let f = formatters.get(tz)
   if (!f) {
     /* An unknown zone counts as UTC, as on the server. */
-    f = new Intl.DateTimeFormat('en-CA', { timeZone: isValidTimeZone(tz) ? tz : 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' })
+    f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: isValidTimeZone(tz) ? tz : 'UTC', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    })
     formatters.set(tz, f)
   }
   return f
 }
 
+const localParts = (d: Date, tz: string) => Object.fromEntries(formatter(tz || 'UTC').formatToParts(d).map((x) => [x.type, x.value]))
+
 /* The date ("YYYY-MM-DD") at this instant in the given time zone. */
 export function localDayKey(d: Date, tz: string): string {
-  const p = Object.fromEntries(formatter(tz || 'UTC').formatToParts(d).map((x) => [x.type, x.value]))
+  const p = localParts(d, tz)
   return `${p.year}-${p.month}-${p.day}`
+}
+
+/* Minutes since midnight at this instant in the given time zone. */
+export function localMinute(d: Date, tz: string): number {
+  const p = localParts(d, tz)
+  return Number(p.hour) * 60 + Number(p.minute)
+}
+
+/* Does the window fit the opening hours on the building's own clock? It must start at or after opening and end by
+ * closing on the same local day; ending exactly at local midnight counts as the day before. Mirrors the server's
+ * BuildingCalendar.IsWithinHours. */
+export function isWithinHours(r: OpeningRules, start: Date, end: Date): boolean {
+  let endDay = localDayKey(end, r.timeZone)
+  let endMin = localMinute(end, r.timeZone)
+  if (endMin === 0 && end > start) {
+    endDay = dayKey(new Date(dayAt(endDay).getTime() - 86400000))
+    endMin = 1440
+  }
+  return endDay === localDayKey(start, r.timeZone) && localMinute(start, r.timeZone) >= r.openMinute && endMin <= r.closeMinute
 }
 
 /* Is this date (in the building's own calendar) a holiday or a weekly closed day? */
@@ -62,17 +91,22 @@ export function closedReason(r: ClosedRules, start: Date, end: Date): string | n
   return null
 }
 
-/* The parts of a UTC day (minutes 0-1440) that are open, i.e. not on a closed local day. Offsets are whole
- * quarter hours, so checking every 15 minutes finds the local midnight exactly. */
+/* The parts of a UTC day (minutes 0-1440) that are open: not on a closed local day, and inside the opening hours
+ * on the local clock. Offsets are whole quarter hours and hours are whole hours, so checking every 15 minutes
+ * finds each local midnight, opening and closing exactly. */
 const openCache = new Map<string, MinuteWindow[]>()
-export function openParts(r: ClosedRules, key: string): MinuteWindow[] {
-  if (!r.holidays.length && !r.closedWeekdays.length) return [{ start: 0, end: 1440 }]
-  const cacheKey = `${r.timeZone}|${r.holidays.join(',')}|${r.closedWeekdays.join(',')}|${key}`
+export function openParts(r: OpeningRules, key: string): MinuteWindow[] {
+  const allHours = r.openMinute <= 0 && r.closeMinute >= 1440
+  if (!r.holidays.length && !r.closedWeekdays.length && allHours) return [{ start: 0, end: 1440 }]
+  const cacheKey = `${r.timeZone}|${r.holidays.join(',')}|${r.closedWeekdays.join(',')}|${r.openMinute}-${r.closeMinute}|${key}`
   const hit = openCache.get(cacheKey)
   if (hit) return hit
   const out: MinuteWindow[] = []
   for (let m = 0; m < 1440; m += 15) {
-    if (isClosedAt(r, dayAt(key, 0, m))) continue
+    const at = dayAt(key, 0, m)
+    if (isClosedAt(r, at)) continue
+    const local = localMinute(at, r.timeZone)
+    if (local < r.openMinute || local >= r.closeMinute) continue
     const last = out[out.length - 1]
     if (last && last.end === m) last.end = m + 15
     else out.push({ start: m, end: m + 15 })
@@ -81,8 +115,14 @@ export function openParts(r: ClosedRules, key: string): MinuteWindow[] {
   return out
 }
 
+/* The stretch of a UTC day (minutes) the opening hours cover, closed days aside: what a time grid shows for it. */
+export function hoursSpan(r: OpeningRules, key: string): MinuteWindow {
+  const parts = openParts({ ...r, holidays: [], closedWeekdays: [] }, key)
+  return parts.length ? { start: parts[0].start, end: parts[parts.length - 1].end } : { start: r.openMinute, end: r.closeMinute }
+}
+
 /* Keeps only the open parts of each window. */
-export function withoutClosed(r: ClosedRules, key: string, windows: MinuteWindow[]): MinuteWindow[] {
+export function onlyOpen(r: OpeningRules, key: string, windows: MinuteWindow[]): MinuteWindow[] {
   const open = openParts(r, key)
   return windows.flatMap((w) => open
     .map((o) => ({ start: Math.max(w.start, o.start), end: Math.min(w.end, o.end) }))

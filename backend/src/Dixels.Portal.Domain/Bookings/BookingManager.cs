@@ -85,10 +85,7 @@ public class BookingManager : PortalDomainService
                 ? L["Error:ClosedForHoliday", ctx.Space.GetName(), closed.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)]
                 : L["Error:ClosedOnWeekday", ctx.Space.GetName(), L[$"Weekdays:{(int)closed.Day.DayOfWeek}"]]).ForField("date");
 
-        var sMin = startUtc.Hour * 60 + startUtc.Minute;
-        var eMin = endUtc.Hour * 60 + endUtc.Minute;
-        if (eMin == 0) eMin = 1440;
-        if (sMin < c.OpenMinute || eMin > c.CloseMinute || endUtc.Date > startUtc.Date && eMin != 1440)
+        if (!BuildingCalendar.IsWithinHours(c, startUtc, endUtc))
             return new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
                 L["Error:OutsideHours", ctx.Space.GetName(), $"{c.OpenMinute / 60:00}:00", $"{c.CloseMinute / 60:00}:00"]).ForField("window");
 

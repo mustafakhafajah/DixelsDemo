@@ -13,12 +13,18 @@ public static class BookingOverlap
 {
     /* PostgreSQL's SQLSTATE for an exclusion-constraint violation. */
     public const string ExclusionViolation = "23P01";
+    /* ... and for a unique-index violation (on bookings: the same person's idempotency key saved twice). */
+    public const string UniqueViolation = "23505";
 
-    public static bool IsOverlap(Exception? ex)
+    public static bool IsOverlap(Exception? ex) => HasSqlState(ex, ExclusionViolation);
+
+    public static bool IsDuplicateKey(Exception? ex) => HasSqlState(ex, UniqueViolation);
+
+    private static bool HasSqlState(Exception? ex, string sqlState)
     {
         for (var e = ex; e != null; e = e.InnerException)
         {
-            if (e is DbException db && db.SqlState == ExclusionViolation) return true;
+            if (e is DbException db && db.SqlState == sqlState) return true;
         }
         return false;
     }

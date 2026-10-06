@@ -89,6 +89,20 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
             .ShouldBeEmpty();
     }
 
+    /* The same opening-hours check as a booking, on the building's clock: Riyadh (UTC+3) is open 08:00-20:00
+     * there, which is 05:00-17:00 UTC. */
+    [Fact]
+    public async Task Free_only_reads_opening_hours_in_the_buildings_time_zone()
+    {
+        var e = await CreateEstateAsync(b => b.TimeZone = "Asia/Riyadh");
+        var day = DateTime.UtcNow.Date.AddDays(30);
+
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FreeFromUtc = day.AddHours(5), FreeToUtc = day.AddHours(6) }))
+            .ShouldBe(new[] { $"Big {e.Tag}", $"Small {e.Tag}", $"Studio {e.Tag}" }, ignoreOrder: true);
+        (await FindNamesAsync(new GetSpaceListInput { BuildingId = e.Building.Id, FreeFromUtc = day.AddHours(18), FreeToUtc = day.AddHours(19) }))
+            .ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_building_that_is_not_bookable_returns_nothing()
     {
@@ -128,10 +142,12 @@ public class FindSpacesTests : PortalEntityFrameworkCoreTestBase
 
     /* Floor 1 (bookable): Big (12 seats), Small (4), Studio (studio type), Closed (not bookable).
      * Floor 2 (not bookable): Upstairs. */
-    private Task<Estate> CreateEstateAsync() => WithUnitOfWorkAsync(async () =>
+    private Task<Estate> CreateEstateAsync(Action<Building>? setUp = null) => WithUnitOfWorkAsync(async () =>
     {
         var tag = Guid.NewGuid().ToString("N")[..6];
-        var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Find {tag}"), autoSave: true);
+        var newBuilding = new Building(Guid.NewGuid(), $"Find {tag}");
+        setUp?.Invoke(newBuilding);
+        var building = await _buildings.InsertAsync(newBuilding, autoSave: true);
         var floor1 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
         var floor2 = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "2") { IsBookable = false }, autoSave: true);
 

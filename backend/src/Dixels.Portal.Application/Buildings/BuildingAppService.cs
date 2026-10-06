@@ -42,7 +42,12 @@ public class BuildingAppService
     public override Task<BuildingDto> GetAsync(Guid id) => base.GetAsync(id);
 
     [Authorize(PortalPermissions.Buildings.Delete)]
-    public override Task DeleteAsync(Guid id) => base.DeleteAsync(id);
+    public override async Task DeleteAsync(Guid id)
+    {
+        var building = await GetEntityByIdAsync(id);
+        await _buildingManager.EnsureCanDeleteAsync(building);
+        await Repository.DeleteAsync(building, autoSave: true);
+    }
 
     [Authorize(PortalPermissions.Buildings.Create)]
     public override async Task<BuildingDto> CreateAsync(CreateUpdateBuildingDto input)

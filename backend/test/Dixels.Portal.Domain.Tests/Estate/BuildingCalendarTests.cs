@@ -5,11 +5,13 @@ using Xunit;
 
 namespace Dixels.Portal.Estate;
 
-/* Closed days are days in the building's own time zone. Asia/Dubai is UTC+4 all year (no daylight saving). */
+/* Closed days and opening hours are read in the building's own time zone. Asia/Dubai is UTC+4 and Asia/Riyadh
+ * UTC+3 all year (no daylight saving); Europe/London is UTC+0 in winter and UTC+1 in summer. */
 public class BuildingCalendarTests
 {
-    private static ResolvedConstraints Rules(string timeZone, DateOnly[]? holidays = null, int[]? closedWeekdays = null)
-        => new(8 * 60, 20 * 60, 15, 8, new List<DateOnly>(holidays ?? []), new List<int>(closedWeekdays ?? []), timeZone);
+    private static ResolvedConstraints Rules(string timeZone, DateOnly[]? holidays = null, int[]? closedWeekdays = null,
+        int openHour = 8, int closeHour = 20)
+        => new(openHour * 60, closeHour * 60, 15, 8, new List<DateOnly>(holidays ?? []), new List<int>(closedWeekdays ?? []), timeZone);
 
     private static DateTime Utc(int y, int mo, int d, int h) => new(y, mo, d, h, 0, 0, DateTimeKind.Utc);
 
@@ -56,6 +58,52 @@ public class BuildingCalendarTests
         BuildingCalendar.FindClosedDay(dubai, Utc(2026, 10, 1, 19), Utc(2026, 10, 1, 21)).ShouldBe(new ClosedDay(new DateOnly(2026, 10, 2), IsHoliday: false));
         /* Ending exactly at local midnight does not touch Friday. */
         BuildingCalendar.FindClosedDay(dubai, Utc(2026, 10, 1, 18), Utc(2026, 10, 1, 20)).ShouldBeNull();
+    }
+
+    [Fact]
+    public void Opening_hours_are_the_buildings_local_hours()
+    {
+        /* Riyadh, open 08:00-18:00 local = 05:00-15:00 UTC. */
+        var riyadh = Rules("Asia/Riyadh", openHour: 8, closeHour: 18);
+
+        BuildingCalendar.IsWithinHours(riyadh, Utc(2026, 11, 2, 5), Utc(2026, 11, 2, 6)).ShouldBeTrue();    // 08:00-09:00 local
+        BuildingCalendar.IsWithinHours(riyadh, Utc(2026, 11, 2, 14), Utc(2026, 11, 2, 15)).ShouldBeTrue();  // 17:00-18:00 local
+        BuildingCalendar.IsWithinHours(riyadh, Utc(2026, 11, 2, 4), Utc(2026, 11, 2, 5)).ShouldBeFalse();   // 07:00 local, before opening
+        BuildingCalendar.IsWithinHours(riyadh, Utc(2026, 11, 2, 16), Utc(2026, 11, 2, 17)).ShouldBeFalse(); // 19:00 local, after closing
+    }
+
+    [Fact]
+    public void Opening_hours_follow_daylight_saving()
+    {
+        /* London clocks go forward on 29 March 2026: 08:00 local is 08:00 UTC the Friday before, 07:00 UTC the Monday after. */
+        var london = Rules("Europe/London", openHour: 8, closeHour: 18);
+
+        BuildingCalendar.IsWithinHours(london, Utc(2026, 3, 27, 8), Utc(2026, 3, 27, 9)).ShouldBeTrue();
+        BuildingCalendar.IsWithinHours(london, Utc(2026, 3, 27, 7), Utc(2026, 3, 27, 8)).ShouldBeFalse();
+        BuildingCalendar.IsWithinHours(london, Utc(2026, 3, 27, 17), Utc(2026, 3, 27, 18)).ShouldBeTrue();
+
+        BuildingCalendar.IsWithinHours(london, Utc(2026, 3, 30, 7), Utc(2026, 3, 30, 8)).ShouldBeTrue();
+        BuildingCalendar.IsWithinHours(london, Utc(2026, 3, 30, 17), Utc(2026, 3, 30, 18)).ShouldBeFalse(); // 18:00-19:00 local
+    }
+
+    [Fact]
+    public void A_window_may_end_at_local_midnight_but_not_run_past_it()
+    {
+        /* Tokyo (UTC+9), open all day: 14:00 UTC is 23:00 local. */
+        var tokyo = Rules("Asia/Tokyo", openHour: 0, closeHour: 24);
+
+        BuildingCalendar.IsWithinHours(tokyo, Utc(2026, 11, 2, 14), Utc(2026, 11, 2, 15)).ShouldBeTrue();   // 23:00-00:00 local
+        BuildingCalendar.IsWithinHours(tokyo, Utc(2026, 11, 2, 14), Utc(2026, 11, 2, 16)).ShouldBeFalse();  // 23:00-01:00 local
+        /* 23:00-01:00 UTC is 08:00-10:00 the next local day: crossing UTC midnight is fine. */
+        BuildingCalendar.IsWithinHours(tokyo, Utc(2026, 11, 2, 23), Utc(2026, 11, 3, 1)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Only_iana_time_zone_names_are_accepted()
+    {
+        /* A Windows name the server could resolve on Windows, but the browser cannot. */
+        BuildingCalendar.IsKnownZone("Arab Standard Time").ShouldBeFalse();
+        BuildingCalendar.IsKnownZone("Asia/Riyadh").ShouldBeTrue();
     }
 
     [Fact]

@@ -122,6 +122,21 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         await Should.NotThrowAsync(() => BookAsync(roomA, Guid.NewGuid(), 0, 1));
     }
 
+    /* Riyadh is UTC+3: 08:00-18:00 there is 05:00-15:00 UTC. Ten is 10:00 UTC (13:00 in Riyadh). */
+    [Fact]
+    public async Task Opening_hours_are_checked_on_the_buildings_own_clock()
+    {
+        var (roomA, roomB) = await CreateTwoSpacesAsync(b =>
+        {
+            b.TimeZone = "Asia/Riyadh";
+            b.CloseHour = 18;
+        });
+
+        await Should.NotThrowAsync(() => BookAsync(roomA, Guid.NewGuid(), -5, -4));    // 08:00-09:00 in Riyadh
+        var ex = await Should.ThrowAsync<BusinessException>(() => BookAsync(roomB, Guid.NewGuid(), 6, 7));  // 19:00-20:00 in Riyadh
+        ex.Code.ShouldBe(PortalDomainErrorCodes.OutsideHours);
+    }
+
     private Task BookAsync(Space space, Guid ownerId, double fromHours, double toHours, bool ownerMayHoldSeveralSpaces = false)
         => WithUnitOfWorkAsync(async () =>
         {

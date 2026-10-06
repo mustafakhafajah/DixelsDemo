@@ -135,6 +135,26 @@ public class BookingManagerTests : PortalEntityFrameworkCoreTestBase
         await Should.NotThrowAsync(() => BookAsync(roomA, Guid.NewGuid(), -5, -4));    // 08:00-09:00 in Riyadh
         var ex = await Should.ThrowAsync<BusinessException>(() => BookAsync(roomB, Guid.NewGuid(), 6, 7));  // 19:00-20:00 in Riyadh
         ex.Code.ShouldBe(PortalDomainErrorCodes.OutsideHours);
+        /* Times are picked in UTC, so the message gives the local hours with the zone, and the same hours in UTC. */
+        ex.Message.ShouldContain("08:00");
+        ex.Message.ShouldContain("Riyadh");
+        ex.Message.ShouldContain("05:00");
+        ex.Message.ShouldContain("15:00 UTC");
+    }
+
+    [Fact]
+    public async Task A_utc_building_gives_its_hours_without_a_zone()
+    {
+        var (roomA, _) = await CreateTwoSpacesAsync(b =>
+        {
+            b.TimeZone = "UTC";
+            b.CloseHour = 18;
+        });
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => BookAsync(roomA, Guid.NewGuid(), 9, 10));  // 19:00-20:00 UTC
+        ex.Code.ShouldBe(PortalDomainErrorCodes.OutsideHours);
+        ex.Message.ShouldContain("18:00");
+        ex.Message.ShouldNotContain("UTC");
     }
 
     private Task BookAsync(Space space, Guid ownerId, double fromHours, double toHours, bool ownerMayHoldSeveralSpaces = false)

@@ -31,6 +31,26 @@ public static class BuildingCalendar
 
     public static DateOnly LocalDay(DateTime utc, TimeZoneInfo zone) => DateOnly.FromDateTime(ToLocal(utc, zone));
 
+    /* A wall-clock time on a local day (minute 1440 = the midnight after), as UTC. A time the clock skips when it
+     * springs forward counts as just after the jump. */
+    public static DateTime LocalToUtc(DateOnly localDay, int minute, TimeZoneInfo zone)
+    {
+        var local = localDay.ToDateTime(TimeOnly.MinValue).AddMinutes(minute);
+        if (zone.IsInvalidTime(local)) local = local.AddHours(1);
+        return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), zone);
+    }
+
+    /* Does the zone's clock read the same as UTC at this instant? Then giving its time as well adds nothing. */
+    public static bool IsUtcLike(TimeZoneInfo zone, DateTime utc)
+        => zone.GetUtcOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)) == TimeSpan.Zero;
+
+    /* The city part of a zone, for messages: Europe/Warsaw -> Warsaw, America/New_York -> New York. */
+    public static string ZoneCity(string? id)
+    {
+        var name = string.IsNullOrWhiteSpace(id) || !IsKnownZone(id.Trim()) ? "UTC" : id.Trim();
+        return name[(name.LastIndexOf('/') + 1)..].Replace('_', ' ');
+    }
+
     /* Opening hours are read on the building's own clock too: in Riyadh (UTC+3), 08:00-18:00 is 05:00-15:00 UTC,
      * and in London the UTC times move by an hour with daylight saving. The window must start at or after opening
      * and end by closing on the same local day; ending exactly at local midnight counts as the day before. */

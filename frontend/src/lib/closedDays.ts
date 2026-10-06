@@ -1,6 +1,6 @@
 import i18n from 'i18next'
 import { intlLocale } from '../i18n/languages'
-import { dayAt, dayKey, weekdayName } from './dateUtils'
+import { dayAt, dayKey, minLabel, minOfDay, weekdayName } from './dateUtils'
 import type { MinuteWindow } from './laneLayout'
 
 /* A building's closed days (holiday dates and weekly closed days). They are days in the building's own time
@@ -56,6 +56,30 @@ export function localMinute(d: Date, tz: string): number {
   const p = localParts(d, tz)
   return Number(p.hour) * 60 + Number(p.minute)
 }
+
+/* "HH:MM" at this instant on the zone's clock. */
+export const localLabel = (d: Date, tz: string) => minLabel(localMinute(d, tz))
+
+/* The city part of a zone, for "14:00 Warsaw": Europe/Warsaw -> Warsaw, America/New_York -> New York. */
+export function zoneCity(tz: string): string {
+  const id = tz && isValidTimeZone(tz) ? tz : 'UTC'
+  return id.split('/').pop()!.replace(/_/g, ' ')
+}
+
+/* The instant a wall-clock time (local day + minute, 1440 = midnight after) happens in the zone. A second step
+ * corrects the offset on the day the clocks change. */
+export function zonedInstant(key: string, minute: number, tz: string): Date {
+  const wall = dayAt(key, 0, minute).getTime()
+  const offsetAt = (t: number) => {
+    const p = localParts(new Date(t), tz)
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - t
+  }
+  const first = wall - offsetAt(wall)
+  return new Date(wall - offsetAt(first))
+}
+
+/* Does the zone's clock read the same as UTC at this instant? Then showing its time as well adds nothing. */
+export const isUtcLike = (tz: string, at: Date) => localDayKey(at, tz) === dayKey(at) && localMinute(at, tz) === minOfDay(at)
 
 /* Does the window fit the opening hours on the building's own clock? It must start at or after opening and end by
  * closing on the same local day; ending exactly at local midnight counts as the day before. Mirrors the server's

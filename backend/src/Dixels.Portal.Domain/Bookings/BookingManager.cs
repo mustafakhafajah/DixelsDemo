@@ -86,8 +86,20 @@ public class BookingManager : PortalDomainService
                 : L["Error:ClosedOnWeekday", ctx.Space.GetName(), L[$"Weekdays:{(int)closed.Day.DayOfWeek}"]]).ForField("date");
 
         if (!BuildingCalendar.IsWithinHours(c, startUtc, endUtc))
+        {
+            var open = $"{c.OpenMinute / 60:00}:00";
+            var close = $"{c.CloseMinute / 60:00}:00";
+            var zone = BuildingCalendar.Zone(c.TimeZone);
+            if (BuildingCalendar.IsUtcLike(zone, startUtc))
+                return new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
+                    L["Error:OutsideHours", ctx.Space.GetName(), open, close]).ForField("window");
+            /* Times are picked in UTC, so a building on another clock also gets its hours in UTC for that day. */
+            var day = BuildingCalendar.LocalDay(startUtc, zone);
+            var openUtc = BuildingCalendar.LocalToUtc(day, c.OpenMinute, zone).ToString("HH:mm", CultureInfo.InvariantCulture);
+            var closeUtc = BuildingCalendar.LocalToUtc(day, c.CloseMinute, zone).ToString("HH:mm", CultureInfo.InvariantCulture);
             return new UserFriendlyException(code: PortalDomainErrorCodes.OutsideHours, message:
-                L["Error:OutsideHours", ctx.Space.GetName(), $"{c.OpenMinute / 60:00}:00", $"{c.CloseMinute / 60:00}:00"]).ForField("window");
+                L["Error:OutsideHoursZone", ctx.Space.GetName(), open, close, BuildingCalendar.ZoneCity(c.TimeZone), openUtc, closeUtc]).ForField("window");
+        }
 
         var mins = (endUtc - startUtc).TotalMinutes;
         if (mins < c.MinBookingMinutes)

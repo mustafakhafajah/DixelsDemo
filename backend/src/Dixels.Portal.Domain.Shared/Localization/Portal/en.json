@@ -91,6 +91,7 @@
     "Error:ClosedForHoliday": "{0}'s building is closed for a holiday on {1}.",
     "Error:ClosedOnWeekday": "{0}'s building is closed on {1}.",
     "Error:OutsideHours": "{0} can only be booked between {1} and {2}.",
+    "Error:OutsideHoursZone": "{0} can only be booked between {1} and {2} {3} time ({4}–{5} UTC).",
     "Error:DurationBelowMin": "Minimum booking length here is {0} minutes.",
     "Error:DurationAboveMax": "Maximum booking length here is {0} hours.",
     "Error:BuildingNotBookable": "{0} is not bookable, so none of its spaces can be booked.",

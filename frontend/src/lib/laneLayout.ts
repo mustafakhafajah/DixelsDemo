@@ -1,8 +1,8 @@
 import i18n from 'i18next'
 import type { Constraints, ScheduleItem } from '../api/types'
 import { DEFAULT_CLOSE_MIN, DEFAULT_OPEN_MIN } from './constants'
-import { closedReason, hoursSpan, isWithinHours, onlyOpen } from './closedDays'
-import { dayAt, dayKey, minOfDay } from './dateUtils'
+import { closedReason, hoursSpan, isUtcLike, isWithinHours, localDayKey, onlyOpen, zoneCity, zonedInstant } from './closedDays'
+import { dayAt, dayKey, hm, minLabel, minOfDay } from './dateUtils'
 
 export interface DaySegment {
   item: ScheduleItem
@@ -147,13 +147,21 @@ export function validateWindowLocal(c: Constraints | null, spaceName: string, st
   if (!c) return null
   const closed = closedReason(c, start, end)
   if (closed) return { code: 'validation.holiday_closed', message: i18n.t('validation.buildingClosed', { space: spaceName, when: closed }) }
-  if (!isWithinHours(c, start, end))
+  if (!isWithinHours(c, start, end)) {
+    const open = minLabel(c.openMinute)
+    const close = minLabel(c.closeMinute)
+    /* The form picks in UTC, so a building on another clock also gets its hours in UTC for that day. */
+    if (isUtcLike(c.timeZone, start))
+      return { code: 'validation.outside_hours', message: i18n.t('validation.outsideHours', { space: spaceName, open, close }) }
+    const day = localDayKey(start, c.timeZone)
     return {
       code: 'validation.outside_hours',
-      message: i18n.t('validation.outsideHours', {
-        space: spaceName, open: `${String(c.openMinute / 60).padStart(2, '0')}:00`, close: `${String(c.closeMinute / 60).padStart(2, '0')}:00`,
+      message: i18n.t('validation.outsideHoursZone', {
+        space: spaceName, open, close, zone: zoneCity(c.timeZone),
+        openUtc: hm(zonedInstant(day, c.openMinute, c.timeZone)), closeUtc: hm(zonedInstant(day, c.closeMinute, c.timeZone)),
       }),
     }
+  }
   const mins = (end.getTime() - start.getTime()) / 60000
   if (mins < c.minBookingMinutes)
     return { code: 'validation.duration_below_min', message: i18n.t('validation.durationBelowMin', { count: c.minBookingMinutes }) }

@@ -100,14 +100,16 @@ export function DatePicker({ id, value, onChange, min, max, placeholder, disable
 }
 
 /* One list of times ("HH:MM") in steps of minuteStep (15 by default): 00:00, 00:15 … 23:45.
- * min ("HH:MM") leaves every earlier time out of the list, so it cannot be picked at all.
+ * min ("HH:MM") leaves every earlier time out of the list, so it cannot be picked at all; allowed (minute of the
+ * day) leaves out any other time that fails it, e.g. outside a building's opening hours.
  * The time already chosen always stays in the list (even an off-step one such as 10:10),
  * so the field never shows as blank. */
-export function TimePicker({ id, value, onChange, min, minuteStep = 15, disabled, className, 'aria-label': ariaLabel }: {
+export function TimePicker({ id, value, onChange, min, allowed, minuteStep = 15, disabled, className, 'aria-label': ariaLabel }: {
   id?: string
   value: string
   onChange: (value: string) => void
   min?: string | null
+  allowed?: (minute: number) => boolean
   minuteStep?: number
   disabled?: boolean
   className?: string
@@ -118,7 +120,7 @@ export function TimePicker({ id, value, onChange, min, minuteStep = 15, disabled
   const floor = min ? toMin(min) : 0
   const times: string[] = []
   for (let m = 0; m < 1440; m += minuteStep) {
-    if (m >= floor) times.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`)
+    if (m >= floor && (!allowed || allowed(m))) times.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`)
   }
   if (value && !times.includes(value)) { times.push(value); times.sort() }
   return (

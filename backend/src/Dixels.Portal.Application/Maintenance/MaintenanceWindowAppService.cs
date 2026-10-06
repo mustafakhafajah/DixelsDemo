@@ -27,10 +27,11 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
     private readonly IRepository<Building, Guid> _buildings;
     private readonly MaintenanceScopeResolver _scopes;
     private readonly BookingNotifier _notifier;
+    private readonly IBookingLocks _locks;
 
     public MaintenanceWindowAppService(IRepository<MaintenanceWindow, Guid> maintenance, IRepository<Booking, Guid> bookings,
         IRepository<Space, Guid> spaces, IRepository<Floor, Guid> floors, IRepository<Building, Guid> buildings,
-        MaintenanceScopeResolver scopes, BookingNotifier notifier)
+        MaintenanceScopeResolver scopes, BookingNotifier notifier, IBookingLocks locks)
     {
         _maintenance = maintenance;
         _bookings = bookings;
@@ -39,6 +40,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         _buildings = buildings;
         _scopes = scopes;
         _notifier = notifier;
+        _locks = locks;
     }
 
     [Authorize(PortalPermissions.Maintenance.Default)]
@@ -86,6 +88,8 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
     public async Task<ScheduleMaintenanceResultDto> ScheduleAsync(ScheduleMaintenanceDto input)
     {
         var spaceIds = await _scopes.GetSpaceIdsAsync(input.ScopeType, input.ScopeId);
+        /* A booking being made on one of these spaces right now finishes first, so the count (and cancel) below sees it. */
+        await _locks.LockSpacesAsync(spaceIds);
         foreach (var o in input.Occurrences)
         {
             if (o.StartUtc == default || o.EndUtc == default)

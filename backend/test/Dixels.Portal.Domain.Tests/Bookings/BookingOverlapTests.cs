@@ -36,6 +36,15 @@ public class BookingOverlapTests
         BookingOverlap.IsOverlap(null).ShouldBeFalse();
     }
 
+    /* The same person's idempotency key saved twice at once (SQLSTATE 23505): BookingAppService answers it with the first booking. */
+    [Fact]
+    public void A_unique_violation_is_a_duplicate_key_not_an_overlap()
+    {
+        BookingOverlap.IsDuplicateKey(Wrapped(BookingOverlap.UniqueViolation)).ShouldBeTrue();
+        BookingOverlap.IsDuplicateKey(Wrapped(BookingOverlap.ExclusionViolation)).ShouldBeFalse();
+        BookingOverlap.IsDuplicateKey(null).ShouldBeFalse();
+    }
+
     [Fact]
     public async Task The_losing_save_becomes_the_normal_booking_conflict()
     {

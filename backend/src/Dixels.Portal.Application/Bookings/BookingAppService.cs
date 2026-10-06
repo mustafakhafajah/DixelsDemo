@@ -28,9 +28,11 @@ public class BookingAppService : PortalAppService, IBookingAppService
     private readonly BookingManager _manager;
     private readonly MaintenanceScopeResolver _scopes;
     private readonly BookingNotifier _notifier;
+    private readonly IBookingLocks _locks;
 
     public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces,
-        IIdentityUserRepository users, BookingManager manager, MaintenanceScopeResolver scopes, BookingNotifier notifier)
+        IIdentityUserRepository users, BookingManager manager, MaintenanceScopeResolver scopes, BookingNotifier notifier,
+        IBookingLocks locks)
     {
         _bookings = bookings;
         _spaces = spaces;
@@ -38,6 +40,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         _manager = manager;
         _scopes = scopes;
         _notifier = notifier;
+        _locks = locks;
     }
 
     /* With Bookings.ViewAll you list anyone's bookings; everyone else only ever gets their own,
@@ -99,19 +102,41 @@ public class BookingAppService : PortalAppService, IBookingAppService
     [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
     {
+        var me = CurrentUser.GetId();
         var key = string.IsNullOrWhiteSpace(input.IdempotencyKey) ? null : input.IdempotencyKey;
+        /* Before the key lookup too: a retry that arrives while the first attempt is still saving waits for it here,
+         * then finds its booking below. */
+        await LockAsync(me, input.SpaceId);
 
-        /* A retried request (same key) gets the booking the first attempt made, not a second one. */
+        /* A retried request (same person, same key) gets the booking the first attempt made, not a second one.
+         * Keys are only unique per person, so someone else's key never hands out their booking. */
         if (key != null)
         {
-            var existing = await _bookings.FirstOrDefaultAsync(b => b.IdempotencyKey == key);
+            var existing = await FindByKeyAsync(me, key);
             if (existing != null) return await MapAsync(existing);
         }
 
-        var booking = await CreateOneAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key);
+        var booking = await NewBookingAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key);
+        try
+        {
+            await InsertAsync(booking);
+        }
+        /* The same key saved at the same moment anyway (the database's unique index on owner + key refused this
+         * one): answer with the booking that won, as for any retry. DeleteAsync only drops the refused insert
+         * from this request, so it isn't tried again when the request ends. */
+        catch (Exception ex) when (key != null && BookingOverlap.IsDuplicateKey(ex))
+        {
+            await _bookings.DeleteAsync(booking);
+            var first = await FindByKeyAsync(me, key);
+            if (first == null) throw;
+            return await MapAsync(first);
+        }
         await _notifier.BookingsCreatedAsync([booking]);
         return await MapAsync(booking);
     }
+
+    private Task<Booking?> FindByKeyAsync(Guid ownerId, string key)
+        => _bookings.FirstOrDefaultAsync(b => b.OwnerUserId == ownerId && b.IdempotencyKey == key);
 
     /* The client expands the recurrence rule; each surviving occurrence is created under one series.
      * An occurrence that breaks a rule is skipped and reported; the rest are still booked. */
@@ -121,11 +146,14 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var seriesId = input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
         var created = new List<Booking>();
         var skipped = new List<BookingWindowFailureDto>();
+        await LockAsync(CurrentUser.GetId(), input.SpaceId);
         foreach (var o in input.Occurrences.OrderBy(o => o.StartUtc))
         {
             try
             {
-                created.Add(await CreateOneAsync(input.SpaceId, o.StartUtc, o.EndUtc, seriesId, null));
+                var booking = await NewBookingAsync(input.SpaceId, o.StartUtc, o.EndUtc, seriesId, null);
+                await InsertAsync(booking);
+                created.Add(booking);
             }
             /* Losing a same-moment race stops the whole series (see BookingRaceException); other clashes skip the date. */
             catch (BusinessException ex) when (ex is not BookingRaceException)
@@ -169,6 +197,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
         var start = input.StartUtc.AsUtc();
         var end = input.EndUtc.AsUtc();
+        await LockAsync(b.OwnerUserId, b.SpaceId);
         var ctx = await _manager.GetSpaceContextAsync(b.SpaceId);
         _manager.ValidateWindow(ctx, start, end);
         await _manager.EnsureNoMaintenanceAsync(ctx, start, end);
@@ -283,15 +312,22 @@ public class BookingAppService : PortalAppService, IBookingAppService
             throw new UserFriendlyException(code: PortalDomainErrorCodes.AccessForbidden, message: message);
     }
 
-    private async Task<Booking> CreateOneAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? seriesId, string? idempotencyKey)
+    /* The owner's bookings and the space's bookings and blocked time are checked next, so no other request may
+     * change them until this one is saved (see IBookingLocks). */
+    private async Task LockAsync(Guid ownerId, Guid spaceId)
     {
-        /* Only with Bookings.MultipleSpaces may the booker hold several spaces at the same time. */
-        var booking = await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
-            seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.MultipleSpaces));
-        /* The database has the last word on overlaps; a same-moment loser gets the normal conflict. */
-        await BookingOverlap.Translate(() => _bookings.InsertAsync(booking, autoSave: true));
-        return booking;
+        await _locks.LockOwnerAsync(ownerId);
+        await _locks.LockSpacesAsync([spaceId]);
     }
+
+    /* Runs every booking rule; nothing is saved yet. */
+    private async Task<Booking> NewBookingAsync(Guid spaceId, DateTime startUtc, DateTime endUtc, Guid? seriesId, string? idempotencyKey)
+        /* Only with Bookings.MultipleSpaces may the booker hold several spaces at the same time. */
+        => await _manager.CreateAsync(spaceId, CurrentUser.GetId(), startUtc.AsUtc(), endUtc.AsUtc(),
+            seriesId: seriesId, idempotencyKey: idempotencyKey, ownerMayHoldSeveralSpaces: await AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.MultipleSpaces));
+
+    /* The database has the last word on overlaps; a same-moment loser gets the normal conflict. */
+    private Task InsertAsync(Booking booking) => BookingOverlap.Translate(() => _bookings.InsertAsync(booking, autoSave: true));
 
     /* False when it was already cancelled (nothing changed, so no email). */
     private async Task<bool> CancelOneAsync(Booking b)

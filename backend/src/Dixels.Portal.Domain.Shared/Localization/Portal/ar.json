@@ -91,6 +91,7 @@
     "Error:ClosedForHoliday": "مبنى {0} مغلق بسبب عطلة في {1}.",
     "Error:ClosedOnWeekday": "مبنى {0} مغلق {1}.",
     "Error:OutsideHours": "لا يمكن حجز {0} إلا بين {1} و{2}.",
+    "Error:OutsideHoursZone": "لا يمكن حجز {0} إلا بين {1} و{2} بتوقيت {3} ({4}–{5} UTC).",
     "Error:DurationBelowMin": "أدنى مدة للحجز هنا {0} دقيقة.",
     "Error:DurationAboveMax": "أقصى مدة للحجز هنا {0} ساعة.",
     "Error:BuildingNotBookable": "{0} غير متاح للحجز، لذا لا يمكن حجز أي من مساحاته.",

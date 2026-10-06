@@ -99,6 +99,29 @@ public class BuildingCalendarTests
     }
 
     [Fact]
+    public void Local_opening_times_convert_to_utc()
+    {
+        /* Warsaw is UTC+2 until the clocks go back on 25 October 2026, then UTC+1. */
+        var warsaw = BuildingCalendar.Zone("Europe/Warsaw");
+
+        BuildingCalendar.LocalToUtc(new DateOnly(2026, 10, 7), 8 * 60, warsaw).ShouldBe(Utc(2026, 10, 7, 6));
+        BuildingCalendar.LocalToUtc(new DateOnly(2026, 10, 7), 20 * 60, warsaw).ShouldBe(Utc(2026, 10, 7, 18));
+        BuildingCalendar.LocalToUtc(new DateOnly(2026, 11, 2), 8 * 60, warsaw).ShouldBe(Utc(2026, 11, 2, 7));
+    }
+
+    [Fact]
+    public void Messages_name_the_zone_by_its_city_and_skip_it_when_it_reads_as_utc()
+    {
+        BuildingCalendar.ZoneCity("Europe/Warsaw").ShouldBe("Warsaw");
+        BuildingCalendar.ZoneCity("America/New_York").ShouldBe("New York");
+        BuildingCalendar.ZoneCity("Mars/Base").ShouldBe("UTC");
+
+        BuildingCalendar.IsUtcLike(BuildingCalendar.Zone("UTC"), Utc(2026, 10, 7, 10)).ShouldBeTrue();
+        BuildingCalendar.IsUtcLike(BuildingCalendar.Zone("Europe/London"), Utc(2026, 12, 1, 10)).ShouldBeTrue();  // winter: UTC+0
+        BuildingCalendar.IsUtcLike(BuildingCalendar.Zone("Europe/Warsaw"), Utc(2026, 10, 7, 10)).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Only_iana_time_zone_names_are_accepted()
     {
         /* A Windows name the server could resolve on Windows, but the browser cannot. */

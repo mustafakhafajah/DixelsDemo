@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Portal.Bookings;
 using Dixels.Portal.Buildings;
@@ -25,6 +26,7 @@ public class BlockTimeTests : PortalEntityFrameworkCoreTestBase
     private readonly IRepository<Building, Guid> _buildings;
     private readonly IRepository<Floor, Guid> _floors;
     private readonly IRepository<Space, Guid> _spaces;
+    private readonly IRepository<MaintenanceWindow, Guid> _maintenance;
 
     private static readonly DateTime Ten = DateTime.UtcNow.Date.AddDays(30).AddHours(10);
 
@@ -36,6 +38,7 @@ public class BlockTimeTests : PortalEntityFrameworkCoreTestBase
         _buildings = GetRequiredService<IRepository<Building, Guid>>();
         _floors = GetRequiredService<IRepository<Floor, Guid>>();
         _spaces = GetRequiredService<IRepository<Space, Guid>>();
+        _maintenance = GetRequiredService<IRepository<MaintenanceWindow, Guid>>();
     }
 
     [Fact]
@@ -77,6 +80,58 @@ public class BlockTimeTests : PortalEntityFrameworkCoreTestBase
         await Should.NotThrowAsync(() => BookAsync(room, 24 * 3 + 1, 24 * 3 + 2));
     }
 
+    [Fact]
+    public async Task Blocking_a_floor_over_a_series_saves_one_row_per_space_per_window()
+    {
+        var room = await CreateRoomAsync();
+        var second = await AddRoomAsync(room);
+        var windows = new List<TimeWindowDto>
+        {
+            new() { StartUtc = Ten, EndUtc = Ten.AddHours(1) },
+            new() { StartUtc = Ten.AddDays(7), EndUtc = Ten.AddDays(7).AddHours(1) },
+            new() { StartUtc = Ten.AddDays(14), EndUtc = Ten.AddDays(14).AddHours(1) },
+        };
+
+        var r = await _service.ScheduleAsync(new ScheduleMaintenanceDto
+        {
+            ScopeType = MaintenanceScopeType.Floor, ScopeId = room.FloorId, CancelAffectedBookings = false, Occurrences = windows,
+        });
+
+        r.Created.ShouldBe(6);
+        var saved = await WithUnitOfWorkAsync(() => _maintenance.GetListAsync(m => m.SeriesId == r.SeriesId));
+        saved.Count.ShouldBe(6);
+        saved.Select(m => m.SpaceId).Distinct().ShouldBe(new[] { room.Id, second.Id }, ignoreOrder: true);
+        saved.ShouldAllBe(m => m.ScopeType == MaintenanceScopeType.Floor && m.ScopeId == room.FloorId);
+    }
+
+    [Fact]
+    public async Task The_list_labels_each_window_by_the_space_floor_or_building_it_was_blocked_for()
+    {
+        var room = await CreateRoomAsync();
+        var roomName = room.GetName();
+        var buildingName = await WithUnitOfWorkAsync(async () => (await _buildings.GetAsync(room.BuildingId)).GetName());
+        await _service.ScheduleAsync(Block(room, Ten, Ten.AddHours(1), cancel: false));
+        await _service.ScheduleAsync(Scoped(MaintenanceScopeType.Floor, room.FloorId, Ten.AddHours(2)));
+        await _service.ScheduleAsync(Scoped(MaintenanceScopeType.Building, room.BuildingId, Ten.AddHours(4)));
+
+        var list = (await _service.GetListAsync(new MaintenanceListFilterDto { BuildingId = room.BuildingId })).Items;
+
+        list.Count.ShouldBe(3);
+        list.ShouldAllBe(m => m.SpaceName == roomName);
+        list.Single(m => m.ScopeType == MaintenanceScopeType.Space).ScopeLabel.ShouldBe(roomName);
+        list.Single(m => m.ScopeType == MaintenanceScopeType.Building).ScopeLabel.ShouldBe(buildingName);
+        var floorLabel = list.Single(m => m.ScopeType == MaintenanceScopeType.Floor).ScopeLabel;
+        floorLabel.ShouldContain(buildingName);
+        floorLabel.ShouldNotBe(buildingName);
+    }
+
+    private static ScheduleMaintenanceDto Scoped(MaintenanceScopeType type, Guid scopeId, DateTime start) => new()
+    {
+        ScopeType = type,
+        ScopeId = scopeId,
+        Occurrences = new List<TimeWindowDto> { new() { StartUtc = start, EndUtc = start.AddHours(1) } },
+    };
+
     private static ScheduleMaintenanceDto Block(Space room, DateTime start, DateTime end, bool cancel, string? note = null) => new()
     {
         ScopeType = MaintenanceScopeType.Space,
@@ -102,5 +157,13 @@ public class BlockTimeTests : PortalEntityFrameworkCoreTestBase
             var building = await _buildings.InsertAsync(new Building(Guid.NewGuid(), $"Test {tag}"), autoSave: true);
             var floor = await _floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "1"), autoSave: true);
             return await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room {tag}", building.Id, floor.Id, DefaultSpaceTypes.MeetingRoom), autoSave: true);
+        });
+
+    /* Another room on the same floor. */
+    private Task<Space> AddRoomAsync(Space sibling)
+        => WithUnitOfWorkAsync(async () =>
+        {
+            var tag = Guid.NewGuid().ToString("N")[..8];
+            return await _spaces.InsertAsync(new Space(Guid.NewGuid(), $"Room {tag}", sibling.BuildingId, sibling.FloorId, DefaultSpaceTypes.MeetingRoom), autoSave: true);
         });
 }

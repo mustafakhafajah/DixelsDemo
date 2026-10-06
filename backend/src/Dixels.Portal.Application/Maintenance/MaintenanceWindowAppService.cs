@@ -96,27 +96,25 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
 
         var note = string.IsNullOrWhiteSpace(input.Note) ? L["Blocked"] : input.Note.Trim();
         var seriesId = spaceIds.Count * input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
-        var created = 0;
         var affected = 0;
         var cancelledBookings = new List<Booking>();
+        var windows = new List<MaintenanceWindow>();
         foreach (var o in input.Occurrences)
         {
             var (s, e) = (o.StartUtc.AsUtc(), o.EndUtc.AsUtc());
             affected += await CountAffectedAsync(spaceIds, s, e);
             if (input.CancelAffectedBookings) cancelledBookings.AddRange(await CancelAffectedAsync(spaceIds, s, e));
-            foreach (var spaceId in spaceIds)
+            windows.AddRange(spaceIds.Select(spaceId => new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
             {
-                var m = new MaintenanceWindow(GuidGenerator.Create(), spaceId, s, e)
-                {
-                    Note = note,
-                    SeriesId = seriesId,
-                    ScopeType = input.ScopeType,
-                    ScopeId = input.ScopeId,
-                };
-                await _maintenance.InsertAsync(m, autoSave: true);
-                created++;
-            }
+                Note = note,
+                SeriesId = seriesId,
+                ScopeType = input.ScopeType,
+                ScopeId = input.ScopeId,
+            }));
         }
+        /* One save for every row: a whole building over a long series is thousands of rows, not thousands of round trips. */
+        await _maintenance.InsertManyAsync(windows, autoSave: true);
+        var created = windows.Count;
 
         /* Each person gets one email listing all their bookings this blocked time cancelled. */
         await _notifier.BookingsCancelledAsync(cancelledBookings, "the space is blocked at that time");
@@ -163,16 +161,30 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
     private async Task<MaintenanceWindowDto> MapAsync(MaintenanceWindow window)
         => (await MapListAsync(new List<MaintenanceWindow> { window }))[0];
 
-    /* ObjectMapper copies the window; the space name and the label of the original scope ("HQ North · Floor 3")
-     * are looked up once per distinct space and scope. */
+    /* ObjectMapper copies the window; the space names and the labels of the original scopes ("HQ North · Floor 3")
+     * come from one query each for spaces, floors and buildings, however many windows and scopes the list holds. */
     private async Task<List<MaintenanceWindowDto>> MapListAsync(List<MaintenanceWindow> list)
     {
         if (list.Count == 0) return new();
-        var spaceIds = list.Select(m => m.SpaceId).Distinct().ToList();
+        var scopes = list.Select(m => (m.ScopeType, m.ScopeId)).Distinct().ToList();
+
+        var spaceIds = list.Select(m => m.SpaceId)
+            .Concat(ScopeIdsOf(scopes, MaintenanceScopeType.Space)).Distinct().ToList();
         var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.GetName());
-        var labels = new Dictionary<(MaintenanceScopeType, Guid), string>();
-        foreach (var key in list.Select(m => (m.ScopeType, m.ScopeId)).Distinct())
-            labels[key] = await ScopeLabelAsync(key.ScopeType, key.ScopeId);
+
+        var floorIds = ScopeIdsOf(scopes, MaintenanceScopeType.Floor).ToList();
+        var floors = floorIds.Count == 0
+            ? new Dictionary<Guid, Floor>()
+            : (await _floors.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
+
+        /* A floor's label names its building too. */
+        var buildingIds = ScopeIdsOf(scopes, MaintenanceScopeType.Building)
+            .Concat(floors.Values.Select(f => f.BuildingId)).Distinct().ToList();
+        var buildings = buildingIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _buildings.GetListAsync(b => buildingIds.Contains(b.Id))).ToDictionary(b => b.Id, b => b.GetName());
+
+        var labels = scopes.ToDictionary(s => s, s => ScopeLabel(s.ScopeType, s.ScopeId, spaces, floors, buildings));
         var now = Clock.Now;
         return list.Select(m =>
         {
@@ -184,19 +196,22 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         }).ToList();
     }
 
-    private async Task<string> ScopeLabelAsync(MaintenanceScopeType type, Guid scopeId)
+    private static IEnumerable<Guid> ScopeIdsOf(IEnumerable<(MaintenanceScopeType Type, Guid Id)> scopes, MaintenanceScopeType type)
+        => scopes.Where(s => s.Type == type).Select(s => s.Id);
+
+    /* From what MapListAsync loaded; a scope that no longer exists gets "a space" / "a floor" / "a building". */
+    private string ScopeLabel(MaintenanceScopeType type, Guid scopeId, Dictionary<Guid, string> spaces,
+        Dictionary<Guid, Floor> floors, Dictionary<Guid, string> buildings)
     {
         switch (type)
         {
             case MaintenanceScopeType.Space:
-                return (await _spaces.FindAsync(scopeId))?.GetName() ?? L["ASpace"];
+                return spaces.GetValueOrDefault(scopeId) ?? L["ASpace"];
             case MaintenanceScopeType.Floor:
-                var f = await _floors.FindAsync(scopeId);
-                if (f == null) return L["AFloor"];
-                var fb = await _buildings.FindAsync(f.BuildingId);
-                return L["BuildingFloorLabel", fb?.GetName() ?? "", f.GetName()];
+                if (!floors.TryGetValue(scopeId, out var f)) return L["AFloor"];
+                return L["BuildingFloorLabel", buildings.GetValueOrDefault(f.BuildingId) ?? "", f.GetName()];
             default:
-                return (await _buildings.FindAsync(scopeId))?.GetName() ?? L["ABuilding"];
+                return buildings.GetValueOrDefault(scopeId) ?? L["ABuilding"];
         }
     }
 }

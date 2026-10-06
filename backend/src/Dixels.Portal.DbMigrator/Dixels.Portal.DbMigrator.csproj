@@ -14,8 +14,9 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <!-- Git-ignored, so it is missing on a fresh clone and in CI: copy it only when it exists. -->
     <None Remove="appsettings.secrets.json" />
-    <Content Include="appsettings.secrets.json">
+    <Content Include="appsettings.secrets.json" Condition="Exists('appsettings.secrets.json')">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

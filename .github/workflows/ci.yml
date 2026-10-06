@@ -1,0 +1,84 @@
+# Builds and tests the backend and the frontend on every pull request and on every push to main.
+# Needs no secrets and no database: the backend tests use a throwaway SQLite database.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (build and test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # Node and the ABP CLI fill Dixels.Portal.Web/wwwroot/libs (git-ignored), which the web test that renders a
+      # page needs. Same steps as backend/Dockerfile; the CLI version matches the ABP packages.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install the ABP CLI
+        run: |
+          dotnet tool install -g Volo.Abp.Cli --version 10.6.1
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Restore
+        run: dotnet restore Dixels.Portal.slnx
+
+      - name: Build
+        run: dotnet build Dixels.Portal.slnx -c Release --no-restore
+
+      - name: Install client-side libraries (wwwroot/libs)
+        working-directory: backend/src/Dixels.Portal.Web
+        run: abp install-libs
+
+      - name: Test
+        run: dotnet test Dixels.Portal.slnx -c Release --no-build
+
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # "npm run build" type-checks first (tsc -b), then builds with .env.production.
+      - name: Type-check and build
+        run: npm run build

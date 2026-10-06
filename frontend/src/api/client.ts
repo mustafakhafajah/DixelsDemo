@@ -1,9 +1,7 @@
 import { useCallback } from 'react'
 import { useAuth } from 'react-oidc-context'
 import i18n from 'i18next'
-
-/* May carry a path (https://host/server), so request paths are appended to it, not resolved against it. */
-const API_URL = (import.meta.env.VITE_API_URL ?? 'https://localhost:44393').replace(/\/+$/, '')
+import { API_URL } from '../config'
 
 /* One message the server tied to a request field, e.g. { field: 'name', message: 'Give the space a name.' }. */
 export interface ServerFieldError { field: string; code: string; message: string }

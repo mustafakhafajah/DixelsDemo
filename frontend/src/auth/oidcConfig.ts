@@ -1,7 +1,8 @@
 import type { UserManagerSettings } from 'oidc-client-ts'
+import { API_URL } from '../config'
 
 export const oidcConfig: UserManagerSettings = {
-  authority: import.meta.env.VITE_API_URL ?? 'https://localhost:44393',
+  authority: API_URL,
   client_id: 'Portal_App',
   /* BASE_URL is where the app lives: "/" in development, "/portal/" on the shared server. */
   redirect_uri: `${window.location.origin}${import.meta.env.BASE_URL}callback`,

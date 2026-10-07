@@ -79,29 +79,13 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         var configurationSection = _configuration.GetSection("OpenIddict:Applications");
 
-        //Web Client
-        var webClientId = configurationSection["Portal_Web:ClientId"];
-        if (!webClientId.IsNullOrWhiteSpace())
+        /* Portal_Web was the template's client for a tiered solution. Nothing signs in through it (the SPA uses
+         * Portal_App, Swagger uses Portal_Swagger), and its client secret was once committed to git, so it is no
+         * longer created, and a copy an older seed made is removed. */
+        var oldWebClient = await _applicationManager.FindByClientIdAsync("Portal_Web");
+        if (oldWebClient != null)
         {
-            var webClientRootUrls = RootUrls(configurationSection["Portal_Web:RootUrl"]).Select(u => u.EnsureEndsWith('/')).ToList();
-
-            /* Portal_Web client is only needed if you created a tiered
-             * solution. Otherwise, you can delete this client. */
-            await CreateApplicationAsync(
-                name: webClientId!,
-                type: OpenIddictConstants.ClientTypes.Confidential,
-                consentType: OpenIddictConstants.ConsentTypes.Implicit,
-                displayName: "Web Application",
-                secret: configurationSection["Portal_Web:ClientSecret"] ?? "1q2w3e*",
-                grantTypes: new List<string> //Hybrid flow
-                {
-                    OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.Implicit
-                },
-                scopes: commonScopes,
-                redirectUris: webClientRootUrls.Select(u => $"{u}signin-oidc").ToList(),
-                clientUri: webClientRootUrls.First(),
-                postLogoutRedirectUris: webClientRootUrls.Select(u => $"{u}signout-callback-oidc").ToList()
-            );
+            await _applicationManager.DeleteAsync(oldWebClient);
         }
 
         // SPA Client (Portal_App)

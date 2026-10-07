@@ -7,7 +7,11 @@ It does not touch the shared IIS server or the Postgres already installed on thi
 |---|---|
 | Web app | http://localhost:8080 |
 | API, sign-in pages, Swagger | https://localhost:8443 (Swagger at `/swagger`) |
-| Database (for pgAdmin etc.) | `localhost:5433`, user `postgres`, password `myPassword`, database `DixelsPortal` |
+| Database (for pgAdmin etc.) | `localhost:5433`, user `postgres`, password `docker-local-only`, database `DixelsPortal` |
+
+> The Docker database has its own password (`docker-local-only`), separate from any real one. A database volume
+> made before 7 Oct 2026 still has the old password: run `docker compose down -v` once to start it fresh.
+
 | Mailbox (smtp4dev) | http://localhost:5000: every email the portal sends lands here, nothing reaches real inboxes |
 
 Sign in with the default ABP admin: `admin` / `1q2w3E*`.

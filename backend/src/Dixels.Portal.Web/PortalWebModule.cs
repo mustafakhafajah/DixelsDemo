@@ -101,9 +101,15 @@ public class PortalWebModule : AbpModule
                 options.AddDevelopmentEncryptionAndSigningCertificate = false;
             });
 
+            /* The signing certificate's password lives with the other secrets (appsettings.secrets.json, or the
+             * AuthServer__CertificatePassPhrase environment variable), never in the code. */
             PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
-                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", "a266993e-a57b-4d12-b2c7-bc95b0e4eeed");
+                var certificatePassPhrase = configuration["AuthServer:CertificatePassPhrase"];
+                if (string.IsNullOrWhiteSpace(certificatePassPhrase))
+                    throw new InvalidOperationException(
+                        "AuthServer:CertificatePassPhrase is not set. Add it to appsettings.secrets.json (see backend/README.md).");
+                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", certificatePassPhrase);
             });
         }
     }

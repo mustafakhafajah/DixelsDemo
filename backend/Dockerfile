@@ -34,8 +34,10 @@ COPY src/ src/
 RUN cd src/Dixels.Portal.Web && abp install-libs
 
 # Outside Development the sign-in server signs its tokens with openiddict.pfx (git-ignored). Generate one for the
-# image; the password is the one PortalWebModule opens it with.
-RUN dotnet dev-certs https -v -ep src/Dixels.Portal.Web/openiddict.pfx -p a266993e-a57b-4d12-b2c7-bc95b0e4eeed
+# image with a password given at build time (docker-compose.yml); the API reads the same password from
+# AuthServer__CertificatePassPhrase. It is a throwaway certificate for local Docker runs, not the server's.
+ARG CERT_PASSPHRASE
+RUN test -n "$CERT_PASSPHRASE" && dotnet dev-certs https -v -ep src/Dixels.Portal.Web/openiddict.pfx -p "$CERT_PASSPHRASE"
 
 # The migrator project always publishes appsettings.secrets.json; the real one is git-ignored and kept out of the
 # image, so publish an empty one. Settings come from environment variables instead (docker-compose.yml).

@@ -9,7 +9,7 @@ import { P } from '../../auth/permissions'
 import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
-import { closedReason, isUtcLike, localLabel, openParts, zoneCity } from '../../lib/closedDays'
+import { closedReason, localLabel, openParts, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
 import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
@@ -157,13 +157,13 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const spaceId = options.some((o) => o.space.id === chosenSpaceId) ? chosenSpaceId : ''
   const space = spaces.find((s) => s.id === spaceId) ?? null
   const c = space?.constraints
-  /* Times are picked in UTC. Once a space is chosen, only times inside its building's opening hours (on the
-   * building's clock) are offered, and each pick also shows that clock when it reads differently from UTC.
+  /* Times are picked on the viewer's own clock. Once a space is chosen, only times inside its building's opening
+   * hours (on the building's clock) are offered, and each pick also shows that clock when it reads differently.
    * On a closed day nothing is open; the date's error explains it, so the lists stay whole. */
   const openToday = c ? openParts(c, date) : []
   const startAllowed = openToday.length ? (m: number) => openToday.some((p) => p.start <= m && m < p.end) : undefined
   const endAllowed = openToday.length ? (m: number) => openToday.some((p) => p.start < m && m <= p.end) : undefined
-  const localHint = (d: Date | null) => c && d && !isUtcLike(c.timeZone, d)
+  const localHint = (d: Date | null) => c && d && !sameClockAsViewer(c.timeZone, d)
     ? <p className="card-sub" style={{ margin: '4px 0 0' }}>{t('booking.localTime', { time: localLabel(d, c.timeZone), zone: zoneCity(c.timeZone) })}</p>
     : null
   const timeError = validateWindowLocal(c ?? null, space?.name ?? '', start, end)
@@ -321,17 +321,13 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.start')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="m-start">{t('common.start')}<RequiredMark /></label>
           <TimePicker id="m-start" aria-label={t('common.start')} value={startTime} min={startMin} allowed={startAllowed} onChange={onStart} />
           {localHint(start)}
           <ErrorLine id="m-start-error" error={shown['m-start']} />
         </div>
         <div>
-          <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.end')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="m-end">{t('common.end')}<RequiredMark /></label>
           <TimePicker id="m-end" aria-label={t('common.end')} value={endTime} min={endMin} allowed={endAllowed} onChange={(v) => { setEndTime(v); edited() }} />
           {localHint(end)}
           <ErrorLine id="m-end-error" error={shown['m-end']} />

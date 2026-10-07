@@ -77,7 +77,7 @@
     "startInPast": "Start must not be in the past.",
     "buildingClosed": "{{space}}'s building is closed {{when}}.",
     "outsideHours": "{{space}} can only be booked between {{open}} and {{close}}.",
-    "outsideHoursZone": "{{space}} can only be booked between {{open}} and {{close}} {{zone}} time ({{openUtc}}–{{closeUtc}} UTC).",
+    "outsideHoursZone": "{{space}} can only be booked between {{open}} and {{close}} {{zone}} time ({{openHere}}–{{closeHere}} your time).",
     "durationBelowMin_one": "Minimum booking length here is {{count}} minute.",
     "durationBelowMin_other": "Minimum booking length here is {{count}} minutes.",
     "durationAboveMax_one": "Maximum booking length here is {{count}} hour.",
@@ -611,8 +611,8 @@
       "alreadyBooked": "already booked"
     },
     "conflict": {
-      "byOwner": "{{space}} is already booked by {{owner}} from {{from}} to {{to}} UTC. Bookings on one space may never overlap.",
-      "taken": "{{space}} is already booked from {{from}} to {{to}} UTC. Bookings on one space may never overlap."
+      "byOwner": "{{space}} is already booked by {{owner}} from {{from}} to {{to}}. Bookings on one space may never overlap.",
+      "taken": "{{space}} is already booked from {{from}} to {{to}}. Bookings on one space may never overlap."
     },
     "toast": {
       "confirmed": "Booking confirmed",
@@ -661,7 +661,7 @@
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
       "notBookable": "This space cannot be booked, so slots are inert",
       "noPermission": "You do not have permission to book",
-      "rest": "click a block for its detail · click a date for the whole day. Times are UTC; a building on another clock also shows its own time."
+      "rest": "click a block for its detail · click a date for the whole day. Times are in your own time zone; a building on another clock also shows its own time."
     }
   },
   "detail": {
@@ -741,7 +741,7 @@
     "seriesCancelled_other": "{{count, number}} occurrences cancelled",
     "seriesCancelledMessage": "Series from {{from}} onward.",
     "ended": "Booking ended",
-    "endedMessage": "Ended at {{time}} UTC. The rest of the window is free.",
+    "endedMessage": "Ended at {{time}}. The rest of the window is free.",
     "endFailed": "Could not end booking",
     "unblocked": "Time unblocked",
     "unblockedMessage": "It can be booked again.",
@@ -806,7 +806,7 @@
     "notLocked": "Not locked",
     "lockedUntil": "Locked until {{date}}",
     "untilUnlocked": "Until someone unlocks it",
-    "timeInUtc": "Time in UTC",
+    "timeLocal": "In your own time zone",
     "youMark": "(you)",
     "viewBookings": "View bookings",
     "col": {

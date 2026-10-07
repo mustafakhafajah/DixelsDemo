@@ -1,7 +1,7 @@
 import i18n from 'i18next'
 import type { Constraints, ScheduleItem } from '../api/types'
 import { DEFAULT_CLOSE_MIN, DEFAULT_OPEN_MIN } from './constants'
-import { closedReason, hoursSpan, isUtcLike, isWithinHours, localDayKey, onlyOpen, zoneCity, zonedInstant } from './closedDays'
+import { closedReason, hoursSpan, isWithinHours, localDayKey, onlyOpen, sameClockAsViewer, zoneCity, zonedInstant } from './closedDays'
 import { dayAt, dayKey, hm, minLabel, minOfDay } from './dateUtils'
 
 export interface DaySegment {
@@ -19,17 +19,19 @@ export interface MinuteWindow {
   end: number
 }
 
-/* Clip an item to one day column; an overnight item yields a segment in each day it touches. */
+/* Clip an item to one day column; an overnight item yields a segment in each day it touches. The day ends at the
+ * next midnight on the viewer's clock (23 or 25 hours away on a clock-change day), and the minutes are read off
+ * that clock so a block lines up with the hour labels. */
 export function daySegment(item: ScheduleItem, key: string): DaySegment | null {
   const d0 = dayAt(key).getTime()
-  const d1 = d0 + 86_400_000
+  const d1 = dayAt(key, 24).getTime()
   const s = Math.max(item.start.getTime(), d0)
   const e = Math.min(item.end.getTime(), d1)
   if (e <= s) return null
   return {
     item,
-    s: Math.round((s - d0) / 60000),
-    e: Math.round((e - d0) / 60000),
+    s: s === d0 ? 0 : minOfDay(new Date(s)),
+    e: e === d1 ? 1440 : minOfDay(new Date(e)),
     clipStart: item.start.getTime() < d0,
     clipEnd: item.end.getTime() > d1,
     lane: 0,
@@ -78,7 +80,7 @@ function widen(bounds: MinuteWindow, items: ScheduleItem[]): MinuteWindow {
   return { start: open, end: close }
 }
 
-/* One space's resolved hours (on the building's clock, so shifted on this UTC day), widened only by its own items that day. */
+/* One space's resolved hours (on the building's clock, so shifted on the viewer's day), widened only by its own items that day. */
 export function resourceDayBounds(c: Constraints, spaceId: string, items: ScheduleItem[], key: string): MinuteWindow {
   const w = widen(hoursSpan(c, key), itemsOnDay(items, spaceId, key))
   const open = Math.max(0, w.start)
@@ -150,15 +152,15 @@ export function validateWindowLocal(c: Constraints | null, spaceName: string, st
   if (!isWithinHours(c, start, end)) {
     const open = minLabel(c.openMinute)
     const close = minLabel(c.closeMinute)
-    /* The form picks in UTC, so a building on another clock also gets its hours in UTC for that day. */
-    if (isUtcLike(c.timeZone, start))
+    /* The form picks on the viewer's clock, so a building on another clock also gets its hours on that clock for that day. */
+    if (sameClockAsViewer(c.timeZone, start))
       return { code: 'validation.outside_hours', message: i18n.t('validation.outsideHours', { space: spaceName, open, close }) }
     const day = localDayKey(start, c.timeZone)
     return {
       code: 'validation.outside_hours',
       message: i18n.t('validation.outsideHoursZone', {
         space: spaceName, open, close, zone: zoneCity(c.timeZone),
-        openUtc: hm(zonedInstant(day, c.openMinute, c.timeZone)), closeUtc: hm(zonedInstant(day, c.closeMinute, c.timeZone)),
+        openHere: hm(zonedInstant(day, c.openMinute, c.timeZone)), closeHere: hm(zonedInstant(day, c.closeMinute, c.timeZone)),
       }),
     }
   }

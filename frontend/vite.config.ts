@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -11,4 +12,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  /* The viewer's time zone is pinned for tests (see vitest.setup.ts); TZ is also set before the workers start. */
+  test: { env: { TZ: 'Asia/Amman' }, setupFiles: ['./vitest.setup.ts'] },
 }))

@@ -104,7 +104,7 @@ export function useScheduleConfig(id: ScheduleId) {
         patch({ from: dayKey(addDays(dayAt(cfg.from), len)), to: dayKey(addDays(dayAt(cfg.to), len)) })
       } else if (cfg.mode === 'month') {
         const d = dayAt(cfg.from)
-        setPeriod(dayKey(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + dir, 1))))
+        setPeriod(dayKey(new Date(d.getFullYear(), d.getMonth() + dir, 1)))
       } else {
         setPeriod(dayKey(addDays(dayAt(cfg.from), (cfg.mode === 'week' ? 7 : 1) * dir)))
       }

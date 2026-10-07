@@ -10,7 +10,7 @@ export const toAttendeeInput = (p: Invitee): AttendeeInput => (p.userId !== null
 /* The list a booking already has, as the owner edits it (guests' addresses only reach the owner and admins). */
 export const inviteesOf = (b: Booking): Invitee[] => [
   ...b.attendees.map((a) => ({ userId: a.userId, name: a.name, email: a.email })),
-  ...b.guests.map((email) => ({ userId: null, email })),
+  ...b.guests.map((g) => ({ userId: null, email: g.email })),
 ]
 
 /* The same people, in any order. */

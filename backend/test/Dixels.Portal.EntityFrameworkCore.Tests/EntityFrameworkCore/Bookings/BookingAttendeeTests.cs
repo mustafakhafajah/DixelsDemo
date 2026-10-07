@@ -57,7 +57,7 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
         invited.UserId.ShouldBe(abed.Id);
         invited.Response.ShouldBe("none");
         booking.GuestCount.ShouldBe(1);
-        booking.Guests.ShouldBe(["guest@outside.test"]);
+        booking.Guests.Select(g => g.Email).ShouldBe(["guest@outside.test"]);
         using (_principal.As(abed))
         {
             (await MyListAsync(abed)).ShouldContain(booking.Id);
@@ -154,7 +154,7 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
         row.RespondedAt.ShouldNotBeNull();
         var day = $"{room.GetName()}, {Ten:ddd d MMM}";
         var answers = (await EmailsToAsync(OwnerEmail, room)).Where(e => e.Method == null).ToList();
-        answers.Select(e => e.Subject).ShouldBe([$"Accepted: {day}", $"Tentative: {day}", $"Declined: {day}"], ignoreOrder: true);
+        answers.Select(e => e.Subject).ShouldBe([$"Accepted: {day}", $"Maybe: {day}", $"Declined: {day}"], ignoreOrder: true);
         answers.First(e => e.Subject.StartsWith("Accepted")).Body.ShouldContain("Abed Tester has accepted your booking:");
     }
 
@@ -249,7 +249,7 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
         var changed = await _service.SetAttendeesAsync(booking.Id, new SetBookingAttendeesDto { Attendees = [Guest("guest@outside.test")] });
 
         changed.Attendees.ShouldBeEmpty();
-        changed.Guests.ShouldBe(["guest@outside.test"]);
+        changed.Guests.Select(g => g.Email).ShouldBe(["guest@outside.test"]);
         var toAbed = await EmailsToAsync(abed.Email, room);
         toAbed.Select(e => e.Subject)
             .ShouldBe([$"Invitation: {room.GetName()}, {Ten:ddd d MMM}", $"No longer invited: {room.GetName()}, {Ten:ddd d MMM}"], ignoreOrder: true);
@@ -339,7 +339,7 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 
         (await GetRequiredService<BookingGuestCleaner>().ForgetFinishedAsync()).ShouldBeGreaterThanOrEqualTo(2);
 
-        (await _service.GetAsync(upcoming.Id)).Guests.ShouldBe(["upcoming@outside.test"]);
+        (await _service.GetAsync(upcoming.Id)).Guests.Select(g => g.Email).ShouldBe(["upcoming@outside.test"]);
         foreach (var id in new[] { ended.Id, cancelled.Id })
         {
             var dto = await _service.GetAsync(id);
@@ -347,6 +347,57 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
             dto.GuestCount.ShouldBe(1);
         }
     }
+
+    [Fact]
+    public async Task An_outside_guest_answers_through_their_private_link_and_the_owner_is_told()
+    {
+        var room = await CreateRoomAsync();
+        var booking = await BookAsync(room, Guest("guest@outside.test"));
+        var token = await IssueGuestTokenAsync(booking.Id, "guest@outside.test");
+        var invitations = GetRequiredService<IBookingInvitationAppService>();
+
+        (await invitations.GetAsync(token)).Response.ShouldBe("none");
+        var answered = await invitations.RespondAsync(token, new RespondToBookingDto { Response = "tentative" });
+
+        answered.Response.ShouldBe("tentative");
+        answered.SpaceName.ShouldBe(room.GetName());
+        (await _service.GetAsync(booking.Id)).Guests.ShouldHaveSingleItem().Response.ShouldBe("tentative");
+        (await EmailsToAsync(OwnerEmail, room)).Select(e => e.Subject).ShouldContain($"Maybe: {room.GetName()}, {Ten:ddd d MMM}");
+        /* The same answer again tells nobody twice. */
+        await invitations.RespondAsync(token, new RespondToBookingDto { Response = "tentative" });
+        (await EmailsToAsync(OwnerEmail, room)).Count(e => e.Subject.StartsWith("Maybe")).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_wrong_link_or_one_for_a_booking_that_is_over_does_not_work()
+    {
+        var room = await CreateRoomAsync();
+        var booking = await BookAsync(room, Guest("guest@outside.test"));
+        var token = await IssueGuestTokenAsync(booking.Id, "guest@outside.test");
+        var invitations = GetRequiredService<IBookingInvitationAppService>();
+
+        (await Should.ThrowAsync<UserFriendlyException>(() => invitations.GetAsync("not-the-secret")))
+            .Code.ShouldBe(PortalDomainErrorCodes.BookingInvitationNotFound);
+
+        await _service.CancelAsync(booking.Id);
+        (await Should.ThrowAsync<UserFriendlyException>(() => invitations.RespondAsync(token, new RespondToBookingDto { Response = "accepted" })))
+            .Code.ShouldBe(PortalDomainErrorCodes.BookingLocked);
+
+        /* Once the booking is over the guest's address and their link are wiped. */
+        await GetRequiredService<BookingGuestCleaner>().ForgetFinishedAsync();
+        (await Should.ThrowAsync<UserFriendlyException>(() => invitations.GetAsync(token)))
+            .Code.ShouldBe(PortalDomainErrorCodes.BookingInvitationNotFound);
+    }
+
+    /* Tests have no portal address, so invitations carry no links: the guest's secret is issued here instead. */
+    private Task<string> IssueGuestTokenAsync(Guid bookingId, string email)
+        => WithUnitOfWorkAsync(async () =>
+        {
+            var row = await _attendees.FirstAsync(a => a.BookingId == bookingId && a.Email == email);
+            var token = row.IssueResponseToken();
+            await _attendees.UpdateAsync(row, autoSave: true);
+            return token;
+        });
 
     private static AttendeeInputDto User(IdentityUser user) => new() { UserId = user.Id };
 

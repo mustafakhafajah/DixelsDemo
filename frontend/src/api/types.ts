@@ -108,9 +108,29 @@ export interface BookingDto {
   lastModificationTime: string | null
   /* Portal users invited. */
   attendees: BookingAttendee[]
-  /* Outside guests' addresses: only for the owner and admins, and only until the booking is over. */
-  guests: string[]
+  /* Outside guests (address and answer): only for the owner and admins, and only until the booking is over. */
+  guests: BookingGuest[]
   guestCount: number
+}
+
+/* An outside guest as the owner sees them; they answer through the private link in their invitation. */
+export interface BookingGuest {
+  email: string
+  response: AttendeeResponse
+}
+
+/* What an outside guest's public answer page shows (GET /api/app/booking-invitations/{secret}). */
+export interface BookingInvitation {
+  spaceName: string
+  buildingName: string
+  floorName: string | null
+  startUtc: string
+  endUtc: string
+  /* The building's zone, for "= 14:30 Warsaw time" when it differs from the guest's own clock. */
+  timeZone: string
+  ownerName: string
+  response: AttendeeResponse
+  lifecycle: Lifecycle
 }
 
 /* How an invited colleague answered, as in a Teams meeting: 'none' until they reply. Someone who declined stays on the list. */

@@ -20,8 +20,8 @@ public class BookingDto : EntityDto<Guid>
     public DateTime? LastModificationTime { get; set; }
     /* The portal users invited. */
     public List<BookingAttendeeDto> Attendees { get; set; } = new();
-    /* Outside guests' email addresses: only for the owner and people who see everyone's bookings, and only until
+    /* Outside guests (address and answer): only for the owner and people who see everyone's bookings, and only until
      * the booking is over or cancelled. GuestCount always says how many there are. */
-    public List<string> Guests { get; set; } = new();
+    public List<BookingGuestDto> Guests { get; set; } = new();
     public int GuestCount { get; set; }
 }

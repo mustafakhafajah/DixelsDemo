@@ -17,6 +17,9 @@ public class BookingAttendeeConfiguration : IEntityTypeConfiguration<BookingAtte
         /* Nobody is on one booking twice; a forgotten guest (no user, no email) can be there many times. */
         b.HasIndex(x => new { x.BookingId, x.UserId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
         b.HasIndex(x => new { x.BookingId, x.Email }).IsUnique().HasFilter("\"Email\" IS NOT NULL");
+        /* A guest's answer link finds their row by the hash of its secret. */
+        b.Property(x => x.ResponseTokenHash).HasMaxLength(64);
+        b.HasIndex(x => x.ResponseTokenHash).IsUnique().HasFilter("\"ResponseTokenHash\" IS NOT NULL");
         b.HasOne<Booking>().WithMany().HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Cascade);
     }
 }

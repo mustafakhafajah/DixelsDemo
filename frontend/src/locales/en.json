@@ -704,7 +704,7 @@
     "cantRespond": "This booking can't be opened. It may have been cancelled, or you're no longer invited.",
     "response": {
       "accepted": "Accepted",
-      "tentative": "Tentative",
+      "tentative": "Maybe",
       "declined": "Declined",
       "none": "No response"
     },
@@ -712,13 +712,13 @@
       "notAnswered": "Not answered yet.",
       "notAnsweredShort": "Not answered",
       "yourAnswer": "Your answer: {{answer}}.",
-      "viaEmail": "To answer or change your answer, use the Accept, Tentative or Decline buttons in your invitation email."
+      "viaEmail": "To answer or change your answer, use the Accept, Maybe or Decline buttons in your invitation email."
     },
     "replySummary": {
       "accepted_one": "{{count, number}} accepted",
       "accepted_other": "{{count, number}} accepted",
-      "tentative_one": "{{count, number}} tentative",
-      "tentative_other": "{{count, number}} tentative",
+      "tentative_one": "{{count, number}} maybe",
+      "tentative_other": "{{count, number}} maybe",
       "declined_one": "{{count, number}} declined",
       "declined_other": "{{count, number}} declined",
       "none_one": "{{count, number}} no response",
@@ -739,7 +739,7 @@
     "unblockedMessage": "It can be booked again.",
     "replied": {
       "accepted": "Accepted",
-      "tentative": "Tentative",
+      "tentative": "Maybe",
       "declined": "Declined"
     },
     "repliedMessage": "{{space}} · {{owner}} has been told.",
@@ -925,5 +925,18 @@
       "title": "No room is free at this time",
       "text": "Try another time or length, or clear the filters to see every room."
     }
+  },
+  "respond": {
+    "loading": "Loading your invitation…",
+    "problem": "This link doesn't work",
+    "notAnswered": "You haven't answered yet",
+    "yourAnswer": "Your answer: {{answer}}",
+    "invitedBy": "{{name}} invited you to this booking.",
+    "time": "Time",
+    "yourTime": "your time",
+    "howToChange": "To change your answer, use the Accept, Maybe or Decline buttons in your invitation email.",
+    "cancelled": "This booking has been cancelled.",
+    "ended": "This booking is over.",
+    "told": "{{name}} has been told."
   }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using Volo.Abp.Domain.Entities;
 
 namespace Dixels.Portal.Bookings;
@@ -15,10 +17,13 @@ public class BookingAttendee : Entity<Guid>
     public Guid? UserId { get; private set; }
     /* Guests only, stored lower-case; null once forgotten. */
     public string? Email { get; private set; }
-    /* Their answer, as in Teams: None until they reply. Only portal users answer in the portal; a guest's reply goes
-     * from their own calendar straight to the owner, so a guest stays None here. */
+    /* Their answer, as in Teams: None until they reply, from the Accept / Tentative / Decline buttons of the
+     * invitation email (portal users through the portal, guests through their private link). */
     public AttendeeResponse Response { get; private set; }
     public DateTime? RespondedAt { get; private set; }
+    /* Guests only: the SHA-256 (hex) of the secret in their invitation's answer links. Only the hash is kept, like a
+     * password, so the database alone can't be used to answer for them; wiped with the email address. */
+    public string? ResponseTokenHash { get; private set; }
 
     public bool IsGuest => UserId == null;
     /* Someone who declined stays on the list (they may change their mind) but takes no seat and doesn't have the
@@ -40,8 +45,21 @@ public class BookingAttendee : Entity<Guid>
 
     public void ForgetGuestEmail()
     {
-        if (IsGuest) Email = null;
+        if (!IsGuest) return;
+        Email = null;
+        ResponseTokenHash = null;
     }
+
+    /* A new secret for a guest's answer links (an older one stops working); the caller puts it in the email. */
+    public string IssueResponseToken()
+    {
+        if (!IsGuest) throw new InvalidOperationException("Only guests answer through a private link.");
+        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        ResponseTokenHash = HashToken(token);
+        return token;
+    }
+
+    public static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
     /* False when it is the answer they had already given: nothing changes and nobody is told again. */
     public bool Respond(AttendeeResponse response, DateTime at)

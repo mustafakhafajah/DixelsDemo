@@ -136,14 +136,44 @@ public class BookingNotifier : ITransientDependency
             BookingEmails.Responded(FirstName(owner), attendeeName, response, lines, s.BookingsUrl), method: null);
     }
 
-    /* Portal users get Accept / Tentative / Decline links to the first of their dates; with several dates (a repeating
-     * booking) the answer covers them all, as answering a Teams series does. Guests answer from the calendar
-     * invitation instead. */
-    private Task InviteAsync(Snapshot s, IReadOnlyCollection<Booking> bookings, IReadOnlyCollection<BookingAttendee> attendees)
-        => PerAttendeeAsync(s, bookings, attendees, (name, ownerName, lines, first) =>
-            BookingEmails.Invited(name, ownerName, lines,
-                first.IsGuest || s.BookingsUrl == null ? null : ResponseLinks.For(s.BookingsUrl, first.BookingId, wholeSeries: lines.Count > 1)),
+    /* A guest answered through their private link: the same email to the owner, naming them by address. */
+    public async Task GuestRespondedAsync(IReadOnlyCollection<Booking> bookings, string guestEmail, AttendeeResponse response)
+    {
+        if (bookings.Count == 0) return;
+        var s = await LoadAsync(bookings);
+        if (s == null) return;
+        await PerOwnerAsync(s, bookings, (owner, lines) =>
+            BookingEmails.Responded(FirstName(owner), guestEmail, response, lines, s.BookingsUrl), method: null);
+    }
+
+    /* Everyone invited gets Accept / Tentative / Decline links to the first of their dates; with several dates (a
+     * repeating booking) the answer covers them all, as answering a Teams series does. Portal users' links open the
+     * portal (they sign in); a guest's are a private link to the public answer page, carrying a fresh secret that only
+     * this email holds (only its hash is saved). */
+    private async Task InviteAsync(Snapshot s, IReadOnlyCollection<Booking> bookings, IReadOnlyCollection<BookingAttendee> attendees)
+    {
+        var tokens = new Dictionary<Guid, string>();
+        if (s.SpaRoot != null)
+        {
+            var ids = bookings.Select(b => b.Id).ToHashSet();
+            var guests = attendees.Where(a => a.IsGuest && a.Email != null && ids.Contains(a.BookingId)).ToList();
+            foreach (var guest in guests) tokens[guest.Id] = guest.IssueResponseToken();
+            if (guests.Count > 0)
+            {
+                try { await _attendees.UpdateManyAsync(guests, autoSave: true); }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Could not save the guests' answer links; their invitations go without buttons.");
+                    tokens.Clear();
+                }
+            }
+        }
+        await PerAttendeeAsync(s, bookings, attendees, (name, ownerName, lines, first) =>
+            BookingEmails.Invited(name, ownerName, lines, first.IsGuest
+                ? tokens.TryGetValue(first.Id, out var token) ? ResponseLinks.ForGuest(s.SpaRoot!, token, wholeSeries: lines.Count > 1) : null
+                : s.BookingsUrl == null ? null : ResponseLinks.For(s.BookingsUrl, first.BookingId, wholeSeries: lines.Count > 1)),
             BookingCalendar.Request);
+    }
 
     /* Only bookings made at least 10 minutes ahead get one; the confirmation covers the rest. */
     private async Task ScheduleReminderAsync(Booking booking)
@@ -264,7 +294,9 @@ public class BookingNotifier : ITransientDependency
                 .Concat(extraUserIds ?? [])
                 .Distinct().ToList();
             var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id);
-            return new Snapshot(await LinesAsync(bookings), attendees, users, await BookingsUrlAsync());
+            var root = await SpaRootAsync();
+            return new Snapshot(await LinesAsync(bookings), attendees, users,
+                root == null ? null : $"{root}/{PortalAppUrls.BookingsPage}", root);
         }
         catch (Exception ex)
         {
@@ -325,17 +357,18 @@ public class BookingNotifier : ITransientDependency
     private static string FirstName(IdentityUser user)
         => !string.IsNullOrWhiteSpace(user.Name) ? user.Name.Trim() : user.GetDisplayName();
 
-    private async Task<string?> BookingsUrlAsync()
+    /* The portal's address without a trailing slash, or null when none is set (emails then carry no links). */
+    private async Task<string?> SpaRootAsync()
     {
         var root = await _urls.GetUrlOrNullAsync(PortalAppUrls.Spa);
-        return string.IsNullOrWhiteSpace(root) ? null : $"{root.TrimEnd('/')}/{PortalAppUrls.BookingsPage}";
+        return string.IsNullOrWhiteSpace(root) ? null : root.TrimEnd('/');
     }
 
     /* The bookings page with this booking open. Signing in first keeps the link. */
     private static string? BookingLink(Snapshot s, Guid bookingId) => s.BookingsUrl == null ? null : $"{s.BookingsUrl}?booking={bookingId}";
 
     private sealed record Snapshot(Dictionary<Guid, BookingEmailLine> Lines, List<BookingAttendee> Attendees,
-        Dictionary<Guid, IdentityUser> Users, string? BookingsUrl)
+        Dictionary<Guid, IdentityUser> Users, string? BookingsUrl, string? SpaRoot)
     {
         public Dictionary<Guid, string?> Zones { get; } = new();
     }

@@ -855,7 +855,7 @@
     "cantRespond": "تعذّر فتح هذا الحجز. ربما أُلغي، أو لم تعد مدعوًا إليه.",
     "response": {
       "accepted": "مقبول",
-      "tentative": "مبدئي",
+      "tentative": "ربما",
       "declined": "مرفوض",
       "none": "لا رد"
     },
@@ -863,7 +863,7 @@
       "notAnswered": "لم تردّ بعد.",
       "notAnsweredShort": "لم تردّ",
       "yourAnswer": "ردّك: {{answer}}.",
-      "viaEmail": "للرد أو لتغيير ردك، استخدم أزرار القبول أو المبدئي أو الرفض في بريد الدعوة."
+      "viaEmail": "للرد أو لتغيير ردك، استخدم أزرار القبول أو ربما أو الرفض في بريد الدعوة."
     },
     "replySummary": {
       "accepted_zero": "لم يقبل أحد",
@@ -872,12 +872,12 @@
       "accepted_few": "قبِل {{count, number}} أشخاص",
       "accepted_many": "قبِل {{count, number}} شخصًا",
       "accepted_other": "قبِل {{count, number}} شخص",
-      "tentative_zero": "لا ردود مبدئية",
-      "tentative_one": "ردّ مبدئي واحد",
-      "tentative_two": "ردّان مبدئيان",
-      "tentative_few": "{{count, number}} ردود مبدئية",
-      "tentative_many": "{{count, number}} ردًّا مبدئيًا",
-      "tentative_other": "{{count, number}} ردّ مبدئي",
+      "tentative_zero": "لا أحد قال ربما",
+      "tentative_one": "واحد قال ربما",
+      "tentative_two": "اثنان قالا ربما",
+      "tentative_few": "{{count, number}} قالوا ربما",
+      "tentative_many": "{{count, number}} قالوا ربما",
+      "tentative_other": "{{count, number}} قالوا ربما",
       "declined_zero": "لم يرفض أحد",
       "declined_one": "رفض شخص واحد",
       "declined_two": "رفض شخصان",
@@ -910,7 +910,7 @@
     "unblockedMessage": "يمكن حجزه من جديد.",
     "replied": {
       "accepted": "تم القبول",
-      "tentative": "رد مبدئي",
+      "tentative": "ربما",
       "declined": "تم الرفض"
     },
     "repliedMessage": "{{space}} · وصل الإشعار إلى {{owner}}.",
@@ -1124,5 +1124,18 @@
       "title": "لا توجد غرفة متاحة في هذا الوقت",
       "text": "جرّب وقتًا أو مدة أخرى، أو امسح عوامل التصفية لعرض كل الغرف."
     }
+  },
+  "respond": {
+    "loading": "جارٍ تحميل دعوتك…",
+    "problem": "هذا الرابط لا يعمل",
+    "notAnswered": "لم تردّ بعد",
+    "yourAnswer": "ردّك: {{answer}}",
+    "invitedBy": "دعاك {{name}} إلى هذا الحجز.",
+    "time": "الوقت",
+    "yourTime": "بتوقيتك",
+    "howToChange": "لتغيير ردّك، استخدم أزرار القبول أو ربما أو الرفض في بريد الدعوة.",
+    "cancelled": "أُلغي هذا الحجز.",
+    "ended": "انتهى هذا الحجز.",
+    "told": "أُبلغ {{name}} بردّك."
   }
 }

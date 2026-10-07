@@ -1,0 +1,29 @@
+/* The public answer page of an outside guest: one centred card, using the shell's colour tokens (light and dark). */
+.respond-page {
+  color-scheme: var(--scheme);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 24px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: Inter, 'Cairo Variable', ui-sans-serif, system-ui, sans-serif;
+}
+.respond-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px 26px;
+  box-shadow: var(--shadow-2);
+}
+.respond-brand { margin: 0 0 14px; font-weight: 700; letter-spacing: .02em; color: var(--mine); }
+.respond-card h1 { display: flex; align-items: center; gap: 8px; font-size: 19px; margin: 0 0 6px; }
+.respond-muted { color: var(--slate); font-size: 13px; margin: 0; }
+.respond-kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 18px 0; font-size: 14px; }
+.respond-kv dt { color: var(--slate); }
+.respond-kv dd { margin: 0; font-weight: 500; }
+.respond-kv .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.respond-note { margin: 0; font-size: 12.5px; color: var(--slate); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }

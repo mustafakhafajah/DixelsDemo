@@ -32,6 +32,14 @@ public class BookingAttendeeDto
     public DateTime? RespondedAt { get; set; }
 }
 
+/* An outside guest as the owner sees them: their address and their answer (from their private answer link). */
+public class BookingGuestDto
+{
+    public string Email { get; set; } = null!;
+    public string Response { get; set; } = "none";
+    public DateTime? RespondedAt { get; set; }
+}
+
 /* GET /api/app/booking-people: active users to pick from when inviting people. */
 public class BookingPeopleFilterDto
 {

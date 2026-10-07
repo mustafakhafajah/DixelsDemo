@@ -19,12 +19,12 @@ const RADIO = { display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer'
 
 /* Who is invited: colleagues by name (you as "You"), then the outside guests: their addresses for the owner and
  * admins, otherwise (and once the booking is over and they're wiped) just how many. With showReplies (the owner and
- * admins) each colleague's answer is shown too, under a one-line count, like a Teams meeting's tracking. */
+ * admins) everyone's answer is shown too, guests' included, under a one-line count, like a Teams meeting's tracking. */
 function Attendees({ b, myId, showReplies }: { b: Booking; myId: string; showReplies: boolean }) {
   const { t } = useTranslation()
   const hiddenGuests = b.guestCount - b.guests.length
   const counts: Record<AttendeeResponse, number> = { accepted: 0, tentative: 0, declined: 0, none: 0 }
-  for (const a of b.attendees) counts[a.response ?? 'none']++
+  for (const a of [...b.attendees, ...b.guests]) counts[a.response ?? 'none']++
   const summary = SUMMARY_ORDER.filter((r) => counts[r] > 0).map((r) => t(`detail.replySummary.${r}`, { count: counts[r] })).join(' · ')
   return (
     <>
@@ -37,8 +37,12 @@ function Attendees({ b, myId, showReplies }: { b: Booking; myId: string; showRep
             {showReplies && <span style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{t(`detail.response.${a.response ?? 'none'}`)}</span>}
           </li>
         ))}
-        {b.guests.map((email) => (
-          <li key={email}><bdi dir="ltr">{email}</bdi> <span className="tag">{t('booking.attendees.guest')}</span></li>
+        {b.guests.map((g) => (
+          <li key={g.email} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {showReplies && <ResponseIcon response={g.response ?? 'none'} />}
+            <bdi dir="ltr">{g.email}</bdi> <span className="tag">{t('booking.attendees.guest')}</span>
+            {showReplies && <span style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{t(`detail.response.${g.response ?? 'none'}`)}</span>}
+          </li>
         ))}
         {hiddenGuests > 0 && (
           <li style={{ color: 'var(--slate)', fontWeight: 400 }}>

@@ -517,7 +517,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
             }).OrderBy(a => a.Name).ToList();
             var guests = invited.Where(a => a.IsGuest).ToList();
             dto.GuestCount = guests.Count;
-            dto.Guests = seesNames || isOwner ? guests.Where(a => a.Email != null).Select(a => a.Email!).OrderBy(e => e).ToList() : new();
+            dto.Guests = seesNames || isOwner
+                ? guests.Where(a => a.Email != null).OrderBy(a => a.Email)
+                    .Select(a => new BookingGuestDto { Email = a.Email!, Response = a.Response.ToApiValue(), RespondedAt = a.RespondedAt }).ToList()
+                : new();
             return dto;
         }).ToList();
     }

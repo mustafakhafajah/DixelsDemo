@@ -22,6 +22,13 @@ public record ResponseLinks(string Accept, string Tentative, string Decline)
         var page = $"{bookingsUrl}?booking={bookingId}{(wholeSeries ? "&series=1" : "")}&respond=";
         return new ResponseLinks(page + "accept", page + "tentative", page + "decline");
     }
+
+    /* A guest can't sign in: their buttons open the public answer page with the private secret of their invitation. */
+    public static ResponseLinks ForGuest(string spaRoot, string token, bool wholeSeries = false)
+    {
+        var page = $"{spaRoot}/{PortalAppUrls.RespondPage}/{token}?{(wholeSeries ? "series=1&" : "")}answer=";
+        return new ResponseLinks(page + "accept", page + "tentative", page + "decline");
+    }
 }
 
 /* The booking emails, in English (the portal's emails are English only). Pure: the same input gives the same email,
@@ -68,9 +75,9 @@ public static class BookingEmails
             [$"Hello {Encode(name)},", "Your booking starts in about 10 minutes:", $"<strong>{Encode(Describe(line))}</strong>"],
             "View my bookings", bookingsUrl));
 
-    /* To someone invited by ownerName; name is null for an outside guest. A portal user answers with the Accept /
-     * Tentative / Decline buttons, as in Teams. A guest gets no buttons: their mail program shows its own reply
-     * buttons from the calendar invitation that comes with the email, and the reply goes to the owner. */
+    /* To someone invited by ownerName; name is null for an outside guest. Everyone answers with the Accept / Maybe /
+     * Decline buttons (Gmail's words): a portal user's open the portal, a guest's open their private answer page.
+     * respond is null only when the portal's address isn't set. */
     public static EmailContent Invited(string? name, string ownerName, IReadOnlyList<BookingEmailLine> lines, ResponseLinks? respond)
     {
         var subject = lines.Count == 1
@@ -81,7 +88,7 @@ public static class BookingEmails
         if (respond != null) paragraphs.Add(Encode($"Please respond, so {ownerName} knows whether you're coming:"));
         return new EmailContent(subject, Html("You're invited", paragraphs, respond == null
             ? []
-            : [new EmailButton("Accept", respond.Accept), new EmailButton("Tentative", respond.Tentative), new EmailButton("Decline", respond.Decline)]));
+            : [new EmailButton("Accept", respond.Accept), new EmailButton("Maybe", respond.Tentative),new EmailButton("Decline", respond.Decline)]));
     }
 
     /* To someone the owner took off the list. */
@@ -122,10 +129,11 @@ public static class BookingEmails
     public static EmailContent Responded(string name, string attendeeName, AttendeeResponse response, IReadOnlyList<BookingEmailLine> lines,
         string? bookingsUrl)
     {
+        /* The subject word, and the sentence "{name} has … your booking" (Maybe in Gmail's words). */
         var (word, verb) = response switch
         {
             AttendeeResponse.Accepted => ("Accepted", "accepted"),
-            AttendeeResponse.Tentative => ("Tentative", "tentatively accepted"),
+            AttendeeResponse.Tentative => ("Maybe", "said maybe to"),
             AttendeeResponse.Declined => ("Declined", "declined"),
             _ => throw new ArgumentOutOfRangeException(nameof(response), response, null),
         };
@@ -133,7 +141,8 @@ public static class BookingEmails
             ? $"{word}: {lines[0].SpaceName}, {Day(lines[0])}"
             : $"{word}: {lines.Count} bookings in {lines[0].SpaceName}";
         var what = lines.Count == 1 ? "your booking" : $"{lines.Count} of your bookings";
-        return new EmailContent(subject, Html($"{attendeeName} {verb}",
+        var heading = response == AttendeeResponse.Tentative ? $"{attendeeName} said maybe" : $"{attendeeName} {verb}";
+        return new EmailContent(subject, Html(heading,
             [$"Hello {Encode(name)},", Encode($"{attendeeName} has {verb} {what}:"), List(lines)],
             "View my bookings", bookingsUrl));
     }

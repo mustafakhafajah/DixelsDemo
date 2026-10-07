@@ -142,7 +142,7 @@ public class BookingEmailsTests
         email.Html.ShouldContain("Sara Ali has invited you to a booking:");
         email.Html.ShouldContain(PortalEmailLayout.Encode("Please respond, so Sara Ali knows whether you're coming:"));
         email.Html.ShouldNotContain("down as attending");
-        foreach (var (button, respond) in new[] { ("Accept", "accept"), ("Tentative", "tentative"), ("Decline", "decline") })
+        foreach (var (button, respond) in new[] { ("Accept", "accept"), ("Maybe", "tentative"), ("Decline", "decline") })
         {
             email.Html.ShouldContain($">{button}</a>");
             email.Html.ShouldContain(PortalEmailLayout.Encode($"https://portal.example/app/bookings?booking={BookingId}&respond={respond}"));
@@ -155,13 +155,26 @@ public class BookingEmailsTests
     }
 
     [Fact]
-    public void An_outside_guest_gets_the_details_without_buttons()
+    public void An_outside_guest_answers_through_their_private_link()
+    {
+        var links = ResponseLinks.ForGuest("https://portal.example", "s3cr3t");
+        var email = BookingEmails.Invited(null, "Sara Ali", [Room4], links);
+
+        email.Html.ShouldContain("Hello,");
+        links.Accept.ShouldBe("https://portal.example/respond/s3cr3t?answer=accept");
+        links.Tentative.ShouldBe("https://portal.example/respond/s3cr3t?answer=tentative");
+        email.Html.ShouldContain(PortalEmailLayout.Encode(links.Decline));
+        foreach (var button in new[] { "Accept", "Maybe", "Decline" }) email.Html.ShouldContain($">{button}</a>");
+        ResponseLinks.ForGuest("https://portal.example", "s3cr3t", wholeSeries: true).Accept
+            .ShouldBe("https://portal.example/respond/s3cr3t?series=1&answer=accept");
+    }
+
+    [Fact]
+    public void Without_the_portal_s_address_there_are_no_buttons()
     {
         var email = BookingEmails.Invited(null, "Sara Ali", [Room4], null);
 
-        email.Html.ShouldContain("Hello,");
         email.Html.ShouldNotContain("<a href");
-        email.Html.ShouldNotContain("Decline");
         email.Html.ShouldNotContain("Please respond");
     }
 
@@ -171,7 +184,7 @@ public class BookingEmailsTests
 
     [Theory]
     [InlineData(AttendeeResponse.Accepted, "Accepted: Room 4, Tue 6 Oct", "Abed Karim has accepted your booking:")]
-    [InlineData(AttendeeResponse.Tentative, "Tentative: Room 4, Tue 6 Oct", "Abed Karim has tentatively accepted your booking:")]
+    [InlineData(AttendeeResponse.Tentative, "Maybe: Room 4, Tue 6 Oct", "Abed Karim has said maybe to your booking:")]
     [InlineData(AttendeeResponse.Declined, "Declined: Room 4, Tue 6 Oct", "Abed Karim has declined your booking:")]
     public void The_owner_hears_each_answer_like_in_teams(AttendeeResponse response, string subject, string sentence)
     {

@@ -9,4 +9,7 @@ public static class PortalAppUrls
 
     /* The portal's "My bookings" page, relative to the Spa root. */
     public const string BookingsPage = "app/bookings";
+
+    /* The public page where an outside guest answers an invitation: {Spa}/respond/{secret}?answer=accept. */
+    public const string RespondPage = "respond";
 }

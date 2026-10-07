@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Portal.Bookings;
@@ -18,10 +17,4 @@ public class BookingDto : EntityDto<Guid>
     public Guid? SeriesId { get; set; }
     public DateTime CreationTime { get; set; }
     public DateTime? LastModificationTime { get; set; }
-    /* The portal users invited. */
-    public List<BookingAttendeeDto> Attendees { get; set; } = new();
-    /* Outside guests' email addresses: only for the owner and people who see everyone's bookings, and only until
-     * the booking is over or cancelled. GuestCount always says how many there are. */
-    public List<string> Guests { get; set; } = new();
-    public int GuestCount { get; set; }
 }

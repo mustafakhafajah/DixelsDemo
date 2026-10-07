@@ -8,13 +8,8 @@ export function itemClass(i: ScheduleItem, myId: string): string {
   const st = lifecycleOf(i)
   if (st === 'in_progress') return 'inprog'
   if (st === 'ended') return 'ended'
-  if (i.ownerUserId === myId) return 'mine'
-  return isInvited(i, myId) ? 'attending' : 'other'
+  return i.ownerUserId === myId ? 'mine' : 'other'
 }
-
-/* You're on the booking's invite list (not its owner): you see it, and can only take yourself off it. */
-export const isInvited = (b: { ownerUserId: string; attendees: { userId: string }[] }, myId: string) =>
-  b.ownerUserId !== myId && b.attendees.some((a) => a.userId === myId)
 
 /* A grey busy block is someone else's booking: there is nothing to open. */
 export const opens = (i: ScheduleItem) => !(i.kind === 'booking' && i.busy)

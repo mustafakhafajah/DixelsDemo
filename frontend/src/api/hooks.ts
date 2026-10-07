@@ -7,10 +7,8 @@ import {
   toBusy,
   type BusyWindowDto,
   toMaintenance,
-  type AttendeeInput,
   type Booking,
   type BookingDto,
-  type BookingPerson,
   type Building,
   type CurrentUser,
   type Floor,
@@ -341,7 +339,6 @@ export interface CreateBookingInput {
   startUtc: string
   endUtc: string
   idempotencyKey?: string
-  attendees?: AttendeeInput[]
 }
 
 export function useCreateBooking() {
@@ -363,48 +360,9 @@ export function useCreateBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: { spaceId: string; occurrences: Window[]; attendees?: AttendeeInput[] }) =>
+    mutationFn: (input: { spaceId: string; occurrences: Window[] }) =>
       api<SeriesResult>('POST', '/api/app/booking-series', input),
     onSuccess: () => invalidate(BOOKING_KEYS),
-  })
-}
-
-/* The owner replaces who is invited; the server emails the people added and the people taken off. */
-export function useSetAttendees() {
-  const api = useApi()
-  const invalidate = useInvalidate()
-  return useMutation({
-    mutationFn: ({ id, attendees }: { id: string; attendees: AttendeeInput[] }) =>
-      api<BookingDto>('PUT', `/api/app/bookings/${id}/attendees`, { attendees }).then(toBooking),
-    onSettled: () => invalidate(BOOKING_KEYS),
-  })
-}
-
-/* An invited person refuses: off this booking, and with wholeSeries off its later dates too. */
-export function useLeaveBooking() {
-  const api = useApi()
-  const qc = useQueryClient()
-  const invalidate = useInvalidate()
-  return useMutation({
-    mutationFn: ({ id, wholeSeries }: { id: string; wholeSeries?: boolean }) =>
-      api<void>('DELETE', `/api/app/bookings/${id}/attendees/me`, undefined, wholeSeries ? { wholeSeries: 'true' } : undefined),
-    /* Once you've left, the booking is no longer yours to see: drop it rather than ask for it again. */
-    onSuccess: (_r, { id }) => qc.removeQueries({ queryKey: ['booking', id] }),
-    onSettled: () => invalidate([['bookings'], ['spaces', 'registry']]),
-  })
-}
-
-/* People to invite, searched on the server (at most 20, never yourself). */
-export function useBookingPeople(filter: string, enabled = true) {
-  const api = useApi()
-  const ok = useEnabled()
-  const q = filter.trim()
-  return useQuery({
-    queryKey: ['booking-people', q],
-    queryFn: async () => (await api<ListResult<BookingPerson>>('GET', '/api/app/booking-people', undefined, q ? { filter: q } : undefined)).items,
-    enabled: ok && enabled,
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
   })
 }
 

@@ -26,8 +26,7 @@ export interface MaintenanceTarget {
  * sequential closeX();openY() calls. */
 type Overlay =
   | { kind: 'booking'; prefill: BookingPrefill; editing: Booking | null }
-  /* refuse: opened from an invitation's Refuse link, so it asks straight away whether to leave the booking. */
-  | { kind: 'detail'; entity: 'booking' | 'maintenance'; id: string; refuse?: boolean }
+  | { kind: 'detail'; entity: 'booking' | 'maintenance'; id: string }
   | { kind: 'day'; key: string; scheduleId: ScheduleId }
   | { kind: 'building'; editing: Building | null }
   | { kind: 'floor'; editing: Floor | null }
@@ -53,8 +52,7 @@ export const modals = {
     useModalStore.getState().open({ kind: 'booking', prefill, editing }),
   reschedule: (b: Booking) =>
     useModalStore.getState().open({ kind: 'booking', prefill: { spaceId: b.spaceId, start: b.start, end: b.end }, editing: b }),
-  detail: (entity: 'booking' | 'maintenance', id: string, refuse = false) =>
-    useModalStore.getState().open({ kind: 'detail', entity, id, refuse }),
+  detail: (entity: 'booking' | 'maintenance', id: string) => useModalStore.getState().open({ kind: 'detail', entity, id }),
   day: (key: string, scheduleId: ScheduleId) => useModalStore.getState().open({ kind: 'day', key, scheduleId }),
   building: (editing: Building | null = null) => useModalStore.getState().open({ kind: 'building', editing }),
   floor: (editing: Floor | null = null) => useModalStore.getState().open({ kind: 'floor', editing }),

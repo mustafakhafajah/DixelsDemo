@@ -37,9 +37,23 @@ interface DragState {
   moved: boolean
 }
 
+/* The search window's length in minutes: the chosen one, or up to the custom end (at least the shortest booking). */
+const windowLength = (f: ReturnType<typeof useFindFilters>) =>
+  f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
+
 function FindFilters() {
   const { t } = useTranslation()
   const f = useFindFilters()
+  /* Which buildings and floors have a room free for the chosen time (of the size and type asked for). The others
+   * can't be picked, building first and then floor, so nobody filters down to nothing. */
+  const durMin = windowLength(f)
+  const winStart = useMemo(() => dayAt(f.date, 0, f.time), [f.date, f.time])
+  const winEnd = useMemo(() => addMin(winStart, durMin), [winStart, durMin])
+  const freeRooms = useFindSpaces({ minCapacity: f.minCapacity, typeIds: f.types, freeFrom: winStart, freeTo: winEnd }).data
+  const hasFree = (where: (s: Space) => boolean) => !freeRooms || freeRooms.some(where)
+  /* The one already chosen stays pickable, so the box still shows it after the time changes. */
+  const pickable = (id: string, label: string, free: boolean) =>
+    ({ value: id, label: free ? label : `${label} — ${t('common.noFreeThen')}`, disabled: !free && id !== f.buildingId && id !== f.floorId })
   /* "Custom…" shows a number box; a saved value that isn't a preset reopens in custom mode. */
   const [customCapacity, setCustomCapacity] = useState(() => f.minCapacity > 0 && !CAPACITY_PRESETS.includes(f.minCapacity))
   const buildings = useBuildings().data ?? []
@@ -105,13 +119,15 @@ function FindFilters() {
           <div>
             <label className="lbl" htmlFor="fv-building">{t('common.building')}</label>
             <Dropdown id="fv-building" value={f.buildingId} onChange={(v) => f.patch({ buildingId: v, floorId: '' })}
-              options={[{ value: '', label: t('common.allBuildings') }, ...buildings.map((b) => ({ value: b.id, label: b.name }))]} />
+              options={[{ value: '', label: t('common.allBuildings') },
+                ...buildings.map((b) => pickable(b.id, b.name, hasFree((s) => s.buildingId === b.id)))]} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-floor">{t('common.floor')}</label>
             <Dropdown id="fv-floor" value={f.floorId} onChange={(v) => f.patch({ floorId: v })}
               disabled={!f.buildingId} placeholder={t('common.chooseBuildingFirst')}
-              options={f.buildingId ? [{ value: '', label: t('common.allFloors') }, ...floors.map((x) => ({ value: x.id, label: t('common.floorName', { name: x.name }) }))] : []} />
+              options={f.buildingId ? [{ value: '', label: t('common.allFloors') },
+                ...floors.map((x) => pickable(x.id, t('common.floorName', { name: x.name }), hasFree((s) => s.floorId === x.id)))] : []} />
           </div>
           <div>
             <label className="lbl" htmlFor="fv-capacity">{t('common.capacity')}</label>
@@ -162,7 +178,7 @@ export function FindSpacePage() {
   const { userId } = session
   /* Without permission to book, the timeline is read-only: no free cells to click and no drag. */
   const canBook = session.can(P.Bookings.Create)
-  const durMin = f.duration === 'custom' ? Math.max(DEFAULT_MIN_MINUTES, (f.customEnd ?? f.time + 60) - f.time) : f.duration
+  const durMin = windowLength(f)
   const winStart = useMemo(() => dayAt(f.date, 0, f.time), [f.date, f.time])
   const winEnd = useMemo(() => addMin(winStart, durMin), [winStart, durMin])
 
@@ -318,10 +334,12 @@ export function FindSpacePage() {
                 const cells = !canBook ? [] : free.flatMap((reg) => hourCells(reg)
                   .filter((c) => reg.end - c.start >= s.constraints.minBookingMinutes)
                   .map((c) => ({ ...c, reg })))
+                /* Taken (or closed) for the chosen time: greyed, so the free rooms stand out. Its free hours stay clickable. */
+                const busy = !isFree(s)
                 return (
-                  <div key={s.id} className="rt-row">
+                  <div key={s.id} className={`rt-row${busy ? ' rt-busy' : ''}`}>
                     <div className="rt-roominfo">
-                      <div className="rt-roomname"><bdi>{s.name}</bdi></div>
+                      <div className="rt-roomname"><bdi>{s.name}</bdi>{busy && <span className="tag rt-busy-tag">{t('find.busyThen')}</span>}</div>
                       <div className="rt-roommeta"><bdi>{s.typeName}</bdi>{s.capacity ? ` · ${t('find.seats', { count: s.capacity })}` : ''}</div>
                     </div>
                     <div className="rt-track" style={{ width: trackW }}

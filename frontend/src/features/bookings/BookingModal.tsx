@@ -128,8 +128,23 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const seed = spaces.find((s) => s.id === (editing?.spaceId ?? prefill.spaceId))
   const buildingId = chosenBuildingId ?? seed?.buildingId ?? ''
   const floorId = chosenFloorId ?? (seed && seed.buildingId === buildingId ? seed.floorId : '')
-  const buildingOptions = uniqueBy(eligible, (s) => s.buildingId, (s) => s.buildingName)
-  const floorOptions = buildingId ? uniqueBy(eligible.filter((s) => s.buildingId === buildingId), (s) => s.floorId, (s) => t('common.floorName', { name: s.floorName })) : []
+  /* The bookable spaces free for the entered time. A building or floor with none of them can't be picked (building
+   * first, then floor); the one already chosen stays, marked, and the space list explains why. While moving a booking
+   * its place is fixed anyway. */
+  const freeSpaces = useMemo(() => {
+    const s0 = fromDateTime(date, startTime)
+    const e0 = fromDateTime(date, endTime)
+    if (editing || !s0 || !e0 || e0 <= s0) return eligible
+    return eligible.filter((s) => !findOverlap(bookings, s.id, s0, e0) && !validateWindowLocal(s.constraints, s.name, s0, e0, true))
+  }, [editing, eligible, bookings, date, startTime, endTime])
+  const onlyWithFree = (opts: { value: string; label: string }[], hasFree: (id: string) => boolean, chosen: string) =>
+    opts.map((o) => (hasFree(o.value) ? o : { ...o, label: `${o.label} — ${t('common.noFreeThen')}`, disabled: o.value !== chosen }))
+  const buildingOptions = onlyWithFree(uniqueBy(eligible, (s) => s.buildingId, (s) => s.buildingName),
+    (id) => freeSpaces.some((s) => s.buildingId === id), buildingId)
+  const floorOptions = buildingId
+    ? onlyWithFree(uniqueBy(eligible.filter((s) => s.buildingId === buildingId), (s) => s.floorId, (s) => t('common.floorName', { name: s.floorName })),
+      (id) => freeSpaces.some((s) => s.floorId === id), floorId)
+    : []
 
   /* Only spaces that are eligible AND free for the entered window; the previously chosen one is
    * kept (annotated) rather than vanishing mid-edit, as in the mock. */

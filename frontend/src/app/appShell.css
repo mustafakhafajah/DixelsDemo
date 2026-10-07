@@ -274,6 +274,9 @@
 .app-shell .tg-block.attending { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--mine); outline: 1px dashed var(--accent); outline-offset: -1px; }
 .app-shell .tg-block.inprog { background: var(--copper-soft); color: var(--copper); border-inline-start-color: var(--copper); }
 .app-shell .tg-block.ended { background: var(--surface-2); color: var(--slate); border-inline-start-color: var(--slate-2); }
+/* Not answered yet, or tentative: striped like a tentative meeting in Teams. Declined: faded and struck through. */
+.app-shell .chip.tentative, .app-shell .tg-block.tentative { background: repeating-linear-gradient(135deg, var(--accent-soft) 0 5px, var(--surface) 5px 10px); }
+.app-shell .chip.declined, .app-shell .tg-block.declined { background: var(--surface); color: var(--slate); text-decoration: line-through; opacity: .75; }
 .app-shell .tg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
 .app-shell .tg-now::before { content: ''; position: absolute; inset-inline-start: -3px; top: -4.5px; width: 7px; height: 7px; border-radius: 999px; background: var(--rust); }
 .app-shell .tg-hint { font-size: 11.5px; color: var(--slate-2); margin: 9px 2px 0; }

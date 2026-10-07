@@ -1,4 +1,4 @@
-import { lifecycleOf, type ScheduleItem } from '../../../api/types'
+import { lifecycleOf, myResponse, type ScheduleItem } from '../../../api/types'
 import { modals } from '../../../state/modalStore'
 
 /* The colour class of a booking or block on the calendars. */
@@ -9,12 +9,11 @@ export function itemClass(i: ScheduleItem, myId: string): string {
   if (st === 'in_progress') return 'inprog'
   if (st === 'ended') return 'ended'
   if (i.ownerUserId === myId) return 'mine'
-  return isInvited(i, myId) ? 'attending' : 'other'
+  /* Invited, shown as Teams does: solid once accepted, striped while unanswered or tentative, faded when declined. */
+  const reply = myResponse(i, myId)
+  if (!reply) return 'other'
+  return reply === 'accepted' ? 'attending' : reply === 'declined' ? 'attending declined' : 'attending tentative'
 }
-
-/* You're on the booking's invite list (not its owner): you see it, and can only take yourself off it. */
-export const isInvited = (b: { ownerUserId: string; attendees: { userId: string }[] }, myId: string) =>
-  b.ownerUserId !== myId && b.attendees.some((a) => a.userId === myId)
 
 /* A grey busy block is someone else's booking: there is nothing to open. */
 export const opens = (i: ScheduleItem) => !(i.kind === 'booking' && i.busy)

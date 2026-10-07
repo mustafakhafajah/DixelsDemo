@@ -12,10 +12,12 @@ import {
   type BookingDto,
   type BookingPerson,
   type Building,
+  type CancelMessage,
   type CurrentUser,
   type Floor,
   type ListResult,
   type PagedResult,
+  type Reply,
   type Maintenance,
   type MaintenanceDto,
   type MaintenanceScopeType,
@@ -380,17 +382,18 @@ export function useSetAttendees() {
   })
 }
 
-/* An invited person refuses: off this booking, and with wholeSeries off its later dates too. */
-export function useLeaveBooking() {
+/* An invited person answers (Accept / Tentative / Decline), for this booking or with wholeSeries for its later
+ * dates too; the owner is emailed. A declined booking stays on their list, so it is refreshed, not dropped. */
+export function useRespondToBooking() {
   const api = useApi()
   const qc = useQueryClient()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ id, wholeSeries }: { id: string; wholeSeries?: boolean }) =>
-      api<void>('DELETE', `/api/app/bookings/${id}/attendees/me`, undefined, wholeSeries ? { wholeSeries: 'true' } : undefined),
-    /* Once you've left, the booking is no longer yours to see: drop it rather than ask for it again. */
-    onSuccess: (_r, { id }) => qc.removeQueries({ queryKey: ['booking', id] }),
-    onSettled: () => invalidate([['bookings'], ['spaces', 'registry']]),
+    mutationFn: ({ id, response, wholeSeries }: { id: string; response: Reply; wholeSeries: boolean }) =>
+      api<BookingDto>('PUT', `/api/app/bookings/${id}/attendees/me/response`, { response, wholeSeries }).then(toBooking),
+    /* The open details show the new answer at once, before the refetch below comes back. */
+    onSuccess: (b) => qc.setQueryData(['booking', b.id], b),
+    onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
 
@@ -418,11 +421,19 @@ export function useRescheduleBooking() {
   })
 }
 
+/* The cancellation email's subject and words as sent: trimmed, and left out when both are blank. */
+function messageBody(m?: CancelMessage) {
+  const subject = m?.subject?.trim()
+  const message = m?.message?.trim()
+  return subject || message ? { subject: subject || undefined, message: message || undefined } : undefined
+}
+
 export function useCancelBooking() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) => api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'cancelled' }).then(toBooking),
+    mutationFn: ({ id, message }: { id: string; message?: CancelMessage }) =>
+      api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'cancelled', message: messageBody(message) }).then(toBooking),
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -432,12 +443,12 @@ export function useCancelBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: async (b: Pick<Booking, 'id' | 'seriesId' | 'start'>): Promise<{ seriesId: string | null; cancelledCount: number }> => {
+    mutationFn: async ({ message, ...b }: Pick<Booking, 'id' | 'seriesId' | 'start'> & { message?: CancelMessage }): Promise<{ seriesId: string | null; cancelledCount: number }> => {
       if (!b.seriesId) {
-        await api<BookingDto>('PATCH', `/api/app/bookings/${b.id}`, { lifecycle: 'cancelled' })
+        await api<BookingDto>('PATCH', `/api/app/bookings/${b.id}`, { lifecycle: 'cancelled', message: messageBody(message) })
         return { seriesId: null, cancelledCount: 1 }
       }
-      return api('PATCH', `/api/app/booking-series/${b.seriesId}`, { lifecycle: 'cancelled', fromUtc: b.start.toISOString() })
+      return api('PATCH', `/api/app/booking-series/${b.seriesId}`, { lifecycle: 'cancelled', fromUtc: b.start.toISOString(), message: messageBody(message) })
     },
     onSettled: () => invalidate(BOOKING_KEYS),
   })
@@ -474,9 +485,9 @@ export function useScheduleMaintenance() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean }) =>
+    mutationFn: ({ message, ...input }: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean; message?: CancelMessage }) =>
       api<{ seriesId: string | null; created: number; affectedBookingsCount: number; cancelledBookingsCount: number }>(
-        'POST', '/api/app/maintenance-windows', input),
+        'POST', '/api/app/maintenance-windows', { ...input, message: input.cancelAffectedBookings ? messageBody(message) : undefined }),
     /* Blocking can cancel bookings, so booking views refresh too. */
     onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ...BOOKING_KEYS]),
   })
@@ -585,7 +596,8 @@ export function useCancelUpcoming() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('PATCH', upcomingPath(scope), { lifecycle: 'cancelled' }),
+    mutationFn: ({ message, ...scope }: EstateScope & { message?: CancelMessage }) =>
+      api<{ cancelledCount: number }>('PATCH', upcomingPath(scope), { lifecycle: 'cancelled', message: messageBody(message) }),
     onSettled: () => invalidate([...BOOKING_KEYS, ['upcoming-count']]),
   })
 }

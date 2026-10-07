@@ -4,6 +4,7 @@ import i18n from 'i18next'
 import { useBuildings, useFloors, useSaveBuilding, useSaveFloor, useSaveSpace, useSaveSpaceType, useSpaceTypes } from '../../api/hooks'
 import type { Building, Floor, Space, SpaceType } from '../../api/types'
 import { ErrorLine, Field, RequiredNote } from '../../components/bits'
+import type { CancelMessageValue } from '../../components/CancelMessageFields'
 import { DatePicker, Dropdown } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { isValidTimeZone, WEEKDAYS } from '../../lib/closedDays'
@@ -129,6 +130,7 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
   const [tz, setTz] = useState(editing?.timeZone ?? 'UTC')
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
   const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const [cancelMessage, setCancelMessage] = useState<CancelMessageValue | null>(null)
   const cancelAfter = useCancelUpcomingAfterSave()
   const [open, setOpen] = useState(String(editing?.openHour ?? 8))
   const [close, setClose] = useState(String(editing?.closeHour ?? 20))
@@ -159,7 +161,7 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
       id: editing?.id,
       body: { name: name.trim(), translations: toTranslations(drafts), timeZone: tz.trim() || 'UTC', isBookable, openHour: o, closeHour: c, minBookingMinutes: mi, maxBookingHours: ma, holidays, closedWeekdays },
     }).then(async () => {
-      if (editing && cancelUpcoming && !isBookable) await cancelAfter('building', editing.id, name.trim())
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('building', editing.id, name.trim(), cancelMessage)
       toast('ok', editing ? t('forms.building.updated') : t('forms.building.added'), name.trim())
       modals.close()
     }, (e) => fields.fromServer(e, { ...BUILDING_SERVER_FIELDS, ...translationServerFields('bld') }))
@@ -227,8 +229,9 @@ export function BuildingFormModal({ editing }: { editing: Building | null }) {
           )) : <span style={{ fontSize: 11.5, color: 'var(--slate)' }}>{t('forms.building.noHolidays')}</span>}
         </div>
       </div>
-      <BookableField idPrefix="bld" kind="building" value={isBookable} onChange={setIsBookable}
-        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
+      <BookableField idPrefix="bld" kind="building" label={name.trim()} value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming}
+        cancelMessage={cancelMessage} onCancelMessageChange={setCancelMessage} />
     </Modal>
   )
 }
@@ -248,6 +251,7 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
   const [drafts, setDrafts] = useState(draftsOf(editing?.translations))
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
   const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const [cancelMessage, setCancelMessage] = useState<CancelMessageValue | null>(null)
   const cancelAfter = useCancelUpcomingAfterSave()
   const [ov, setOv] = useState<Overrides>([
     numText(editing?.openHourOverride), numText(editing?.closeHourOverride),
@@ -269,7 +273,7 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
       id: editing?.id,
       body: { buildingId: b.id, name: name.trim(), translations: toTranslations(drafts), isBookable, openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma },
     }).then(async () => {
-      if (editing && cancelUpcoming && !isBookable) await cancelAfter('floor', editing.id, t('common.floorIn', { building: b.name, floor: name.trim() }))
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('floor', editing.id, t('common.floorIn', { building: b.name, floor: name.trim() }), cancelMessage)
       toast('ok', editing ? t('forms.floor.updated') : t('forms.floor.added'), t('forms.floor.savedMessage', { floor: name.trim(), building: b.name }))
       modals.close()
     }, (e) => fields.fromServer(e, { ...FLOOR_SERVER_FIELDS, ...translationServerFields('flr') }))
@@ -289,8 +293,9 @@ export function FloorFormModal({ editing }: { editing: Floor | null }) {
       <OverrideFields prefix="flr" parent="building" values={ov} errors={errors}
         onChange={(v) => { setOv(v); fields.clear('flr-open', 'flr-close', 'flr-min', 'flr-max') }}
         inherits={b ? [b.openHour, b.closeHour, b.minBookingMinutes, b.maxBookingHours] : null} />
-      <BookableField idPrefix="flr" kind="floor" value={isBookable} onChange={setIsBookable}
-        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
+      <BookableField idPrefix="flr" kind="floor" label={b ? t('common.floorIn', { building: b.name, floor: name.trim() }) : name.trim()} value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming}
+        cancelMessage={cancelMessage} onCancelMessageChange={setCancelMessage} />
     </Modal>
   )
 }
@@ -316,6 +321,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
   const [capacity, setCapacity] = useState(String(editing?.capacity ?? 0))
   const [isBookable, setIsBookable] = useState(editing?.isBookable ?? true)
   const [cancelUpcoming, setCancelUpcoming] = useState(false)
+  const [cancelMessage, setCancelMessage] = useState<CancelMessageValue | null>(null)
   const cancelAfter = useCancelUpcomingAfterSave()
   const [buildingId, setBuildingId] = useState(editing?.buildingId ?? '')
   const [floorId, setFloorId] = useState(editing?.floorId ?? '')
@@ -360,7 +366,7 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
         openHourOverride: o, closeHourOverride: c, minBookingMinutesOverride: mi, maxBookingHoursOverride: ma,
       },
     }).then(async () => {
-      if (editing && cancelUpcoming && !isBookable) await cancelAfter('space', editing.id, name.trim())
+      if (editing && cancelUpcoming && !isBookable) await cancelAfter('space', editing.id, name.trim(), cancelMessage)
       toast('ok', editing ? t('forms.space.updated') : t('forms.space.added'),
         editing ? t('forms.space.updatedMessage', { name: name.trim(), building: b.name, floor: f.name })
           : isBookable ? t('forms.space.addedBookable', { name: name.trim() }) : t('forms.space.addedNotBookable', { name: name.trim() }))
@@ -405,8 +411,9 @@ export function SpaceFormModal({ editing }: { editing: Space | null }) {
         onChange={(v) => { setOv(v); fields.clear(...SPACE_OVERRIDE_IDS) }} />
       <LocalizedInput prefix="sp" field="note" id="sp-note" label={t('forms.description')} english={note} onEnglish={setNote}
         drafts={drafts} onDrafts={setDrafts} errors={errors} attempt={fields.attempt} clear={fields.clear} placeholder={t('forms.space.notePlaceholder')} maxLength={NOTE_MAX} />
-      <BookableField idPrefix="sp" kind="space" value={isBookable} onChange={setIsBookable}
-        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming} />
+      <BookableField idPrefix="sp" kind="space" label={name.trim()} value={isBookable} onChange={setIsBookable}
+        existingId={editing?.id} wasBookable={editing?.isBookable} cancelUpcoming={cancelUpcoming} onCancelUpcomingChange={setCancelUpcoming}
+        cancelMessage={cancelMessage} onCancelMessageChange={setCancelMessage} />
       {/* The space's own tick can be on while its floor or building is off: say so. */}
       {isBookable && b && (!b.isBookable || (f && !f.isBookable)) && (
         <p className="muted-box">

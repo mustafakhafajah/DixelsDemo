@@ -25,4 +25,11 @@ public interface IBookingAppService : IApplicationService
     Task<int> GetUpcomingCountAsync(EstateScopeDto input);
     /* Admin: cancel exactly those bookings, e.g. after making the scope not bookable. */
     Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input);
+    /* The owner replaces who is invited; added people get an invitation, removed ones are told. */
+    Task<BookingDto> SetAttendeesAsync(Guid id, SetBookingAttendeesDto input);
+    /* An invited user takes themselves off the booking (and, with wholeSeries, off its later dates too);
+     * the owner is told. */
+    Task LeaveAsync(Guid id, bool wholeSeries = false);
+    /* Active users to invite, by name, user name or email. */
+    Task<ListResultDto<BookingPersonDto>> GetPeopleAsync(BookingPeopleFilterDto input);
 }

@@ -1,6 +1,7 @@
 import i18n from 'i18next'
 import type { FieldError, FieldErrors } from '../../lib/useFieldErrors'
 import { intlLocale } from '../../i18n/languages'
+import { isEmail } from '../../lib/email'
 import type { ProfileChanges } from './api'
 
 /* The same rules the server applies (PortalProfileAppService and ASP.NET Identity), checked as the user types so
@@ -10,8 +11,6 @@ import type { ProfileChanges } from './api'
 const PHONE = /^\+?[0-9]{6,15}$/
 /* ASP.NET Identity's default AllowedUserNameCharacters, which ABP keeps. */
 const USER_NAME = /^[A-Za-z0-9\-._@+]+$/
-/* Only a shape check; the server has the final word. */
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const problem = (code: string, message: string): FieldError => ({ code, message })
 
@@ -29,7 +28,7 @@ export function checkProfile(form: ProfileChanges): FieldErrors {
     [PROFILE_FIELDS.userName]: !userName ? problem('validation.missing_field', i18n.t('profile.edit.userNameMissing'))
       : USER_NAME.test(userName) ? undefined : problem('validation.invalid_user_name', i18n.t('profile.edit.userNameInvalid')),
     [PROFILE_FIELDS.email]: !email ? problem('validation.missing_field', i18n.t('profile.edit.emailMissing'))
-      : EMAIL.test(email) ? undefined : problem('validation.invalid_email', i18n.t('profile.edit.emailInvalid')),
+      : isEmail(email) ? undefined : problem('validation.invalid_email', i18n.t('profile.edit.emailInvalid')),
     [PROFILE_FIELDS.phoneNumber]: !phone || PHONE.test(phone) ? undefined : problem('validation.invalid_phone', i18n.t('profile.edit.phoneInvalid')),
   }
 }

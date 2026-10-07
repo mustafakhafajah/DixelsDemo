@@ -58,6 +58,9 @@
     "you": "You"
   },
   "time": {
+    "localRange": "{{from}}–{{to}} {{zone}} time",
+    "zoneOffset": "{{zone}} time · {{offset}}",
+    "zoneClock": "{{zone}} time",
     "hoursShort_one": "{{count}}h",
     "hoursShort_other": "{{count}}h",
     "minutesShort_one": "{{count}}m",
@@ -638,7 +641,7 @@
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
       "notBookable": "This space cannot be booked, so slots are inert",
       "noPermission": "You do not have permission to book",
-      "rest": "click a block for its detail · click a date for the whole day. All times UTC."
+      "rest": "click a block for its detail · click a date for the whole day. Times are UTC; a building on another clock also shows its own time."
     }
   },
   "detail": {

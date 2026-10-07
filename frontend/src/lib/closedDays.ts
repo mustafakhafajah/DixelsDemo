@@ -1,6 +1,6 @@
 import i18n from 'i18next'
 import { intlLocale } from '../i18n/languages'
-import { dayAt, dayKey, minLabel, minOfDay, weekdayName } from './dateUtils'
+import { dayAt, dayKey, minLabel, minOfDay, pad, weekdayName } from './dateUtils'
 import type { MinuteWindow } from './laneLayout'
 
 /* A building's closed days (holiday dates and weekly closed days). They are days in the building's own time
@@ -80,6 +80,19 @@ export function zonedInstant(key: string, minute: number, tz: string): Date {
 
 /* Does the zone's clock read the same as UTC at this instant? Then showing its time as well adds nothing. */
 export const isUtcLike = (tz: string, at: Date) => localDayKey(at, tz) === dayKey(at) && localMinute(at, tz) === minOfDay(at)
+
+/* The zone's offset from UTC at this instant, for labels: "UTC+2", "UTC−3", "UTC+5:30". */
+export function offsetLabel(tz: string, at: Date): string {
+  const days = localDayKey(at, tz).localeCompare(dayKey(at))
+  const diff = localMinute(at, tz) - minOfDay(at) + days * 1440
+  const abs = Math.abs(diff)
+  return `UTC${diff < 0 ? '−' : '+'}${Math.floor(abs / 60)}${abs % 60 ? `:${pad(abs % 60)}` : ''}`
+}
+
+/* "08:00–09:00 Warsaw time" for a window on a building's clock, or null when that clock reads as UTC. Shown next
+ * to the UTC times the app works in. */
+export const localRange = (start: Date, end: Date, tz: string) => isUtcLike(tz, start) ? null
+  : i18n.t('time.localRange', { from: localLabel(start, tz), to: localLabel(end, tz), zone: zoneCity(tz) })
 
 /* Does the window fit the opening hours on the building's own clock? It must start at or after opening and end by
  * closing on the same local day; ending exactly at local midnight counts as the day before. Mirrors the server's

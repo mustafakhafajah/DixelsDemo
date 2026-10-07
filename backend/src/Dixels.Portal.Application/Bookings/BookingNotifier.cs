@@ -136,12 +136,13 @@ public class BookingNotifier : ITransientDependency
             BookingEmails.Responded(FirstName(owner), attendeeName, response, lines, s.BookingsUrl), method: null);
     }
 
-    /* Portal users get Accept / Tentative / Decline links to the first of their dates; guests answer from the
-     * calendar invitation instead. */
+    /* Portal users get Accept / Tentative / Decline links to the first of their dates; with several dates (a repeating
+     * booking) the answer covers them all, as answering a Teams series does. Guests answer from the calendar
+     * invitation instead. */
     private Task InviteAsync(Snapshot s, IReadOnlyCollection<Booking> bookings, IReadOnlyCollection<BookingAttendee> attendees)
         => PerAttendeeAsync(s, bookings, attendees, (name, ownerName, lines, first) =>
             BookingEmails.Invited(name, ownerName, lines,
-                first.IsGuest || s.BookingsUrl == null ? null : ResponseLinks.For(s.BookingsUrl, first.BookingId)),
+                first.IsGuest || s.BookingsUrl == null ? null : ResponseLinks.For(s.BookingsUrl, first.BookingId, wholeSeries: lines.Count > 1)),
             BookingCalendar.Request);
 
     /* Only bookings made at least 10 minutes ahead get one; the confirmation covers the rest. */

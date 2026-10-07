@@ -13,12 +13,13 @@ namespace Dixels.Portal.Bookings;
 public record BookingEmailLine(string SpaceName, string Place, DateTime StartUtc, DateTime EndUtc, string TimeZoneId);
 
 /* The Accept / Tentative / Decline buttons of an invitation: the bookings page opens the booking and records the
- * answer (signing in first keeps the link). */
+ * answer (signing in first keeps the link). They are the only way to answer; the portal just shows it.
+ * wholeSeries: the answer covers this date and the series' later ones. */
 public record ResponseLinks(string Accept, string Tentative, string Decline)
 {
-    public static ResponseLinks For(string bookingsUrl, Guid bookingId)
+    public static ResponseLinks For(string bookingsUrl, Guid bookingId, bool wholeSeries = false)
     {
-        var page = $"{bookingsUrl}?booking={bookingId}&respond=";
+        var page = $"{bookingsUrl}?booking={bookingId}{(wholeSeries ? "&series=1" : "")}&respond=";
         return new ResponseLinks(page + "accept", page + "tentative", page + "decline");
     }
 }

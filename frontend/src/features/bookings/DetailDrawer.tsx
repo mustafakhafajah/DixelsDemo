@@ -13,8 +13,6 @@ import { modals } from '../../state/modalStore'
 import { ResponseIcon } from './Replies'
 import { useBookingActions } from './useBookingActions'
 
-const REPLIES: Reply[] = ['accepted', 'tentative', 'declined']
-const REPLY_BUTTON = { accepted: 'accept', tentative: 'tentative', declined: 'decline' } as const
 const SUMMARY_ORDER: AttendeeResponse[] = ['accepted', 'tentative', 'declined', 'none']
 const RADIO_ROW = { border: 0, margin: '0 0 12px', padding: 0, display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5 } as const
 const RADIO = { display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' } as const
@@ -52,46 +50,22 @@ function Attendees({ b, myId, showReplies }: { b: Booking; myId: string; showRep
   )
 }
 
-/* An invited person's answer, like Teams: Accept / Tentative / Decline with the current one pressed, and for a
- * repeating booking whether it is for this date or this and the later ones. Answering again changes it. */
-function ReplyPanel({ b, current, laterInSeries, busy, onReply }: {
-  b: Booking
-  current: AttendeeResponse
-  laterInSeries: number
-  busy: boolean
-  onReply: (r: Reply, wholeSeries: boolean) => void
-}) {
+/* An invited person's answer, shown only: answering and changing it happen through the Accept / Tentative / Decline
+ * buttons in the invitation email. */
+function YourAnswer({ current }: { current: AttendeeResponse }) {
   const { t } = useTranslation()
-  const [wholeSeries, setWholeSeries] = useState(false)
   return (
     <div className="muted-box" style={{ marginBottom: 18, color: 'var(--ink)' }}>
-      <p style={{ margin: '0 0 10px' }}>
+      <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <ResponseIcon response={current} />
         {current === 'none' ? t('detail.reply.notAnswered') : t('detail.reply.yourAnswer', { answer: t(`detail.response.${current}`) })}
       </p>
-      {laterInSeries > 0 && (
-        <fieldset style={RADIO_ROW}>
-          <legend style={{ padding: 0, marginBottom: 6, color: 'var(--slate)' }}>{t('detail.reply.applyTo')}</legend>
-          <label style={RADIO}>
-            <input type="radio" name={`reply-scope-${b.id}`} checked={!wholeSeries} onChange={() => setWholeSeries(false)} />{t('detail.reply.thisOne')}
-          </label>
-          <label style={RADIO}>
-            <input type="radio" name={`reply-scope-${b.id}`} checked={wholeSeries} onChange={() => setWholeSeries(true)} />{t('detail.reply.thisAndLater')}
-          </label>
-        </fieldset>
-      )}
-      <div className="seg" role="group" aria-label={t('detail.reply.label')} style={{ display: 'inline-flex', flexWrap: 'wrap' }}>
-        {REPLIES.map((r) => (
-          <button key={r} type="button" className={current === r ? 'active' : undefined} aria-pressed={current === r} disabled={busy}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }} onClick={() => onReply(r, wholeSeries)}>
-            <ResponseIcon response={r} />{t(`detail.reply.${REPLY_BUTTON[r]}`)}
-          </button>
-        ))}
-      </div>
+      <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--slate)' }}>{t('detail.reply.viaEmail')}</p>
     </div>
   )
 }
 
-function BookingDetail({ b, respond, startCancel }: { b: Booking; respond?: Reply; startCancel: boolean }) {
+function BookingDetail({ b, respond, respondSeries, startCancel }: { b: Booking; respond?: Reply; respondSeries: boolean; startCancel: boolean }) {
   const { t } = useTranslation()
   const session = useSession()
   const spaces = useSpaces()
@@ -127,13 +101,14 @@ function BookingDetail({ b, respond, startCancel }: { b: Booking; respond?: Repl
     void run.then((ok) => { if (ok) setAskCancel(false) })
   }
 
-  /* From an invitation email's Accept / Tentative / Decline link: that answer is recorded once, as a click would be. */
+  /* From an invitation email's Accept / Tentative / Decline link (the only place to answer): recorded once, for the
+   * later dates too when the invitation was for a repeating booking. */
   const replied = useRef(false)
   useEffect(() => {
     if (!respond || replied.current || !showReply) return
     replied.current = true
-    void actions.respond(b, respond)
-  }, [respond, showReply, actions, b])
+    void actions.respond(b, respond, respondSeries)
+  }, [respond, respondSeries, showReply, actions, b])
 
   let note = ''
   if (state === 'ended') note = t('detail.note.ended')
@@ -165,10 +140,7 @@ function BookingDetail({ b, respond, startCancel }: { b: Booking; respond?: Repl
       </dl>
       {note && <p className="muted-box" style={{ margin: '0 0 14px' }}>{note}</p>}
 
-      {showReply && (
-        <ReplyPanel b={b} current={reply} laterInSeries={laterInSeries} busy={actions.busy}
-          onReply={(r, wholeSeries) => void actions.respond(b, r, wholeSeries)} />
-      )}
+      {showReply && <YourAnswer current={reply} />}
 
       {askCancel && showCancel ? (
         <div className="muted-box" style={{ marginBottom: 18, color: 'var(--ink)' }}>
@@ -194,7 +166,7 @@ function BookingDetail({ b, respond, startCancel }: { b: Booking; respond?: Repl
           {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>{t('schedule.reschedule')}</button>}
           {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>{t('schedule.endNow')}</button>}
           {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => setAskCancel(true)}>{t('detail.cancelBooking')}</button>}
-          {!showReschedule && !showEndNow && !showCancel && !showReply && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
+          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
         </div>
       )}
     </>
@@ -232,11 +204,13 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
   )
 }
 
-/* respond: an answer to record straight away (from an invitation email); cancel: start on the cancel step. */
-export function DetailDrawer({ entity, id, respond, cancel = false }: {
+/* respond: an answer to record straight away (from an invitation email; respondSeries: for the later dates too);
+ * cancel: start on the cancel step. */
+export function DetailDrawer({ entity, id, respond, respondSeries = false, cancel = false }: {
   entity: 'booking' | 'maintenance'
   id: string
   respond?: Reply
+  respondSeries?: boolean
   cancel?: boolean
 }) {
   const { t } = useTranslation()
@@ -250,7 +224,7 @@ export function DetailDrawer({ entity, id, respond, cancel = false }: {
 
   return (
     <Drawer title={title} subtitle={subtitle} onClose={modals.close}>
-      {b ? <BookingDetail b={b} respond={respond} startCancel={cancel} /> : m ? <MaintenanceDetail m={m} />
+      {b ? <BookingDetail b={b} respond={respond} respondSeries={respondSeries} startCancel={cancel} /> : m ? <MaintenanceDetail m={m} />
         /* An invitation link for a booking you can no longer see: you were taken off it, or it is gone. */
         : failed ? <p className="muted-box">{respond ? t('detail.cantRespond') : t('detail.loadFailed')}</p> : <Loading />}
     </Drawer>

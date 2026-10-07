@@ -24,6 +24,8 @@ export interface MaintenanceTarget {
 
 export interface DetailOptions {
   respond?: Reply
+  /* The answer covers the series' later dates too (a repeating booking's invitation). */
+  respondSeries?: true
   cancel?: true
 }
 

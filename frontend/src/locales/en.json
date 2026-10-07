@@ -709,17 +709,10 @@
       "none": "No response"
     },
     "reply": {
-      "label": "Your answer",
-      "accept": "Accept",
-      "tentative": "Tentative",
-      "decline": "Decline",
       "notAnswered": "Not answered yet.",
       "notAnsweredShort": "Not answered",
       "yourAnswer": "Your answer: {{answer}}.",
-      "applyTo": "Answer for",
-      "thisOne": "This booking",
-      "thisAndLater": "This and later ones",
-      "respond": "Respond"
+      "viaEmail": "To answer or change your answer, use the Accept, Tentative or Decline buttons in your invitation email."
     },
     "replySummary": {
       "accepted_one": "{{count, number}} accepted",

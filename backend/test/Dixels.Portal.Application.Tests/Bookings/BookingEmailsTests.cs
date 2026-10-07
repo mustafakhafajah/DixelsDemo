@@ -123,6 +123,16 @@ public class BookingEmailsTests
         BookingEmails.Reminder("Sara", Room4, null).Subject.ShouldBe("Starting soon: Room 4 at 10:00");
 
     [Fact]
+    public void A_repeating_booking_s_buttons_answer_for_the_whole_series()
+    {
+        var links = ResponseLinks.For("https://portal.example/app/bookings", BookingId, wholeSeries: true);
+
+        links.Accept.ShouldBe($"https://portal.example/app/bookings?booking={BookingId}&series=1&respond=accept");
+        links.Decline.ShouldEndWith("&series=1&respond=decline");
+        ResponseLinks.For("https://portal.example/app/bookings", BookingId).Accept.ShouldNotContain("series");
+    }
+
+    [Fact]
     public void A_portal_user_is_invited_with_accept_tentative_and_decline()
     {
         var email = BookingEmails.Invited("Abed", "Sara Ali", [Room4], ResponseLinks.For("https://portal.example/app/bookings", BookingId));

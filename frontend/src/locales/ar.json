@@ -860,17 +860,10 @@
       "none": "لا رد"
     },
     "reply": {
-      "label": "ردّك",
-      "accept": "قبول",
-      "tentative": "مبدئي",
-      "decline": "رفض",
       "notAnswered": "لم تردّ بعد.",
       "notAnsweredShort": "لم تردّ",
       "yourAnswer": "ردّك: {{answer}}.",
-      "applyTo": "الرد على",
-      "thisOne": "هذا الحجز",
-      "thisAndLater": "هذا الحجز وما بعده",
-      "respond": "الرد"
+      "viaEmail": "للرد أو لتغيير ردك، استخدم أزرار القبول أو المبدئي أو الرفض في بريد الدعوة."
     },
     "replySummary": {
       "accepted_zero": "لم يقبل أحد",

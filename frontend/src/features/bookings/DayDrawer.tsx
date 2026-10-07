@@ -60,10 +60,6 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
           {!isMaint && canDelete(mine) && open && (
             <button type="button" className="btn btn-sm btn-danger" onClick={() => modals.detail('booking', i.id, { cancel: true })}>{t('common.cancel')}</button>
           )}
-          {/* Invited: answering (Accept / Tentative / Decline) happens in the booking's details. */}
-          {reply && open && (
-            <button type="button" className="btn btn-sm" onClick={() => modals.detail('booking', i.id)}>{t('detail.reply.respond')}</button>
-          )}
         </span>
       </div>
     )

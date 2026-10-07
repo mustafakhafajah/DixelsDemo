@@ -7,6 +7,7 @@ import { P } from '../../auth/permissions'
 import { ErrorLine, LoadError, Loading } from '../../components/bits'
 import { EmptyState } from '../../components/EmptyState'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
+import { isUtcLike, localLabel, localRange, offsetLabel, zoneCity } from '../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
@@ -280,11 +281,33 @@ export function FindSpacePage() {
         {keys.map((k) => {
           const [bld, fl] = k.split('||')
           const rooms = groups.get(k)!
+          /* A building on another clock gets its own ruler in its local time, under the UTC one the grid runs on. */
+          const tz = rooms[0].timeZone
+          const noon = dayAt(f.date, 12)
+          const ownClock = !isUtcLike(tz, noon)
+          /* The tooltip times: UTC, plus the building's clock when it differs. */
+          const both = (from: number, to: number) => {
+            const local = localRange(dayAt(f.date, 0, from), dayAt(f.date, 0, to), tz)
+            return `${minLabel(from)}–${minLabel(to)} UTC${local ? ` (${local})` : ''}`
+          }
+          const cellLabel = (s: Space, c: MinuteWindow) => {
+            const local = localRange(dayAt(f.date, 0, c.start), dayAt(f.date, 0, c.end), tz)
+            return `${t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })}${local ? ` (${local})` : ''}`
+          }
           return (
             <div key={k}>
               <div className="rt-group-head">
                 <bdi>{t('common.floorIn', { building: bld, floor: fl })}</bdi> <span className="tag">{t('find.roomsFree', { rooms: t('count.room', { count: rooms.length }), count: rooms.filter(isFree).length })}</span>
+                {ownClock && <span className="tag">{t('time.zoneOffset', { zone: zoneCity(tz), offset: offsetLabel(tz, noon) })}</span>}
               </div>
+              {ownClock && (
+                <div className="rt-local">
+                  <div className="rt-roominfo rt-local-name">{t('time.zoneClock', { zone: zoneCity(tz) })}</div>
+                  <div className="rt-ruler rt-local-ruler" style={{ width: trackW }} aria-hidden="true">
+                    {ticks.map((m) => <div key={m} className="rt-tick" style={{ insetInlineStart: px(m - open) }}>{localLabel(dayAt(f.date, 0, m), tz)}</div>)}
+                  </div>
+                </div>
+              )}
               {rooms.map((s) => {
                 const segs = items.filter((i) => i.spaceId === s.id).map((i) => daySegment(i, f.date))
                   .filter((g): g is DaySegment => !!g).sort((a, b) => a.s - b.s)
@@ -307,14 +330,13 @@ export function FindSpacePage() {
                       {band}{nowLine}
                       {drag?.spaceId === s.id && drag.moved && (
                         <div className="rt-drag" style={{ insetInlineStart: px(Math.min(drag.from, drag.to) - open), width: px(Math.abs(drag.to - drag.from)) }}>
-                          <span>{minLabel(Math.min(drag.from, drag.to))}–{minLabel(Math.max(drag.from, drag.to))}</span>
+                          <span>{both(Math.min(drag.from, drag.to), Math.max(drag.from, drag.to))}</span>
                         </div>
                       )}
                       {cells.map((c) => (
                         <div key={c.start} className="rt-free" style={{ insetInlineStart: px(c.start - open) + 1, width: px(c.end - c.start) - 2 }}
                           onClick={() => cellPrefill(s, c, c.reg)} {...pressable(() => cellPrefill(s, c, c.reg))}
-                          title={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })}
-                          aria-label={t('find.bookCell', { name: s.name, from: minLabel(c.start), to: minLabel(c.end) })} />
+                          title={cellLabel(s, c)} aria-label={cellLabel(s, c)} />
                       ))}
                       {segs.map((g) => {
                         const it = g.item
@@ -323,8 +345,8 @@ export function FindSpacePage() {
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
                             {...(opens(it) ? pressable(() => openItem(it)) : {})}
                             style={{ insetInlineStart: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
-                            title={`${hm(it.start)}–${hm(it.end)} UTC · ${who}`}>
-                            <b>{g.clipStart ? '↥' : ''}{hm(it.start)}{g.clipEnd ? ' ↧' : ''}</b>
+                            title={`${hm(it.start)}–${hm(it.end)} UTC${ownClock ? ` (${localRange(it.start, it.end, tz)})` : ''} · ${who}`}>
+                            <b>{g.clipStart ? '↥' : ''}{hm(it.start)}{ownClock ? <i className="rt-local-time"> · {localLabel(it.start, tz)}</i> : null}{g.clipEnd ? ' ↧' : ''}</b>
                             <span><bdi>{who}</bdi></span>
                           </div>
                         )

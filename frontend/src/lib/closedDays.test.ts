@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hoursSpan, isUtcLike, isWithinHours, localLabel, openParts, zoneCity, zonedInstant, type OpeningRules } from './closedDays'
+import { hoursSpan, isUtcLike, isWithinHours, localLabel, localRange, offsetLabel, openParts, zoneCity, zonedInstant, type OpeningRules } from './closedDays'
 
 /* Opening hours are on the building's own clock, as on the server (BuildingCalendar.IsWithinHours). */
 
@@ -62,5 +62,20 @@ describe('both clocks', () => {
   it('offers only the UTC times inside a Warsaw building opening hours', () => {
     /* Open 08:00-20:00 in Warsaw on 7 October = 06:00-18:00 UTC: an end of 19:00 UTC is not offered. */
     expect(openParts(rules('Europe/Warsaw', 8, 20), '2026-10-07')).toEqual([{ start: 6 * 60, end: 18 * 60 }])
+  })
+})
+
+/* The timeline and schedule show a building's own clock beside UTC (FindSpacePage, ScheduleCalendar). */
+describe('building clock labels', () => {
+  it('gives the offset from UTC, including half hours and the clock change', () => {
+    expect(offsetLabel('Europe/Warsaw', utc('2026-10-07T12:00'))).toBe('UTC+2')
+    expect(offsetLabel('Europe/Warsaw', utc('2026-11-02T12:00'))).toBe('UTC+1')
+    expect(offsetLabel('Asia/Kolkata', utc('2026-10-07T12:00'))).toBe('UTC+5:30')
+    expect(offsetLabel('America/New_York', utc('2026-12-01T02:00'))).toBe('UTC−5')
+  })
+
+  it('has a local window only for a building whose clock differs from UTC', () => {
+    expect(localRange(utc('2026-10-07T06:00'), utc('2026-10-07T07:00'), 'UTC')).toBeNull()
+    expect(localRange(utc('2026-10-07T06:00'), utc('2026-10-07T07:00'), 'Europe/Warsaw')).not.toBeNull()
   })
 })

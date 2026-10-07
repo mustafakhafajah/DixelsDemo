@@ -10,7 +10,7 @@ import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { closedReason, localLabel, openParts, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
-import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
+import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stamp } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
 import { useFieldErrors, type FieldError, type FieldErrors } from '../../lib/useFieldErrors'
@@ -256,7 +256,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         if (peopleChanged) await setAttendees.mutateAsync({ id: editing.id, attendees })
         if (timeChanged) {
           await reschedule.mutateAsync({ id: editing.id, startUtc: start.toISOString(), endUtc: end.toISOString(), expectedVersion: editing.version })
-          toast('ok', t('booking.toast.rescheduled'), t('booking.toast.rescheduledMessage', { space: editing.spaceName, start: stampOffset(start), end: hm(end) }))
+          toast('ok', t('booking.toast.rescheduled'), t('booking.toast.rescheduledMessage', { space: editing.spaceName, start: stamp(start), end: hm(end) }))
         } else if (peopleChanged) {
           toast('ok', t('booking.toast.peopleSaved'), t('booking.toast.peopleSavedMessage', { space: editing.spaceName }))
         }
@@ -285,7 +285,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
         idempotencyKey, attendees,
       })
-      toast('ok', t('booking.toast.confirmed'), t('booking.toast.confirmedMessage', { space: space.name, start: stampOffset(start), end: hm(end) }))
+      toast('ok', t('booking.toast.confirmed'), t('booking.toast.confirmedMessage', { space: space.name, start: stamp(start), end: hm(end) }))
       modals.close()
     } catch (e) {
       showError(e)

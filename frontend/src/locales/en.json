@@ -59,7 +59,6 @@
   },
   "time": {
     "localRange": "{{from}}–{{to}} {{zone}} time",
-    "zoneOffset": "{{zone}} time · {{offset}}",
     "zoneClock": "{{zone}} time",
     "hoursShort_one": "{{count}}h",
     "hoursShort_other": "{{count}}h",

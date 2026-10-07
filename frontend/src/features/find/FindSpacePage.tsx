@@ -7,7 +7,7 @@ import { P } from '../../auth/permissions'
 import { ErrorLine, LoadError, Loading } from '../../components/bits'
 import { EmptyState } from '../../components/EmptyState'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
-import { localLabel, localRange, offsetLabel, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
+import { localLabel, localRange, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
@@ -298,7 +298,7 @@ export function FindSpacePage() {
             <div key={k}>
               <div className="rt-group-head">
                 <bdi>{t('common.floorIn', { building: bld, floor: fl })}</bdi> <span className="tag">{t('find.roomsFree', { rooms: t('count.room', { count: rooms.length }), count: rooms.filter(isFree).length })}</span>
-                {ownClock && <span className="tag">{t('time.zoneOffset', { zone: zoneCity(tz), offset: offsetLabel(tz, noon) })}</span>}
+                {ownClock && <span className="tag">{t('time.zoneClock', { zone: zoneCity(tz) })}</span>}
               </div>
               {ownClock && (
                 <div className="rt-local">

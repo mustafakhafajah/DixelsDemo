@@ -25,13 +25,6 @@ export function fromDateTime(dateStr: string, timeStr: string): Date | null {
 export const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 export const stamp = (d: Date) => `${dayKey(d)} ${hm(d)}`
 
-/* The viewer's offset from UTC at this instant, e.g. "+03:00" (getTimezoneOffset counts the other way round). */
-export function offsetOf(d: Date): string {
-  const off = -d.getTimezoneOffset()
-  const abs = Math.abs(off)
-  return `${off < 0 ? '-' : '+'}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
-}
-export const stampOffset = (d: Date) => `${dayKey(d)} ${hm(d)} ${offsetOf(d)}`
 export const minOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes()
 export const minLabel = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`
 

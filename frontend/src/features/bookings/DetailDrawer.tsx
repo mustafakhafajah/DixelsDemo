@@ -8,7 +8,7 @@ import { Loading, StatusPill } from '../../components/bits'
 import { CancelMessageFields, type CancelMessageValue } from '../../components/CancelMessageFields'
 import { bookingCancelDefaults } from '../../components/cancelMessage'
 import { Drawer } from '../../components/Sheet'
-import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
+import { dayKey, durationLabel, parseUtc, stamp } from '../../lib/dateUtils'
 import { modals } from '../../state/modalStore'
 import { ResponseIcon } from './Replies'
 import { useBookingActions } from './useBookingActions'
@@ -154,8 +154,8 @@ function BookingDetail({ b, respond, startCancel }: { b: Booking; respond?: Repl
         <dd><bdi>{b.spaceName}</bdi>{space && <div style={{ fontSize: 11.5, color: 'var(--slate)', fontWeight: 400 }}>{t('detail.spacePlace', { building: space.buildingName, floor: space.floorName, tz: space.timeZone })}</div>}</dd>
         <dt>{t('detail.bookedBy')}</dt>
         <dd><bdi>{seesOwner ? b.ownerName : t('detail.someoneElse')}</bdi></dd>
-        <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(b.start)}</dd>
-        <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(b.end)}</dd>
+        <dt>{t('common.start')}</dt><dd className="mono">{stamp(b.start)}</dd>
+        <dt>{t('common.end')}</dt><dd className="mono">{stamp(b.end)}</dd>
         <dt>{t('detail.duration')}</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>
         {(b.attendees.length > 0 || b.guestCount > 0) && (
           <><dt>{t('detail.attendees')}</dt><dd><Attendees b={b} myId={session.userId} showReplies={mine || session.can(P.Bookings.ViewAll)} /></dd></>
@@ -218,8 +218,8 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
       <dl className="kv" style={{ marginBottom: 16 }}>
         <dt>{t('detail.scope')}</dt><dd><bdi>{m.scopeLabel}</bdi></dd>
         <dt>{t('common.space')}</dt><dd><bdi>{m.spaceName}</bdi></dd>
-        <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(m.start)}</dd>
-        <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(m.end)}</dd>
+        <dt>{t('common.start')}</dt><dd className="mono">{stamp(m.start)}</dd>
+        <dt>{t('common.end')}</dt><dd className="mono">{stamp(m.end)}</dd>
         <dt>{t('common.reason')}</dt><dd><bdi>{m.note || t('schedule.blocked')}</bdi></dd>
         <dt>{t('detail.created')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(m.creationTime))}</dd>
       </dl>

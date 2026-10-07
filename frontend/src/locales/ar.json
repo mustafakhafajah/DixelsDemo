@@ -59,7 +59,6 @@
   },
   "time": {
     "localRange": "{{from}}–{{to}} بتوقيت {{zone}}",
-    "zoneOffset": "بتوقيت {{zone}} · {{offset}}",
     "zoneClock": "بتوقيت {{zone}}",
     "hoursShort_zero": "{{count}} س",
     "hoursShort_one": "{{count}} س",

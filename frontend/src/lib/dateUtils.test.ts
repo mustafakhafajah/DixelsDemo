@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { localLabel, openParts, viewerZone, type OpeningRules } from './closedDays'
-import { addDays, dayAt, dayKey, hm, minOfDay, monthBounds, stampOffset, weekStart } from './dateUtils'
+import { addDays, dayAt, dayKey, hm, minOfDay, monthBounds, stamp, weekStart } from './dateUtils'
 import { generateOccurrences } from './recurrence'
 
 /* Tests run as a viewer in Amman (UTC+3 all year, see vitest.setup.ts): every time is read on that clock. */
@@ -19,7 +19,7 @@ describe("the viewer's own clock", () => {
     expect(dayKey(late)).toBe('2026-10-08')
     expect(hm(late)).toBe('01:30')
     expect(minOfDay(late)).toBe(90)
-    expect(stampOffset(late)).toBe('2026-10-08 01:30 +03:00')
+    expect(stamp(late)).toBe('2026-10-08 01:30')
   })
 
   it('turns a day and a time back into the instant, rolling minutes over', () => {

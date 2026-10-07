@@ -58,6 +58,8 @@ public static class PortalDomainErrorCodes
     public const string BookingInvalidAttendee = "booking.invalid_attendee";
     /* Leaving a booking you aren't invited to. */
     public const string BookingNotAttendee = "booking.not_attendee";
+    /* Answering an invitation with something other than "accepted", "tentative" or "declined". */
+    public const string BookingInvalidResponse = "booking.invalid_response";
     public const string VersionMismatch = "conflict.version_mismatch";
     public const string MaintenanceNotFound = "maintenance.not_found";
 
@@ -107,6 +109,7 @@ public static class PortalDomainErrorCodes
         [BookingOverCapacity] = HttpStatusCode.BadRequest,
         [BookingInvalidAttendee] = HttpStatusCode.BadRequest,
         [BookingNotAttendee] = HttpStatusCode.Conflict,
+        [BookingInvalidResponse] = HttpStatusCode.BadRequest,
         [VersionMismatch] = HttpStatusCode.Conflict,
         [MaintenanceNotFound] = HttpStatusCode.NotFound,
     };

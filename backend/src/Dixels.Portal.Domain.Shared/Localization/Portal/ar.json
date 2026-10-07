@@ -119,6 +119,7 @@
     "Error:AttendeeMissing": "يجب أن يكون لكل شخص مستخدم أو عنوان بريد إلكتروني.",
     "Error:TooManyAttendees": "يمكن دعوة {0} شخصاً على الأكثر إلى الحجز الواحد.",
     "Error:NotAnAttendee": "أنت لست مدعواً إلى هذا الحجز.",
-    "Error:OnlyOwnInvite": "يمكنك تغيير المدعوين إلى حجوزاتك فقط."
+    "Error:OnlyOwnInvite": "يمكنك تغيير المدعوين إلى حجوزاتك فقط.",
+    "Error:InvalidResponse": "اختر الرد: قبول أو ربما أو رفض."
   }
 }

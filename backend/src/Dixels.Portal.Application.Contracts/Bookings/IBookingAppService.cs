@@ -17,19 +17,20 @@ public interface IBookingAppService : IApplicationService
     /* PATCH: a new time, or a new lifecycle state ("cancelled" / "ended"); each goes to the matching action below. */
     Task<BookingDto> UpdateAsync(Guid id, UpdateBookingDto input);
     Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input);
-    Task<BookingDto> CancelAsync(Guid id);
+    /* message: an optional subject and note for the cancellation emails. */
+    Task<BookingDto> CancelAsync(Guid id, CancellationMessageDto? message = null);
     /* Cancels the series' bookings that start at or after input.FromUtc; ended occurrences are left alone. */
     Task<CancelSeriesResultDto> CancelSeriesAsync(Guid seriesId, CancelBookingSeriesDto input);
     Task<BookingDto> EndEarlyAsync(Guid id);
     /* Admin: bookings in a space, floor or building that have not started yet (confirmed only). */
     Task<int> GetUpcomingCountAsync(EstateScopeDto input);
     /* Admin: cancel exactly those bookings, e.g. after making the scope not bookable. */
-    Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input);
+    Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input, CancellationMessageDto? message = null);
     /* The owner replaces who is invited; added people get an invitation, removed ones are told. */
     Task<BookingDto> SetAttendeesAsync(Guid id, SetBookingAttendeesDto input);
-    /* An invited user takes themselves off the booking (and, with wholeSeries, off its later dates too);
-     * the owner is told. */
-    Task LeaveAsync(Guid id, bool wholeSeries = false);
+    /* An invited user answers: accepted, tentative or declined (and, with wholeSeries, the same for the series'
+     * later dates). The owner is told when the answer changes. */
+    Task<BookingDto> RespondAsync(Guid id, RespondToBookingDto input);
     /* Active users to invite, by name, user name or email. */
     Task<ListResultDto<BookingPersonDto>> GetPeopleAsync(BookingPeopleFilterDto input);
 }

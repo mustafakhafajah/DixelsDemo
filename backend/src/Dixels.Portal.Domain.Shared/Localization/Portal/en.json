@@ -119,6 +119,7 @@
     "Error:AttendeeMissing": "Each person needs a user or an email address.",
     "Error:TooManyAttendees": "A booking can have at most {0} people invited.",
     "Error:NotAnAttendee": "You're not invited to this booking.",
-    "Error:OnlyOwnInvite": "You can only change who is invited to your own bookings."
+    "Error:OnlyOwnInvite": "You can only change who is invited to your own bookings.",
+    "Error:InvalidResponse": "Answer with accepted, tentative or declined."
   }
 }

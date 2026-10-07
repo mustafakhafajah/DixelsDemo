@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Dixels.Portal.Bookings;
 
 namespace Dixels.Portal.Maintenance;
 
@@ -9,4 +10,6 @@ public class ScheduleMaintenanceDto : PreviewMaintenanceDto
     public string? Note { get; set; }
     /* Bookings that overlap the blocked time are kept unless the admin ticks this. */
     public bool CancelAffectedBookings { get; set; }
+    /* With CancelAffectedBookings: an optional subject and note for the cancellation emails. */
+    public CancellationMessageDto? Message { get; set; }
 }

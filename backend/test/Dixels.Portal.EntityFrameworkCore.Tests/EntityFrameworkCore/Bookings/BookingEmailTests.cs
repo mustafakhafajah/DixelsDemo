@@ -11,7 +11,6 @@ using Dixels.Portal.SpaceTypes;
 using Shouldly;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Xunit;
 
@@ -105,6 +104,28 @@ public class BookingEmailTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task A_series_cancelled_with_a_message_is_one_calendar_cancellation_with_that_subject()
+    {
+        var room = await CreateRoomAsync();
+        var result = await _bookingService.CreateSeriesAsync(new CreateBookingSeriesDto
+        {
+            SpaceId = room.Id,
+            Occurrences = Enumerable.Range(0, 2).Select(w => new TimeWindowDto { StartUtc = Ten.AddDays(7 * w), EndUtc = Ten.AddDays(7 * w).AddHours(1) }).ToList(),
+        });
+
+        await _bookingService.CancelSeriesAsync(result.SeriesId!.Value, new CancelBookingSeriesDto
+        {
+            Lifecycle = CancellationDto.Cancelled, FromUtc = Ten,
+            Message = new CancellationMessageDto { Subject = "Team day moved", Message = "See you next month." },
+        });
+
+        var email = (await EmailsAboutAsync(room)).Where(e => e.Method == BookingCalendar.Cancel).ShouldHaveSingleItem();
+        email.Subject.ShouldBe("Team day moved");
+        email.Body.ShouldContain("See you next month.");
+        email.Calendar!.Split("\r\n").Count(l => l == "BEGIN:VEVENT").ShouldBe(2);
+    }
+
+    [Fact]
     public async Task A_booking_starting_within_10_minutes_gets_no_reminder()
     {
         var room = await CreateRoomAsync();
@@ -137,9 +158,11 @@ public class BookingEmailTests : PortalEntityFrameworkCoreTestBase
         (await EmailsAboutAsync(room)).Count(e => e.Subject.StartsWith("Starting soon")).ShouldBe(1);
     }
 
-    private async Task<List<BackgroundEmailSendingJobArgs>> EmailsAboutAsync(Space room)
-        => (await JobsAsync<BackgroundEmailSendingJobArgs>())
-            .Select(j => j.Args).Where(a => a.To == OwnerEmail && a.Body.Contains(room.GetName())).ToList();
+    /* Plain emails and the ones carrying a calendar invitation alike (see QueuedEmails). */
+    private async Task<List<QueuedEmail>> EmailsAboutAsync(Space room)
+        => (await WithUnitOfWorkAsync(() => QueuedEmails.ReadAsync(
+                GetRequiredService<IBackgroundJobRepository>(), GetRequiredService<IBackgroundJobSerializer>())))
+            .Where(e => e.To == OwnerEmail && e.Body.Contains(room.GetName())).ToList();
 
     private async Task<List<(BookingReminderJobArgs Args, DateTime NextTryTime)>> RemindersForAsync(Guid bookingId)
         => (await JobsAsync<BookingReminderJobArgs>()).Where(j => j.Args.BookingId == bookingId).ToList();

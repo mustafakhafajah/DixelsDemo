@@ -121,7 +121,7 @@ public class MaintenanceWindowAppService : PortalAppService, IMaintenanceWindowA
         var created = windows.Count;
 
         /* Each person gets one email listing all their bookings this blocked time cancelled. */
-        await _notifier.BookingsCancelledAsync(cancelledBookings, "the space is blocked at that time");
+        await _notifier.BookingsCancelledAsync(cancelledBookings, "the space is blocked at that time", input.Message);
 
         return new ScheduleMaintenanceResultDto
         {

@@ -843,20 +843,62 @@
       "inProgress": "بدأ هذا الحجز بالفعل، لذا يمكن إلغاؤه أو إنهاؤه مبكرًا فقط.",
       "ownedBy": "حجز {{name}}. بصفتك مسؤول المساحات يمكنك تغيير موعده أو إلغاؤه.",
       "someoneElse": "حجز هذا شخص آخر. يمكنك تغيير حجوزاتك أنت فقط.",
-      "invitedBy": "دعاك {{name}}. أنت مسجَّل كحاضر؛ إن لم تستطع الحضور فغادر الحجز وسيصله إشعار."
+      "invitedBy": "دعاك {{name}}."
     },
-    "leave": "مغادرة الحجز",
-    "leaveQuestion": "مغادرة هذا الحجز؟ سيصل إلى {{name}} بريد إلكتروني بأنك لا تستطيع الحضور.",
-    "leaveSeriesQuestion": "هذا الحجز متكرر. هل تغادر هذا الموعد فقط، أم هذا الموعد وكل ما بعده؟",
-    "stayInvited": "البقاء مدعوًا",
-    "alreadyLeft": "لم تعد ضمن هذا الحجز. ربما رفضته من قبل، أو أُلغي.",
     "seriesQuestion": "هذا الحجز جزء من سلسلة متكررة. ما الذي تريد إلغاءه؟",
     "onlyThis": "هذا الحجز فقط",
     "thisAndLater": "هذا الحجز وكل ما بعده",
     "keepIt": "الإبقاء عليه",
     "cancelBooking": "إلغاء الحجز",
     "unblock": "إلغاء حجب هذا الوقت",
-    "noActions": "لا توجد إجراءات متاحة."
+    "noActions": "لا توجد إجراءات متاحة.",
+    "cancelQuestion": "إلغاء هذا الحجز؟",
+    "cantRespond": "تعذّر فتح هذا الحجز. ربما أُلغي، أو لم تعد مدعوًا إليه.",
+    "response": {
+      "accepted": "مقبول",
+      "tentative": "مبدئي",
+      "declined": "مرفوض",
+      "none": "لا رد"
+    },
+    "reply": {
+      "label": "ردّك",
+      "accept": "قبول",
+      "tentative": "مبدئي",
+      "decline": "رفض",
+      "notAnswered": "لم تردّ بعد.",
+      "notAnsweredShort": "لم تردّ",
+      "yourAnswer": "ردّك: {{answer}}.",
+      "applyTo": "الرد على",
+      "thisOne": "هذا الحجز",
+      "thisAndLater": "هذا الحجز وما بعده",
+      "respond": "الرد"
+    },
+    "replySummary": {
+      "accepted_zero": "لم يقبل أحد",
+      "accepted_one": "قبِل شخص واحد",
+      "accepted_two": "قبِل شخصان",
+      "accepted_few": "قبِل {{count, number}} أشخاص",
+      "accepted_many": "قبِل {{count, number}} شخصًا",
+      "accepted_other": "قبِل {{count, number}} شخص",
+      "tentative_zero": "لا ردود مبدئية",
+      "tentative_one": "ردّ مبدئي واحد",
+      "tentative_two": "ردّان مبدئيان",
+      "tentative_few": "{{count, number}} ردود مبدئية",
+      "tentative_many": "{{count, number}} ردًّا مبدئيًا",
+      "tentative_other": "{{count, number}} ردّ مبدئي",
+      "declined_zero": "لم يرفض أحد",
+      "declined_one": "رفض شخص واحد",
+      "declined_two": "رفض شخصان",
+      "declined_few": "رفض {{count, number}} أشخاص",
+      "declined_many": "رفض {{count, number}} شخصًا",
+      "declined_other": "رفض {{count, number}} شخص",
+      "none_zero": "ردّ الجميع",
+      "none_one": "لم يردّ شخص واحد",
+      "none_two": "لم يردّ شخصان",
+      "none_few": "لم يردّ {{count, number}} أشخاص",
+      "none_many": "لم يردّ {{count, number}} شخصًا",
+      "none_other": "لم يردّ {{count, number}} شخص"
+    }
   },
   "actions": {
     "cancelled": "أُلغي الحجز",
@@ -874,10 +916,25 @@
     "endFailed": "تعذّر إنهاء الحجز",
     "unblocked": "أُلغي حجب الوقت",
     "unblockedMessage": "يمكن حجزه من جديد.",
-    "left": "غادرت الحجز",
-    "leftMessage": "{{space}} · وصل الإشعار إلى {{owner}}.",
-    "leftSeriesMessage": "{{space}} · هذا الموعد وما بعده · وصل الإشعار إلى {{owner}}.",
-    "leaveFailed": "تعذّرت مغادرة الحجز"
+    "replied": {
+      "accepted": "تم القبول",
+      "tentative": "رد مبدئي",
+      "declined": "تم الرفض"
+    },
+    "repliedMessage": "{{space}} · وصل الإشعار إلى {{owner}}.",
+    "repliedSeriesMessage": "{{space}} · هذا الموعد وما بعده · وصل الإشعار إلى {{owner}}.",
+    "replyFailed": "تعذّر إرسال ردّك"
+  },
+  "cancelMessage": {
+    "subject": "الموضوع",
+    "message": "الرسالة",
+    "hint": "تُرسل إلى صاحب الحجز وكل المدعوين.",
+    "bookingSubject": "أُلغي: {{space}} – {{date}}",
+    "bookingMessage": "ألغى {{name}} هذا الحجز.",
+    "bulkSubject": "أُلغيت الحجوزات في {{scope}}",
+    "notBookableMessage": "أُلغيت الحجوزات في {{scope}} لأنه لم يعد متاحًا للحجز.",
+    "blockedMessage": "أُلغيت الحجوزات في {{scope}} لأن الوقت محجوب: {{note}}",
+    "blockedPlainMessage": "أُلغيت الحجوزات في {{scope}} لأن الوقت محجوب."
   },
   "find": {
     "when": "متى",

@@ -1,23 +1,27 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import type { Reply } from '../../api/types'
 import { LoadError, Loading } from '../../components/bits'
 import { modals } from '../../state/modalStore'
 import { ScheduleCalendar } from './schedule/ScheduleCalendar'
 import { ScheduleToolbar } from './schedule/ScheduleToolbar'
 import { useScheduleData } from './schedule/useScheduleData'
 
-/* The links in an invitation email: ?booking=<id> opens that booking (Accept: nothing else to do), and
- * &respond=refuse also asks straight away whether to leave it. The address is tidied up afterwards. */
+/* The answers an invitation email's links carry. "refuse" is what older emails say for Decline. */
+const EMAIL_REPLIES = new Map<string, Reply>([['accept', 'accepted'], ['tentative', 'tentative'], ['decline', 'declined'], ['refuse', 'declined']])
+
+/* The links in an invitation email: ?booking=<id> opens that booking, and &respond=accept|tentative|decline also
+ * records that answer at once, as clicking it in a Teams email does. The address is tidied up afterwards. */
 function useEmailLink() {
   const [params, setParams] = useSearchParams()
   const bookingId = params.get('booking')
-  const refuse = params.get('respond') === 'refuse'
+  const respond = EMAIL_REPLIES.get(params.get('respond') ?? '')
   useEffect(() => {
     if (!bookingId) return
-    modals.detail('booking', bookingId, refuse)
+    modals.detail('booking', bookingId, respond ? { respond } : {})
     setParams((p) => { p.delete('booking'); p.delete('respond'); return p }, { replace: true })
-  }, [bookingId, refuse, setParams])
+  }, [bookingId, respond, setParams])
 }
 
 export function BookingsPage() {

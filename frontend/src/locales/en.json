@@ -692,20 +692,46 @@
       "inProgress": "This booking has already started, so it can only be cancelled or ended early.",
       "ownedBy": "Owned by {{name}}. As the space administrator you can reschedule or cancel it.",
       "someoneElse": "Someone else booked this. You can only change your own bookings.",
-      "invitedBy": "{{name}} invited you. You're down as attending; if you can't make it, leave the booking and they'll be told."
+      "invitedBy": "{{name}} invited you."
     },
-    "leave": "Leave booking",
-    "leaveQuestion": "Leave this booking? {{name}} will get an email saying you can't make it.",
-    "leaveSeriesQuestion": "This booking repeats. Leave only this date, or this one and every later one?",
-    "stayInvited": "Stay invited",
-    "alreadyLeft": "You're no longer on this booking. You may have refused it already, or it was cancelled.",
     "seriesQuestion": "This booking is part of a repeating series. What should be cancelled?",
     "onlyThis": "Only this one",
     "thisAndLater": "This and all later ones",
     "keepIt": "Keep it",
     "cancelBooking": "Cancel booking",
     "unblock": "Unblock this time",
-    "noActions": "No actions available."
+    "noActions": "No actions available.",
+    "cancelQuestion": "Cancel this booking?",
+    "cantRespond": "This booking can't be opened. It may have been cancelled, or you're no longer invited.",
+    "response": {
+      "accepted": "Accepted",
+      "tentative": "Tentative",
+      "declined": "Declined",
+      "none": "No response"
+    },
+    "reply": {
+      "label": "Your answer",
+      "accept": "Accept",
+      "tentative": "Tentative",
+      "decline": "Decline",
+      "notAnswered": "Not answered yet.",
+      "notAnsweredShort": "Not answered",
+      "yourAnswer": "Your answer: {{answer}}.",
+      "applyTo": "Answer for",
+      "thisOne": "This booking",
+      "thisAndLater": "This and later ones",
+      "respond": "Respond"
+    },
+    "replySummary": {
+      "accepted_one": "{{count, number}} accepted",
+      "accepted_other": "{{count, number}} accepted",
+      "tentative_one": "{{count, number}} tentative",
+      "tentative_other": "{{count, number}} tentative",
+      "declined_one": "{{count, number}} declined",
+      "declined_other": "{{count, number}} declined",
+      "none_one": "{{count, number}} no response",
+      "none_other": "{{count, number}} no response"
+    }
   },
   "actions": {
     "cancelled": "Booking cancelled",
@@ -719,10 +745,25 @@
     "endFailed": "Could not end booking",
     "unblocked": "Time unblocked",
     "unblockedMessage": "It can be booked again.",
-    "left": "You've left the booking",
-    "leftMessage": "{{space}} · {{owner}} has been told.",
-    "leftSeriesMessage": "{{space}} · this and later dates · {{owner}} has been told.",
-    "leaveFailed": "Could not leave the booking"
+    "replied": {
+      "accepted": "Accepted",
+      "tentative": "Tentative",
+      "declined": "Declined"
+    },
+    "repliedMessage": "{{space}} · {{owner}} has been told.",
+    "repliedSeriesMessage": "{{space}} · this and later dates · {{owner}} has been told.",
+    "replyFailed": "Could not send your answer"
+  },
+  "cancelMessage": {
+    "subject": "Subject",
+    "message": "Message",
+    "hint": "Sent to the owner and everyone invited.",
+    "bookingSubject": "Canceled: {{space}} – {{date}}",
+    "bookingMessage": "{{name}} has cancelled this booking.",
+    "bulkSubject": "Canceled: bookings at {{scope}}",
+    "notBookableMessage": "Bookings at {{scope}} have been cancelled because it is no longer bookable.",
+    "blockedMessage": "Bookings at {{scope}} have been cancelled because the time is blocked: {{note}}",
+    "blockedPlainMessage": "Bookings at {{scope}} have been cancelled because the time is blocked."
   },
   "find": {
     "when": "When",

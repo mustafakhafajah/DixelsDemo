@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { usePreviewMaintenance, useScheduleMaintenance } from '../../api/hooks'
 import { ErrorLine, RequiredMark } from '../../components/bits'
+import { CancelMessageFields, type CancelMessageValue } from '../../components/CancelMessageFields'
+import { bulkCancelDefaults } from '../../components/cancelMessage'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
 import { addMin, dayKey, earliestStart, fromDateTime, hm, roundUp30 } from '../../lib/dateUtils'
@@ -35,6 +37,8 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
   const [reason, setReason] = useState<Reason>(REASONS[0])
   const [otherReason, setOtherReason] = useState('')
   const [cancelAffected, setCancelAffected] = useState(false)
+  /* The email to everyone on a cancelled booking; null until edited, so it follows the reason picked. */
+  const [cancelMessage, setCancelMessage] = useState<CancelMessageValue | null>(null)
   const schedule = useScheduleMaintenance()
 
   const start = fromDateTime(startDate, startTime)
@@ -50,6 +54,7 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
   const shown: FieldErrors = { ...liveErrors, ...fields.errors }
   const edited = () => fields.clear('mt-start', 'mt-end', 'mt-occurrences')
   const note = reason === OTHER ? otherReason.trim() : t(`maintenance.reasons.${reason}`)
+  const shownMessage = cancelMessage ?? bulkCancelDefaults(target.label, { note })
 
   /* Read from the form's own values (dates and times), so it is only worked out again when those change. */
   const generated = useMemo(() => {
@@ -100,6 +105,7 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
       scopeId: target.scopeId,
       note,
       cancelAffectedBookings: cancelAffected,
+      message: cancelAffected ? shownMessage : undefined,
       occurrences: wanted.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() })),
     }).then((r) => {
       const message = r.cancelledBookingsCount
@@ -176,6 +182,11 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
             <input type="checkbox" checked={cancelAffected} onChange={(e) => setCancelAffected(e.target.checked)} />
             {t('maintenance.alsoCancel', { count: totalAffected })}
           </label>
+          {cancelAffected && (
+            <div style={{ marginTop: 10 }}>
+              <CancelMessageFields idPrefix="mt-cancel" value={shownMessage} onChange={setCancelMessage} />
+            </div>
+          )}
         </div>
       )}
     </Modal>

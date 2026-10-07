@@ -113,10 +113,28 @@ export interface BookingDto {
   guestCount: number
 }
 
+/* How an invited colleague answered, as in a Teams meeting: 'none' until they reply. Someone who declined stays on the list. */
+export type AttendeeResponse = 'none' | 'accepted' | 'tentative' | 'declined'
+/* The answers a person can give; there is no going back to 'none'. */
+export type Reply = Exclude<AttendeeResponse, 'none'>
+
 export interface BookingAttendee {
   userId: string
   name: string
   email: string | null
+  response: AttendeeResponse
+}
+
+/* Your own answer to a booking you're invited to; null when you're not on its list. */
+export const myResponse = (b: { attendees: BookingAttendee[] }, userId: string): AttendeeResponse | null => {
+  const me = b.attendees.find((a) => a.userId === userId)
+  return me ? me.response ?? 'none' : null
+}
+
+/* The subject and words emailed to everyone on a booking when it is cancelled. A blank part gets the server's own text. */
+export interface CancelMessage {
+  subject?: string
+  message?: string
 }
 
 /* Someone to invite (GET /api/app/booking-people). */

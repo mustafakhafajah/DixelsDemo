@@ -22,6 +22,7 @@ import { useNavCountStore } from '../state/navCountStore'
 import { useThemeStore, type Theme } from '../state/themeStore'
 import { PageActionsSlot } from './pageActionsSlot'
 import { ESTATE_PAGES, manageAny, useSession } from './session'
+import { useTimeZoneSync } from './useTimeZoneSync'
 import { P } from '../auth/permissions'
 import './appShell.css'
 
@@ -268,6 +269,7 @@ export function AppLayout() {
   const collapsed = useSidebarStore((s) => s.collapsed)
   const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null)
   useLanguagePreferenceSync()
+  useTimeZoneSync()
   useEffect(() => {
     if (!navOpen) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNavOpen(false)

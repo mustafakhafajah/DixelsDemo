@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { lifecycleOf, type ScheduleItem } from '../../api/types'
+import { lifecycleOf, myResponse, type ScheduleItem } from '../../api/types'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { StatusPill } from '../../components/bits'
@@ -10,7 +10,8 @@ import { computeFree, resourceDayBounds } from '../../lib/laneLayout'
 import { pressable } from '../../lib/pressable'
 import { modals, type ScheduleId } from '../../state/modalStore'
 import { useScheduleData } from './schedule/useScheduleData'
-import { isInvited, openItem, opens } from './schedule/scheduleItems'
+import { ResponsePill } from './Replies'
+import { openItem, opens } from './schedule/scheduleItems'
 import { useBookingActions } from './useBookingActions'
 
 export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: string; scheduleId: ScheduleId }) {
@@ -30,6 +31,9 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
     const state = lifecycleOf(i)
     const isMaint = i.kind === 'maintenance'
     const mine = !isMaint && i.ownerUserId === session.userId
+    /* Your answer when you're invited to it (not your own booking); null otherwise. */
+    const reply = isMaint || mine ? null : myResponse(i, session.userId)
+    const open = state === 'scheduled' || state === 'in_progress'
     const blocked = t('schedule.blocked')
     const you = t('common.you')
     const primary = isMaint ? (multiSpace ? i.spaceName : i.note || blocked) : multiSpace ? i.spaceName : mine ? you : i.ownerName
@@ -45,19 +49,20 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
           <span style={{ display: 'block', fontSize: 11.5, color: 'var(--slate)' }}><bdi>{secondary}</bdi></span>
         </span>
         {isMaint ? <span className="pill pill-inactive"><span className="dot" />{blocked}</span> : <StatusPill item={i} />}
+        {reply && open && <ResponsePill response={reply} />}
         <span onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6 }}>
           {isMaint && session.can(P.Maintenance.Delete) && i.status === 'Active' && state !== 'ended' && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => actions.cancelMaintenance(i.id)}>{t('common.cancel')}</button>
           )}
           {!isMaint && canEdit(mine) && state === 'scheduled' && <button type="button" className="btn btn-sm" onClick={() => modals.reschedule(i)}>{t('schedule.reschedule')}</button>}
           {!isMaint && canEdit(mine) && state === 'in_progress' && <button type="button" className="btn btn-sm" disabled={actions.busy} onClick={() => actions.endEarly(i)}>{t('schedule.endNow')}</button>}
-          {!isMaint && canDelete(mine) && (state === 'scheduled' || state === 'in_progress') && (
-            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy}
-              onClick={() => (i.seriesId ? openItem(i) : actions.cancel(i))}>{t('common.cancel')}</button>
+          {/* Cancelling is confirmed in the booking's details, where the email to everyone on it can be written. */}
+          {!isMaint && canDelete(mine) && open && (
+            <button type="button" className="btn btn-sm btn-danger" onClick={() => modals.detail('booking', i.id, { cancel: true })}>{t('common.cancel')}</button>
           )}
-          {/* Invited: the only action is leaving, asked to confirm in the booking's details. */}
-          {!isMaint && isInvited(i, session.userId) && (state === 'scheduled' || state === 'in_progress') && (
-            <button type="button" className="btn btn-sm btn-danger" onClick={() => modals.detail('booking', i.id, true)}>{t('detail.leave')}</button>
+          {/* Invited: answering (Accept / Tentative / Decline) happens in the booking's details. */}
+          {reply && open && (
+            <button type="button" className="btn btn-sm" onClick={() => modals.detail('booking', i.id)}>{t('detail.reply.respond')}</button>
           )}
         </span>
       </div>

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { useCancelBooking, useCancelBookingSeries, useCancelMaintenance, useEndBookingEarly, useLeaveBooking } from '../../api/hooks'
+import { useCancelBooking, useCancelBookingSeries, useCancelMaintenance, useEndBookingEarly, useRespondToBooking } from '../../api/hooks'
 import { errorText } from '../../api/client'
-import type { Booking } from '../../api/types'
+import type { Booking, CancelMessage, Reply } from '../../api/types'
 import { hm, stamp } from '../../lib/dateUtils'
 import { toast } from '../../state/toastStore'
 
@@ -11,30 +11,32 @@ export function useBookingActions() {
   const cancelSeries = useCancelBookingSeries()
   const endEarly = useEndBookingEarly()
   const cancelMaint = useCancelMaintenance()
-  const leave = useLeaveBooking()
+  const respond = useRespondToBooking()
 
   const fail = (title: string) => (e: unknown) => {
     const { code, message } = errorText(e)
     toast('err', title, message, code)
   }
+  /* Resolves to true when it worked, so a confirm step knows whether to close. */
+  const done = <T>(p: Promise<T>, ok: (r: T) => void, failTitle: string) =>
+    p.then((r) => { ok(r); return true }, (e: unknown) => { fail(failTitle)(e); return false })
 
   return {
-    busy: cancel.isPending || cancelSeries.isPending || endEarly.isPending || cancelMaint.isPending || leave.isPending,
-    /* Refusing an invitation: off this booking (and with wholeSeries its later dates); the owner gets an email.
-     * True when it worked: the booking is then no longer yours to see. */
-    leave: (b: Booking, wholeSeries = false) =>
-      leave.mutateAsync({ id: b.id, wholeSeries }).then(
-        () => {
-          toast('ok', t('actions.left'), t(wholeSeries ? 'actions.leftSeriesMessage' : 'actions.leftMessage', { space: b.spaceName, owner: b.ownerName }))
-          return true
-        },
-        (e: unknown) => { fail(t('actions.leaveFailed'))(e); return false }),
-    cancel: (b: Booking) =>
-      cancel.mutateAsync(b.id).then(() => toast('ok', t('actions.cancelled'), t('actions.cancelledMessage', { space: b.spaceName })), fail(t('actions.cancelFailed'))),
-    cancelSeriesFrom: (b: Booking) =>
-      cancelSeries.mutateAsync(b).then(
+    busy: cancel.isPending || cancelSeries.isPending || endEarly.isPending || cancelMaint.isPending || respond.isPending,
+    /* An invited person's answer, like Teams' Accept / Tentative / Decline: for this booking, or with wholeSeries
+     * for its later dates too. The owner gets an email either way. */
+    respond: (b: Booking, response: Reply, wholeSeries = false) =>
+      done(respond.mutateAsync({ id: b.id, response, wholeSeries }),
+        () => toast('ok', t(`actions.replied.${response}`),
+          t(wholeSeries ? 'actions.repliedSeriesMessage' : 'actions.repliedMessage', { space: b.spaceName, owner: b.ownerName })),
+        t('actions.replyFailed')),
+    cancel: (b: Booking, message?: CancelMessage) =>
+      done(cancel.mutateAsync({ id: b.id, message }),
+        () => toast('ok', t('actions.cancelled'), t('actions.cancelledMessage', { space: b.spaceName })), t('actions.cancelFailed')),
+    cancelSeriesFrom: (b: Booking, message?: CancelMessage) =>
+      done(cancelSeries.mutateAsync({ id: b.id, seriesId: b.seriesId, start: b.start, message }),
         (r) => toast('ok', t('actions.seriesCancelled', { count: r.cancelledCount }), t('actions.seriesCancelledMessage', { from: stamp(b.start) })),
-        fail(t('actions.cancelFailed'))),
+        t('actions.cancelFailed')),
     endEarly: (b: Booking) =>
       endEarly.mutateAsync(b.id).then(
         () => toast('ok', t('actions.ended'), t('actions.endedMessage', { time: hm(new Date()) })),

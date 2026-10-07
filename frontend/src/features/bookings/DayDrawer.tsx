@@ -10,7 +10,7 @@ import { computeFree, resourceDayBounds } from '../../lib/laneLayout'
 import { pressable } from '../../lib/pressable'
 import { modals, type ScheduleId } from '../../state/modalStore'
 import { useScheduleData } from './schedule/useScheduleData'
-import { openItem, opens } from './schedule/scheduleItems'
+import { isInvited, openItem, opens } from './schedule/scheduleItems'
 import { useBookingActions } from './useBookingActions'
 
 export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: string; scheduleId: ScheduleId }) {
@@ -54,6 +54,10 @@ export function DayDrawer({ dayKeyValue: key, scheduleId }: { dayKeyValue: strin
           {!isMaint && canDelete(mine) && (state === 'scheduled' || state === 'in_progress') && (
             <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy}
               onClick={() => (i.seriesId ? openItem(i) : actions.cancel(i))}>{t('common.cancel')}</button>
+          )}
+          {/* Invited: the only action is leaving, asked to confirm in the booking's details. */}
+          {!isMaint && isInvited(i, session.userId) && (state === 'scheduled' || state === 'in_progress') && (
+            <button type="button" className="btn btn-sm btn-danger" onClick={() => modals.detail('booking', i.id, true)}>{t('detail.leave')}</button>
           )}
         </span>
       </div>

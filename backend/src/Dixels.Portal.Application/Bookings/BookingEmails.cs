@@ -51,6 +51,63 @@ public static class BookingEmails
             [$"Hello {Encode(name)},", "Your booking starts in about 10 minutes:", $"<strong>{Encode(Describe(line))}</strong>"],
             "View my bookings", bookingsUrl));
 
+    /* To someone invited by ownerName; name is null for an outside guest. A portal user is attending unless they
+     * refuse, so they get Accept (opens the booking) and Refuse (takes them off it); a guest gets the details only. */
+    public static EmailContent Invited(string? name, string ownerName, IReadOnlyList<BookingEmailLine> lines, string? acceptUrl, string? refuseUrl)
+    {
+        var subject = lines.Count == 1
+            ? $"Invitation: {lines[0].SpaceName}, {Day(lines[0])}"
+            : $"Invitation: {lines.Count} bookings in {lines[0].SpaceName}";
+        var intro = lines.Count == 1 ? $"{ownerName} has invited you to a booking:" : $"{ownerName} has invited you to {lines.Count} bookings:";
+        var paragraphs = new List<string> { Hello(name), Encode(intro), List(lines) };
+        var canRefuse = !string.IsNullOrWhiteSpace(refuseUrl);
+        if (canRefuse) paragraphs.Add(Encode("You're down as attending. If you can't make it, choose Refuse and you'll be taken off the booking."));
+        return new EmailContent(subject, Html("You're invited", paragraphs,
+            canRefuse ? "Accept" : null, acceptUrl, canRefuse ? "Refuse" : null, refuseUrl));
+    }
+
+    /* To someone the owner took off the list. */
+    public static EmailContent Uninvited(string? name, string ownerName, IReadOnlyList<BookingEmailLine> lines)
+    {
+        var subject = lines.Count == 1
+            ? $"No longer invited: {lines[0].SpaceName}, {Day(lines[0])}"
+            : $"No longer invited: {lines.Count} bookings";
+        var intro = lines.Count == 1 ? $"{ownerName} has taken you off this booking:" : $"{ownerName} has taken you off these bookings:";
+        return new EmailContent(subject, Html("You're no longer invited",
+            [Hello(name), Encode(intro), List(lines), Encode("You don't need to do anything.")]));
+    }
+
+    /* To the people invited when the owner moves the booking. */
+    public static EmailContent InviteRescheduled(string? name, string ownerName, BookingEmailLine before, BookingEmailLine after, string? bookingUrl)
+        => new($"Booking changed: {after.SpaceName}, {Day(after)}", Html("Booking changed",
+            [Hello(name), Encode($"{ownerName}'s booking you're invited to has a new time:"),
+             $"<strong>Now:</strong> {Encode(Describe(after))}",
+             $"<span style=\"color:#6e7781\"><s>Was: {Encode(Describe(before))}</s></span>"],
+            bookingUrl != null ? "View the booking" : null, bookingUrl));
+
+    /* To the people invited when the booking is cancelled, by the owner or anyone else. */
+    public static EmailContent InviteCancelled(string? name, string ownerName, IReadOnlyList<BookingEmailLine> lines, string? reason)
+    {
+        var subject = lines.Count == 1
+            ? $"Booking cancelled: {lines[0].SpaceName}, {Day(lines[0])}"
+            : $"{lines.Count} bookings cancelled";
+        var what = lines.Count == 1 ? "booking you were invited to has" : $"{lines.Count} bookings you were invited to have";
+        return new EmailContent(subject, Html(lines.Count == 1 ? "Booking cancelled" : "Bookings cancelled",
+            [Hello(name), Encode($"{ownerName}'s {what} been cancelled" + (reason != null ? $" ({reason})." : ".")), List(lines)]));
+    }
+
+    /* To the owner when someone they invited refuses. */
+    public static EmailContent AttendeeLeft(string name, string attendeeName, IReadOnlyList<BookingEmailLine> lines, string? bookingsUrl)
+    {
+        var subject = lines.Count == 1
+            ? $"{attendeeName} can't make it: {lines[0].SpaceName}, {Day(lines[0])}"
+            : $"{attendeeName} can't make it: {lines.Count} bookings";
+        var what = lines.Count == 1 ? "your booking and is no longer invited" : $"{lines.Count} of your bookings and is no longer invited to them";
+        return new EmailContent(subject, Html("Someone can't make it",
+            [$"Hello {Encode(name)},", Encode($"{attendeeName} has refused {what}:"), List(lines)],
+            "View my bookings", bookingsUrl));
+    }
+
     /* "Room 4 · HQ North · Floor 3 — Mon 6 Oct 2026, 10:00–11:00 (Europe/Warsaw)". */
     public static string Describe(BookingEmailLine line)
         => $"{line.SpaceName}{(line.Place.Length > 0 ? " · " + line.Place : "")} — {When(line)}";
@@ -71,6 +128,8 @@ public static class BookingEmails
 
     private static string LocalTime(DateTime utc, string timeZoneId)
         => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), BuildingCalendar.Zone(timeZoneId)).ToString("HH:mm", Invariant);
+
+    private static string Hello(string? name) => string.IsNullOrWhiteSpace(name) ? "Hello," : $"Hello {Encode(name)},";
 
     private static string List(IEnumerable<BookingEmailLine> lines)
         => "<ul style=\"margin:0;padding-left:20px\">"

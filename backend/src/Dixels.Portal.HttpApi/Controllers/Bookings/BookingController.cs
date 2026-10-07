@@ -61,4 +61,15 @@ public class BookingController : PortalController, IBookingAppService
 
     [NonAction]
     public Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input) => _bookings.CancelUpcomingAsync(input);
+
+    /* { attendees: [{ userId } | { email }] }: the whole new list of people invited. */
+    [HttpPut("{id}/attendees")]
+    public Task<BookingDto> SetAttendeesAsync(Guid id, [FromBody] SetBookingAttendeesDto input) => _bookings.SetAttendeesAsync(id, input);
+
+    /* The signed-in person refuses: takes themselves off the booking (?wholeSeries=true: and its later dates). */
+    [HttpDelete("{id}/attendees/me")]
+    public Task LeaveAsync(Guid id, [FromQuery] bool wholeSeries = false) => _bookings.LeaveAsync(id, wholeSeries);
+
+    [NonAction]
+    public Task<ListResultDto<BookingPersonDto>> GetPeopleAsync(BookingPeopleFilterDto input) => _bookings.GetPeopleAsync(input);
 }

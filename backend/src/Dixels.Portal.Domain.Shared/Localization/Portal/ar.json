@@ -110,6 +110,15 @@
     "Error:VersionMismatch": "تغيّر هذا الحجز منذ أن فتحته. أعد التحميل وحاول مرة أخرى.",
     "Error:BookingNotInProgress": "يمكن إنهاء الحجز مبكراً فقط إذا كان قد بدأ بالفعل.",
     "Error:EndedCannotCancel": "لا يمكن إلغاء حجز منتهٍ.",
-    "Error:MaintenanceNotFound": "لا يوجد وقت محجوب بهذا المعرّف."
+    "Error:MaintenanceNotFound": "لا يوجد وقت محجوب بهذا المعرّف.",
+    "Error:BookingOverCapacity": "تتسع {0} لـ {1}. معك ومع المدعوين يصبح العدد {2}.",
+    "Error:AttendeeNotFound": "أحد المدعوين لم يعد لديه حساب نشط.",
+    "Error:AttendeeIsOwner": "لا داعي لدعوة نفسك.",
+    "Error:AttendeeTwice": "{0} مذكور في القائمة مرتين.",
+    "Error:AttendeeBadEmail": "\"{0}\" ليس عنوان بريد إلكتروني صالحاً.",
+    "Error:AttendeeMissing": "يجب أن يكون لكل شخص مستخدم أو عنوان بريد إلكتروني.",
+    "Error:TooManyAttendees": "يمكن دعوة {0} شخصاً على الأكثر إلى الحجز الواحد.",
+    "Error:NotAnAttendee": "أنت لست مدعواً إلى هذا الحجز.",
+    "Error:OnlyOwnInvite": "يمكنك تغيير المدعوين إلى حجوزاتك فقط."
   }
 }

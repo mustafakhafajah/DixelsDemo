@@ -7,14 +7,14 @@
 
 name: dixels-portal
 
-x-connection-string: &connection-string "Host=db;Port=5432;Database=DixelsPortal;User ID=postgres;Password=myPassword;"
+x-connection-string: &connection-string "Host=db;Port=5432;Database=DixelsPortal;User ID=postgres;Password=docker-local-only;"
 
 services:
   db:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: myPassword
+      POSTGRES_PASSWORD: docker-local-only
       POSTGRES_DB: DixelsPortal
     ports:
       - "5433:5432"
@@ -33,7 +33,6 @@ services:
       target: migrator
     environment:
       ConnectionStrings__Default: *connection-string
-      OpenIddict__Applications__Portal_Web__RootUrl: https://localhost:8443
       OpenIddict__Applications__Portal_Swagger__RootUrl: https://localhost:8443
       OpenIddict__Applications__Portal_App__RootUrl: http://localhost:8080
     depends_on:
@@ -44,8 +43,11 @@ services:
     build:
       context: ./backend
       target: web
+      args:
+        CERT_PASSPHRASE: &cert-passphrase docker-local-only
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      AuthServer__CertificatePassPhrase: *cert-passphrase
       ASPNETCORE_URLS: https://+:8443
       # HTTPS uses this machine's ASP.NET Core development certificate, exported to docker/certs (see docs/docker.md),
       # so the browser trusts https://localhost:8443 the same way it trusts https://localhost:44393.

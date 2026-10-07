@@ -65,11 +65,13 @@ file and no `wwwroot/libs`.
 | `App:SelfUrl` | Web | `https://localhost:44393` | This server's own address; used for links to ABP's pages in emails |
 | `App:ClientUrl` | Web | `http://localhost:5173` | The React app's address; used for "Open the portal" links in emails |
 | `App:CorsOrigins` | Web | `http://localhost:5173,https://localhost:5173` | Comma-separated browser origins allowed to call the API |
-| `ConnectionStrings:Default` | Web, DbMigrator | local PostgreSQL | The database. Overridden by `appsettings.secrets.json` |
+| `ConnectionStrings:Default` | Web, DbMigrator | placeholder, no password | The database. **Secret:** the real one goes in `appsettings.secrets.json` |
+| `StringEncryption:DefaultPassPhrase` | Web | placeholder | Encrypts settings ABP stores encrypted (e.g. the SMTP password). **Secret.** Keep the value the server uses: a different one can't read what was encrypted before |
+| `AuthServer:CertificatePassPhrase` | Web, outside Development | not set | Opens `openiddict.pfx`. **Secret.** The app stops at startup with a clear message when it is missing |
 | `OpenIddict:Applications:*:RootUrl` | DbMigrator | the server and localhost addresses | Seeded into the sign-in clients' allowed redirect addresses. Comma-separated |
 | `Settings:Abp.Mailing.*` | Web (secrets file) | not set | ABP's email settings. See "Email" below |
 
-`appsettings.secrets.json` (git-ignored) is read last and overrides everything above. There is deliberately **no
+No secret is committed: the committed values are placeholders. Each person's `appsettings.secrets.json` (git-ignored) holds the real ones, is read last and overrides everything above. There is deliberately **no
 `appsettings.Production.json`**: the server keeps its own `appsettings.json` and `appsettings.secrets.json` in its
 publish folder, and deploys never copy appsettings files over them. A Production file in the repo would either
 never reach the server or, worse, be picked up by the DbMigrator (which runs as Production by default) and change
@@ -98,8 +100,8 @@ server keeps its own). To make a new one:
 dotnet dev-certs https -v -ep openiddict.pfx -p <certificate password>
 ```
 
-`<certificate password>` must be the password the Web app opens the file with (see
-`AddProductionEncryptionAndSigningCertificate` in `PortalWebModule.cs`). More in ABP's
+Put the same `<certificate password>` in `AuthServer:CertificatePassPhrase` in that machine's
+`appsettings.secrets.json` (Docker passes it as `AuthServer__CertificatePassPhrase`). More in ABP's
 [Configuring OpenIddict](https://abp.io/docs/latest/deployment/configuring-openiddict#production-environment).
 
 ## Deploying

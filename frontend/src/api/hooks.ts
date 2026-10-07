@@ -383,11 +383,14 @@ export function useSetAttendees() {
 /* An invited person refuses: off this booking, and with wholeSeries off its later dates too. */
 export function useLeaveBooking() {
   const api = useApi()
+  const qc = useQueryClient()
   const invalidate = useInvalidate()
   return useMutation({
     mutationFn: ({ id, wholeSeries }: { id: string; wholeSeries?: boolean }) =>
       api<void>('DELETE', `/api/app/bookings/${id}/attendees/me`, undefined, wholeSeries ? { wholeSeries: 'true' } : undefined),
-    onSettled: () => invalidate(BOOKING_KEYS),
+    /* Once you've left, the booking is no longer yours to see: drop it rather than ask for it again. */
+    onSuccess: (_r, { id }) => qc.removeQueries({ queryKey: ['booking', id] }),
+    onSettled: () => invalidate([['bookings'], ['spaces', 'registry']]),
   })
 }
 

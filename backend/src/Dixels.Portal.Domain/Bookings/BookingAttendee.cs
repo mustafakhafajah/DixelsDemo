@@ -15,8 +15,15 @@ public class BookingAttendee : Entity<Guid>
     public Guid? UserId { get; private set; }
     /* Guests only, stored lower-case; null once forgotten. */
     public string? Email { get; private set; }
+    /* Their answer, as in Teams: None until they reply. Only portal users answer in the portal; a guest's reply goes
+     * from their own calendar straight to the owner, so a guest stays None here. */
+    public AttendeeResponse Response { get; private set; }
+    public DateTime? RespondedAt { get; private set; }
 
     public bool IsGuest => UserId == null;
+    /* Someone who declined stays on the list (they may change their mind) but takes no seat and doesn't have the
+     * booking on their schedule. */
+    public bool HasDeclined => Response == AttendeeResponse.Declined;
 
     protected BookingAttendee() { }
 
@@ -34,6 +41,15 @@ public class BookingAttendee : Entity<Guid>
     public void ForgetGuestEmail()
     {
         if (IsGuest) Email = null;
+    }
+
+    /* False when it is the answer they had already given: nothing changes and nobody is told again. */
+    public bool Respond(AttendeeResponse response, DateTime at)
+    {
+        if (response == Response) return false;
+        Response = response;
+        RespondedAt = at;
+        return true;
     }
 
     public bool Is(AttendeeKey key) => key.UserId.HasValue ? UserId == key.UserId : UserId == null && Email == key.Email;

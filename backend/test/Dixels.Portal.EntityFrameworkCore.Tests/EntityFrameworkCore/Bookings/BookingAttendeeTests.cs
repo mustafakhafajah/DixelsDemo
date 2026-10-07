@@ -9,11 +9,11 @@ using Dixels.Portal.Estate;
 using Dixels.Portal.Floors;
 using Dixels.Portal.Spaces;
 using Dixels.Portal.SpaceTypes;
+using Dixels.Portal.TimeZones;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -21,8 +21,8 @@ using Xunit;
 namespace Dixels.Portal.EntityFrameworkCore.Bookings;
 
 /* People invited to a booking, through the real booking service: who sees it, the rules on who can be invited,
- * leaving it, the emails each change queues, and wiping guests' addresses once it is over.
- * (Tests grant every permission, so the owner-only checks are not exercised here.) */
+ * answering (accept / tentative / decline), the emails and calendar invitations each change queues, and wiping
+ * guests' addresses once it is over. (Tests grant every permission, so the owner-only checks are not exercised here.) */
 [Collection(PortalTestConsts.CollectionDefinitionName)]
 public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 {
@@ -53,27 +53,42 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 
         var booking = await BookAsync(room, User(abed), Guest("Guest@Outside.test"));
 
-        booking.Attendees.ShouldHaveSingleItem().UserId.ShouldBe(abed.Id);
+        var invited = booking.Attendees.ShouldHaveSingleItem();
+        invited.UserId.ShouldBe(abed.Id);
+        invited.Response.ShouldBe("none");
         booking.GuestCount.ShouldBe(1);
         booking.Guests.ShouldBe(["guest@outside.test"]);
         using (_principal.As(abed))
         {
-            var mine = await _service.GetListAsync(new BookingListFilterDto { OwnerUserId = abed.Id, FromUtc = Ten.AddHours(-1), ToUtc = Ten.AddHours(2) });
-            mine.Items.Select(b => b.Id).ShouldContain(booking.Id);
+            (await MyListAsync(abed)).ShouldContain(booking.Id);
             (await _service.GetBusyListAsync(new BusyListFilterDto { SpaceId = room.Id })).Items.ShouldBeEmpty();
         }
     }
 
     [Fact]
-    public async Task Everyone_invited_gets_an_invitation()
+    public async Task Everyone_invited_and_the_owner_get_a_calendar_invitation()
     {
         var room = await CreateRoomAsync();
         var abed = await CreateUserAsync("Abed");
 
-        await BookAsync(room, User(abed), Guest("guest@outside.test"));
+        var booking = await BookAsync(room, User(abed), Guest("guest@outside.test"));
 
-        (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem().Subject.ShouldBe($"Invitation: {room.GetName()}, {Ten:ddd d MMM}");
-        (await EmailsToAsync("guest@outside.test", room)).ShouldHaveSingleItem().Body.ShouldNotContain("Refuse");
+        var toAbed = (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem();
+        toAbed.Subject.ShouldBe($"Invitation: {room.GetName()}, {Ten:ddd d MMM}");
+        toAbed.Method.ShouldBe(BookingCalendar.Request);
+        var calendar = Unfold(toAbed.Calendar!);
+        calendar.ShouldContain($"UID:{BookingCalendar.Uid(booking.Id)}");
+        calendar.ShouldContain("SEQUENCE:1");
+        calendar.ShouldContain(l => l.StartsWith("ORGANIZER;CN=") && l.EndsWith($":mailto:{OwnerEmail}"));
+        calendar.ShouldContain($"ATTENDEE;CN=Abed Tester;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{abed.Email}");
+        calendar.ShouldContain("ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:guest@outside.test");
+
+        var toGuest = (await EmailsToAsync("guest@outside.test", room)).ShouldHaveSingleItem();
+        toGuest.Method.ShouldBe(BookingCalendar.Request);
+        toGuest.Body.ShouldContain("Hello,"); // no name for a guest; the buttons are covered by BookingEmailsTests
+
+        /* The owner's confirmation puts it in their calendar too. */
+        (await EmailsToAsync(OwnerEmail, room)).ShouldHaveSingleItem().Method.ShouldBe(BookingCalendar.Request);
     }
 
     [Fact]
@@ -120,7 +135,7 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task Refusing_takes_you_off_and_tells_the_owner()
+    public async Task Each_answer_is_recorded_and_the_owner_hears_each_change_once()
     {
         var room = await CreateRoomAsync();
         var abed = await CreateUserAsync("Abed");
@@ -128,18 +143,79 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 
         using (_principal.As(abed))
         {
-            await _service.LeaveAsync(booking.Id);
-            (await Should.ThrowAsync<UserFriendlyException>(() => _service.LeaveAsync(booking.Id)))
-                .Code.ShouldBe(PortalDomainErrorCodes.BookingNotAttendee);
+            (await RespondAsync(booking.Id, "accepted")).Attendees.ShouldHaveSingleItem().Response.ShouldBe("accepted");
+            await RespondAsync(booking.Id, "accepted"); // the same answer again: nothing changes, no email
+            (await RespondAsync(booking.Id, "Tentative")).Attendees.ShouldHaveSingleItem().Response.ShouldBe("tentative");
+            (await RespondAsync(booking.Id, "declined")).Attendees.ShouldHaveSingleItem().Response.ShouldBe("declined");
         }
 
-        (await _service.GetAsync(booking.Id)).Attendees.ShouldBeEmpty();
-        (await EmailsToAsync(OwnerEmail, room)).Select(e => e.Subject)
-            .ShouldContain($"Abed Tester can't make it: {room.GetName()}, {Ten:ddd d MMM}");
+        var row = await WithUnitOfWorkAsync(() => _attendees.FirstAsync(a => a.BookingId == booking.Id));
+        row.Response.ShouldBe(AttendeeResponse.Declined);
+        row.RespondedAt.ShouldNotBeNull();
+        var day = $"{room.GetName()}, {Ten:ddd d MMM}";
+        var answers = (await EmailsToAsync(OwnerEmail, room)).Where(e => e.Method == null).ToList();
+        answers.Select(e => e.Subject).ShouldBe([$"Accepted: {day}", $"Tentative: {day}", $"Declined: {day}"], ignoreOrder: true);
+        answers.First(e => e.Subject.StartsWith("Accepted")).Body.ShouldContain("Abed Tester has accepted your booking:");
     }
 
     [Fact]
-    public async Task Refusing_a_series_from_one_date_leaves_the_earlier_dates()
+    public async Task A_bad_answer_someone_not_invited_or_a_cancelled_booking_is_refused()
+    {
+        var room = await CreateRoomAsync();
+        var abed = await CreateUserAsync("Abed");
+        var mona = await CreateUserAsync("Mona");
+        var booking = await BookAsync(room, User(abed));
+
+        using (_principal.As(abed))
+        {
+            foreach (var bad in new[] { null, "", "none", "maybe" })
+                (await Should.ThrowAsync<UserFriendlyException>(() => RespondAsync(booking.Id, bad)))
+                    .Code.ShouldBe(PortalDomainErrorCodes.BookingInvalidResponse);
+        }
+        using (_principal.As(mona))
+        {
+            (await Should.ThrowAsync<UserFriendlyException>(() => RespondAsync(booking.Id, "accepted")))
+                .Code.ShouldBe(PortalDomainErrorCodes.BookingNotAttendee);
+        }
+        await _service.CancelAsync(booking.Id);
+        using (_principal.As(abed))
+        {
+            (await Should.ThrowAsync<UserFriendlyException>(() => RespondAsync(booking.Id, "accepted")))
+                .Code.ShouldBe(PortalDomainErrorCodes.BookingLocked);
+        }
+    }
+
+    [Fact]
+    public async Task Declining_keeps_you_listed_frees_your_seat_and_takes_it_off_your_schedule_until_you_change_your_mind()
+    {
+        var room = await CreateRoomAsync(capacity: 2);
+        var abed = await CreateUserAsync("Abed");
+        var mona = await CreateUserAsync("Mona");
+        var booking = await BookAsync(room, User(abed));
+
+        using (_principal.As(abed))
+        {
+            await RespondAsync(booking.Id, "declined");
+            (await MyListAsync(abed)).ShouldNotContain(booking.Id);
+            (await _service.GetBusyListAsync(new BusyListFilterDto { SpaceId = room.Id })).Items.ShouldHaveSingleItem();
+            (await _service.GetAsync(booking.Id)).Id.ShouldBe(booking.Id);
+        }
+
+        /* Abed no longer takes a seat, so Mona fits; saving the list again keeps Abed's answer. */
+        var changed = await _service.SetAttendeesAsync(booking.Id, new SetBookingAttendeesDto { Attendees = [User(abed), User(mona)] });
+        changed.Attendees.Single(a => a.UserId == abed.Id).Response.ShouldBe("declined");
+        changed.Attendees.Single(a => a.UserId == mona.Id).Response.ShouldBe("none");
+        (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem(); // only the first invitation, nothing new
+
+        using (_principal.As(abed))
+        {
+            await RespondAsync(booking.Id, "accepted");
+            (await MyListAsync(abed)).ShouldContain(booking.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Answering_for_the_whole_series_from_one_date_leaves_the_earlier_dates_and_is_one_email()
     {
         var room = await CreateRoomAsync();
         var abed = await CreateUserAsync("Abed");
@@ -149,12 +225,18 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
             Occurrences = Enumerable.Range(0, 3).Select(w => new TimeWindowDto { StartUtc = Ten.AddDays(7 * w), EndUtc = Ten.AddDays(7 * w).AddHours(1) }).ToList(),
             Attendees = [User(abed)],
         });
-        (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem().Subject.ShouldBe($"Invitation: 3 bookings in {room.GetName()}");
+        var invitation = (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem();
+        invitation.Subject.ShouldBe($"Invitation: 3 bookings in {room.GetName()}");
+        Unfold(invitation.Calendar!).Count(l => l == "BEGIN:VEVENT").ShouldBe(3);
 
-        using (_principal.As(abed)) await _service.LeaveAsync(series.Created[1].Id, wholeSeries: true);
+        using (_principal.As(abed))
+            await _service.RespondAsync(series.Created[1].Id, new RespondToBookingDto { Response = "declined", WholeSeries = true });
 
-        var still = await WithUnitOfWorkAsync(() => _attendees.GetListAsync(a => a.UserId == abed.Id));
-        still.Select(a => a.BookingId).ShouldBe([series.Created[0].Id]);
+        var rows = await WithUnitOfWorkAsync(() => _attendees.GetListAsync(a => a.UserId == abed.Id));
+        rows.Single(a => a.BookingId == series.Created[0].Id).Response.ShouldBe(AttendeeResponse.None);
+        rows.Where(a => a.BookingId != series.Created[0].Id).ShouldAllBe(a => a.Response == AttendeeResponse.Declined);
+        (await EmailsToAsync(OwnerEmail, room)).Where(e => e.Subject.StartsWith("Declined")).ShouldHaveSingleItem()
+            .Subject.ShouldBe($"Declined: 2 bookings in {room.GetName()}");
     }
 
     [Fact]
@@ -168,13 +250,18 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 
         changed.Attendees.ShouldBeEmpty();
         changed.Guests.ShouldBe(["guest@outside.test"]);
-        (await EmailsToAsync(abed.Email, room)).Select(e => e.Subject)
+        var toAbed = await EmailsToAsync(abed.Email, room);
+        toAbed.Select(e => e.Subject)
             .ShouldBe([$"Invitation: {room.GetName()}, {Ten:ddd d MMM}", $"No longer invited: {room.GetName()}, {Ten:ddd d MMM}"], ignoreOrder: true);
+        /* Taking Abed off cancels the event in Abed's calendar only: the cancellation names nobody else. */
+        var off = toAbed.Single(e => e.Subject.StartsWith("No longer"));
+        off.Method.ShouldBe(BookingCalendar.Cancel);
+        Unfold(off.Calendar!).Where(l => l.StartsWith("ATTENDEE")).ShouldHaveSingleItem().ShouldEndWith($"mailto:{abed.Email}");
         (await EmailsToAsync("guest@outside.test", room)).ShouldHaveSingleItem().Subject.ShouldStartWith("Invitation");
     }
 
     [Fact]
-    public async Task Moving_or_cancelling_tells_everyone_invited()
+    public async Task Moving_or_cancelling_updates_everyone_invited_and_their_calendars()
     {
         var room = await CreateRoomAsync();
         var abed = await CreateUserAsync("Abed");
@@ -183,12 +270,55 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
         await _service.RescheduleAsync(booking.Id, new RescheduleBookingDto { StartUtc = Ten.AddHours(2), EndUtc = Ten.AddHours(3) });
         await _service.CancelAsync(booking.Id);
 
-        foreach (var to in new[] { abed.Email, "guest@outside.test" })
+        foreach (var to in new[] { OwnerEmail, abed.Email, "guest@outside.test" })
         {
-            var subjects = (await EmailsToAsync(to, room)).Select(e => e.Subject).ToList();
-            subjects.ShouldContain($"Booking changed: {room.GetName()}, {Ten:ddd d MMM}");
-            subjects.ShouldContain($"Booking cancelled: {room.GetName()}, {Ten:ddd d MMM}");
+            var emails = await EmailsToAsync(to, room);
+            var moved = emails.Single(e => e.Subject == $"Booking changed: {room.GetName()}, {Ten:ddd d MMM}");
+            moved.Method.ShouldBe(BookingCalendar.Request);
+            Unfold(moved.Calendar!).ShouldContain("SEQUENCE:2");
+            var cancelled = emails.Single(e => e.Subject == $"Booking cancelled: {room.GetName()}, {Ten:ddd d MMM}");
+            cancelled.Method.ShouldBe(BookingCalendar.Cancel);
+            Unfold(cancelled.Calendar!).ShouldContain("SEQUENCE:3");
+            Unfold(cancelled.Calendar!).ShouldContain("STATUS:CANCELLED");
         }
+    }
+
+    [Fact]
+    public async Task A_cancellation_message_reaches_the_owner_and_everyone_invited()
+    {
+        var room = await CreateRoomAsync();
+        var abed = await CreateUserAsync("Abed");
+        var booking = await BookAsync(room, User(abed), Guest("guest@outside.test"));
+
+        await _service.UpdateAsync(booking.Id, new UpdateBookingDto
+        {
+            Lifecycle = UpdateBookingDto.Cancelled,
+            Message = new CancellationMessageDto { Subject = "Office closed", Message = "The heating is broken.\nSorry!" },
+        });
+
+        foreach (var to in new[] { OwnerEmail, abed.Email, "guest@outside.test" })
+        {
+            var email = (await EmailsToAsync(to, room)).Single(e => e.Method == BookingCalendar.Cancel);
+            email.Subject.ShouldBe("Office closed");
+            email.Body.ShouldContain("The heating is broken.<br>Sorry!");
+        }
+    }
+
+    [Fact]
+    public async Task Each_reader_sees_times_in_their_own_time_zone()
+    {
+        var room = await CreateRoomAsync();
+        var abed = await CreateUserAsync("Abed");
+        using (_principal.As(abed))
+            await GetRequiredService<ITimeZonePreferenceAppService>().SetAsync(new TimeZonePreferenceDto { TimeZone = "Asia/Amman" });
+
+        await BookAsync(room, User(abed), Guest("guest@outside.test"));
+
+        /* Abed chose Amman (UTC+3); the owner chose nothing and the guest can't, so they get the building's zone (UTC). */
+        (await EmailsToAsync(abed.Email, room)).ShouldHaveSingleItem().Body
+            .ShouldContain($"{Ten.AddHours(3):HH:mm}–{Ten.AddHours(4):HH:mm} (UTC+03:00) Amman");
+        (await EmailsToAsync(OwnerEmail, room)).ShouldHaveSingleItem().Body.ShouldContain($"{Ten:HH:mm}–{Ten.AddHours(1):HH:mm} (UTC)");
+        (await EmailsToAsync("guest@outside.test", room)).ShouldHaveSingleItem().Body.ShouldContain($"{Ten:HH:mm}–{Ten.AddHours(1):HH:mm} (UTC)");
     }
 
     [Fact]
@@ -222,6 +352,13 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
 
     private static AttendeeInputDto Guest(string email) => new() { Email = email };
 
+    private Task<BookingDto> RespondAsync(Guid bookingId, string? response)
+        => _service.RespondAsync(bookingId, new RespondToBookingDto { Response = response });
+
+    private async Task<List<Guid>> MyListAsync(IdentityUser user)
+        => (await _service.GetListAsync(new BookingListFilterDto { OwnerUserId = user.Id, FromUtc = Ten.AddHours(-1), ToUtc = Ten.AddHours(2) }))
+            .Items.Select(b => b.Id).ToList();
+
     private Task<BookingDto> BookAsync(Space room, params AttendeeInputDto[] people) => BookAsync(room, people, at: 0);
 
     /* at: hours after 10:00 on the test day, so several bookings in one room don't clash. */
@@ -233,16 +370,13 @@ public class BookingAttendeeTests : PortalEntityFrameworkCoreTestBase
             SpaceId = room.Id, StartUtc = Ten.AddHours(at), EndUtc = Ten.AddHours(at + 1), Attendees = people.ToList(),
         });
 
-    private async Task<List<BackgroundEmailSendingJobArgs>> EmailsToAsync(string to, Space room)
-        => (await WithUnitOfWorkAsync(async () =>
-        {
-            var name = BackgroundJobNameAttribute.GetName<BackgroundEmailSendingJobArgs>();
-            var serializer = GetRequiredService<IBackgroundJobSerializer>();
-            var jobs = await GetRequiredService<IBackgroundJobRepository>().GetListAsync();
-            return jobs.Where(j => j.JobName == name)
-                .Select(j => (BackgroundEmailSendingJobArgs)serializer.Deserialize(j.JobArgs, typeof(BackgroundEmailSendingJobArgs)))
-                .ToList();
-        })).Where(a => a.To == to && a.Body.Contains(room.GetName())).ToList();
+    private async Task<List<QueuedEmail>> EmailsToAsync(string to, Space room)
+        => (await WithUnitOfWorkAsync(() => QueuedEmails.ReadAsync(
+                GetRequiredService<IBackgroundJobRepository>(), GetRequiredService<IBackgroundJobSerializer>())))
+            .Where(e => e.To == to && e.Body.Contains(room.GetName())).ToList();
+
+    /* The calendar's lines, with folded continuations joined back on. */
+    private static List<string> Unfold(string ics) => ics.Replace("\r\n ", "").Split("\r\n").ToList();
 
     private Task<IdentityUser> CreateUserAsync(string name)
         => WithUnitOfWorkAsync(async () =>

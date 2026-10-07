@@ -8,6 +8,7 @@ public class PortalSettingDefinitionProvider : SettingDefinitionProvider
     public override void Define(ISettingDefinitionContext context)
     {
         context.Add(new SettingDefinition(PortalSettings.Language));
+        context.Add(new SettingDefinition(PortalSettings.TimeZone));
 
         /* People may not change their own email: ABP's profile update then keeps it as it is, whatever is sent.
          * An administrator still can, on ABP's Users page. ABP's Identity settings page can switch it back on. */

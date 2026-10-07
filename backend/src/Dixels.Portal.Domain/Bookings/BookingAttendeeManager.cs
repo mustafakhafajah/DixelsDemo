@@ -25,8 +25,11 @@ public class BookingAttendeeManager : PortalDomainService
     }
 
     /* The checked list, in the order given. Refuses an unknown or inactive user, the owner, a bad address, anyone
-     * listed twice, and more people than the room seats (the owner counts as one; a capacity of 0 means not set). */
-    public async Task<List<AttendeeKey>> ResolveAsync(SpaceContext ctx, Guid ownerId, IReadOnlyList<(Guid? UserId, string? Email)> people)
+     * listed twice, and more people than the room seats (the owner counts as one; a capacity of 0 means not set).
+     * current: the booking's rows today, when its list is being changed. Someone still on the list who declined keeps
+     * that answer (see Diff), so they take no seat. */
+    public async Task<List<AttendeeKey>> ResolveAsync(SpaceContext ctx, Guid ownerId, IReadOnlyList<(Guid? UserId, string? Email)> people,
+        IReadOnlyCollection<BookingAttendee>? current = null)
     {
         if (people.Count > BookingConsts.MaxAttendees)
             throw Invalid(L["Error:TooManyAttendees", BookingConsts.MaxAttendees]);
@@ -50,14 +53,15 @@ public class BookingAttendeeManager : PortalDomainService
         }
 
         var capacity = ctx.Space.Capacity;
-        if (capacity > 0 && keys.Count + 1 > capacity)
+        var seats = keys.Count(k => current == null || !current.Any(a => a.HasDeclined && a.Is(k))) + 1;
+        if (capacity > 0 && seats > capacity)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingOverCapacity,
-                message: L["Error:BookingOverCapacity", ctx.Space.GetName(), capacity, keys.Count + 1]).ForField("attendees");
+                message: L["Error:BookingOverCapacity", ctx.Space.GetName(), capacity, seats]).ForField("attendees");
         return keys;
     }
 
     /* The rows to add and the rows to remove so a booking's attendees become exactly the wanted list.
-     * People already on it keep their row. */
+     * People already on it keep their row, and with it their answer. */
     public (List<BookingAttendee> Added, List<BookingAttendee> Removed) Diff(Guid bookingId,
         IReadOnlyCollection<BookingAttendee> current, IReadOnlyCollection<AttendeeKey> wanted)
     {

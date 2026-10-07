@@ -26,6 +26,10 @@ public class BookingAttendeeDto
     public Guid UserId { get; set; }
     public string Name { get; set; } = null!;
     public string? Email { get; set; }
+    /* Their answer: "none" (not answered yet), "accepted", "tentative" or "declined". Someone who declined is still
+     * listed, so the owner sees it and they can change their mind. */
+    public string Response { get; set; } = "none";
+    public DateTime? RespondedAt { get; set; }
 }
 
 /* GET /api/app/booking-people: active users to pick from when inviting people. */

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { ScheduleItem } from '../../../api/types'
 import { useSession } from '../../../app/session'
 import { P } from '../../../auth/permissions'
-import { isClosedAt, isClosedDay, isUtcLike, localLabel, localRange, zoneCity } from '../../../lib/closedDays'
+import { isClosedAt, isClosedDay, localLabel, localRange, sameClockAsViewer, viewerZone, zoneCity } from '../../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, PX_PER_HOUR, SLOT_MIN } from '../../../lib/constants'
 import { WEEKDAYS } from '../../../lib/closedDays'
 import { addDays, dayAt, dayKey, formatDate, hm, minLabel, minOfDay, pad, todayKey, weekdayName } from '../../../lib/dateUtils'
@@ -32,8 +32,8 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   const from = dayAt(cfg.from)
   const to = dayAt(cfg.to)
   const months: Date[] = []
-  for (let c = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1)); c <= to;
-    c = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1))) months.push(c)
+  for (let c = new Date(from.getFullYear(), from.getMonth(), 1); c <= to;
+    c = new Date(c.getFullYear(), c.getMonth() + 1, 1)) months.push(c)
   const today = todayKey()
 
   const label = (i: ScheduleItem) => i.kind === 'maintenance'
@@ -44,18 +44,18 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
       : i.ownerUserId === userId ? t('common.you') : i.ownerName
 
   /* A building on another clock also shows its own time: " · 08:00 Warsaw" on the chip, the full window in its tooltip. */
-  const tzOf = (i: ScheduleItem) => zones.get(i.spaceId) ?? 'UTC'
-  const localStart = (i: ScheduleItem) => isUtcLike(tzOf(i), i.start) ? null
+  const tzOf = (i: ScheduleItem) => zones.get(i.spaceId) ?? viewerZone()
+  const localStart = (i: ScheduleItem) => sameClockAsViewer(tzOf(i), i.start) ? null
     : <i className="tg-local"> · {localLabel(i.start, tzOf(i))} {zoneCity(tzOf(i))}</i>
   const localSuffix = (i: ScheduleItem) => { const l = localRange(i.start, i.end, tzOf(i)); return l ? ` (${l})` : '' }
 
   return (
     <div className="month-wrap">
       {months.map((m) => {
-        const y = m.getUTCFullYear()
-        const mo = m.getUTCMonth()
-        const daysInMonth = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate()
-        const firstDow = (new Date(Date.UTC(y, mo, 1)).getUTCDay() + 6) % 7
+        const y = m.getFullYear()
+        const mo = m.getMonth()
+        const daysInMonth = new Date(y, mo + 1, 0).getDate()
+        const firstDow = (new Date(y, mo, 1).getDay() + 6) % 7
         const trail = (7 - ((firstDow + daysInMonth) % 7)) % 7
         return (
           <div key={m.getTime()} className="month-block">
@@ -81,7 +81,7 @@ function MonthView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                       <div key={it.id} className={`chip ${itemClass(it, userId)}`}
                         onClick={shut ? (e) => { e.stopPropagation(); openItem(it) } : undefined}
                         {...(shut && opens(it) ? pressable(() => openItem(it)) : {})}
-                        title={`${hm(it.start)}–${hm(it.end)} UTC${localSuffix(it)} · ${label(it)}`}>
+                        title={`${hm(it.start)}–${hm(it.end)}${localSuffix(it)} · ${label(it)}`}>
                         {hm(it.start)}{localStart(it)} <bdi>{label(it)}</bdi>
                       </div>
                     ))}
@@ -204,11 +204,11 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
   }, [dragging, open, close, pph])
 
   const axis = Array.from({ length: Math.ceil((close - open) / 60) }, (_, i) => open + i * 60)
-  /* When every space shown is in one building zone that reads differently from UTC, the hour column also gives
-   * that zone's hours (read on the first day shown). */
+  /* When every space shown is in one building zone whose clock reads differently from the viewer's, a second hour
+   * column gives that zone's hours (read on the first day shown), headed by its city. */
   const shownZones = [...new Set(shownSpaces.map((s) => s.timeZone))]
-  const axisZone = shownZones.length === 1 && days.length && !isUtcLike(shownZones[0], dayAt(days[0], 12)) ? shownZones[0] : null
-  const tzOf = (i: ScheduleItem) => zones.get(i.spaceId) ?? 'UTC'
+  const axisZone = shownZones.length === 1 && days.length && !sameClockAsViewer(shownZones[0], dayAt(days[0], 12)) ? shownZones[0] : null
+  const tzOf = (i: ScheduleItem) => zones.get(i.spaceId) ?? viewerZone()
   const slotMins = Array.from({ length: Math.ceil((close - open) / SLOT_MIN) }, (_, i) => open + i * SLOT_MIN)
   const track = cfg.mode === 'day' ? 'minmax(220px,1fr)' : 'minmax(126px,1fr)'
 
@@ -216,7 +216,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
     <div className={`tg-wrap${dragging ? ' dragging' : ''}`}>
       <div className="tg-scroll" ref={scroller}>
         <div className="tg-grid" style={{ gridTemplateColumns: `56px repeat(${days.length},${track})` }}>
-          <div className="tg-corner">{axisZone && <span className="tg-corner-zones">UTC<small>{zoneCity(axisZone)}</small></span>}</div>
+          <div className="tg-corner">{axisZone && <span className="tg-corner-zones"><small>{zoneCity(axisZone)}</small></span>}</div>
           {days.map((k) => {
             const d = dayAt(k)
             const shut = !!closed && isClosedDay(closed, k)
@@ -237,7 +237,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
           </div>
           {days.map((k) => {
             const segs = segsBy[k]
-            const dow = dayAt(k).getUTCDay()
+            const dow = dayAt(k).getDay()
             const shut = !!closed && isClosedDay(closed, k)
             const slots = slotMins.map((m) => {
               const inert = inertAt(k, m)
@@ -281,7 +281,7 @@ function TimeGridView({ id, data }: { id: ScheduleId; data: ScheduleData }) {
                     <div key={`${it.id}-${k}`} className={`tg-block ${itemClass(it, userId)}${h < 30 ? ' compact' : ''}`}
                       onClick={() => openItem(it)} {...(opens(it) ? pressable(() => openItem(it)) : {})}
                       style={{ top: ((g.s - open) / 60) * pph, height: h, insetInlineStart: `calc(${w * g.lane}% + 2px)`, width: `calc(${w}% - 4px)` }}
-                      title={`${hm(it.start)}–${hm(it.end)} UTC${local ? ` (${local})` : ''} · ${it.spaceName} · ${who}`}>
+                      title={`${hm(it.start)}–${hm(it.end)}${local ? ` (${local})` : ''} · ${it.spaceName} · ${who}`}>
                       <b>{g.clipStart ? '↥ ' : ''}{hm(it.start)}–{hm(it.end)}{g.clipEnd ? ' ↧' : ''}</b>
                       {local && h >= 30 && <span className="tg-local">{local}</span>}
                       <span><bdi>{label}</bdi></span>

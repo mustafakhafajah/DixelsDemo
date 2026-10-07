@@ -7,7 +7,7 @@ import { P } from '../../auth/permissions'
 import { ErrorLine, LoadError, Loading } from '../../components/bits'
 import { EmptyState } from '../../components/EmptyState'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
-import { isUtcLike, localLabel, localRange, offsetLabel, zoneCity } from '../../lib/closedDays'
+import { localLabel, localRange, offsetLabel, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
 import { DEFAULT_MIN_MINUTES, RT_PX_PER_HOUR } from '../../lib/constants'
 import { addDays, addMin, ceilStep, dayAt, dayKey, durationLabel, formatDate, hm, minLabel, minOfDay, todayKey } from '../../lib/dateUtils'
 import { candidatesDayBounds, computeFree, daySegment, findOverlap, validateWindowLocal, type DaySegment, type MinuteWindow } from '../../lib/laneLayout'
@@ -281,14 +281,14 @@ export function FindSpacePage() {
         {keys.map((k) => {
           const [bld, fl] = k.split('||')
           const rooms = groups.get(k)!
-          /* A building on another clock gets its own ruler in its local time, under the UTC one the grid runs on. */
+          /* A building on another clock gets its own ruler in its local time, under the viewer's one the grid runs on. */
           const tz = rooms[0].timeZone
           const noon = dayAt(f.date, 12)
-          const ownClock = !isUtcLike(tz, noon)
-          /* The tooltip times: UTC, plus the building's clock when it differs. */
+          const ownClock = !sameClockAsViewer(tz, noon)
+          /* The tooltip times: the viewer's own, plus the building's clock when it differs. */
           const both = (from: number, to: number) => {
             const local = localRange(dayAt(f.date, 0, from), dayAt(f.date, 0, to), tz)
-            return `${minLabel(from)}–${minLabel(to)} UTC${local ? ` (${local})` : ''}`
+            return `${minLabel(from)}–${minLabel(to)}${local ? ` (${local})` : ''}`
           }
           const cellLabel = (s: Space, c: MinuteWindow) => {
             const local = localRange(dayAt(f.date, 0, c.start), dayAt(f.date, 0, c.end), tz)
@@ -345,7 +345,7 @@ export function FindSpacePage() {
                           <div key={it.id} className={`tg-block rt-block ${itemClass(it, userId)}`} onClick={() => openItem(it)}
                             {...(opens(it) ? pressable(() => openItem(it)) : {})}
                             style={{ insetInlineStart: px(g.s - open), width: Math.max(30, px(g.e - g.s) - 2) }}
-                            title={`${hm(it.start)}–${hm(it.end)} UTC${ownClock ? ` (${localRange(it.start, it.end, tz)})` : ''} · ${who}`}>
+                            title={`${hm(it.start)}–${hm(it.end)}${ownClock ? ` (${localRange(it.start, it.end, tz)})` : ''} · ${who}`}>
                             <b>{g.clipStart ? '↥' : ''}{hm(it.start)}{ownClock ? <i className="rt-local-time"> · {localLabel(it.start, tz)}</i> : null}{g.clipEnd ? ' ↧' : ''}</b>
                             <span><bdi>{who}</bdi></span>
                           </div>

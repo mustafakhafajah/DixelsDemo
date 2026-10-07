@@ -15,8 +15,8 @@ import { checkProfile, PROFILE_FIELDS } from './validation'
 import './profile.css'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }
-/* "4 October 2026, 14:05 UTC": the app shows every time in UTC, so it says so. */
-const MOMENT: Intl.DateTimeFormatOptions = { ...DAY, hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' }
+/* "4 October 2026, 14:05", on the viewer's own clock like every time in the app. */
+const MOMENT: Intl.DateTimeFormatOptions = { ...DAY, hour: '2-digit', minute: '2-digit', hour12: false }
 
 /* ABP's limits (IdentityUserConsts), so a field stops where the server would refuse. */
 const USER_NAME_MAX = 256

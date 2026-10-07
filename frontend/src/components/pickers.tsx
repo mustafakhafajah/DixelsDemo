@@ -50,7 +50,7 @@ export function Dropdown({ id, value, onChange, options, placeholder, disabled, 
 
 const DATE_LABEL: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }
 
-/* value/min/max are UTC day keys ("YYYY-MM-DD"), the same format the app already uses everywhere. */
+/* value/min/max are day keys ("YYYY-MM-DD") on the viewer's own calendar, the format the app uses everywhere. */
 export function DatePicker({ id, value, onChange, min, max, placeholder, disabled, className, style, 'aria-label': ariaLabel }: {
   id?: string
   value: string
@@ -87,7 +87,6 @@ export function DatePicker({ id, value, onChange, min, max, placeholder, disable
       <PopoverContent className="tw:w-auto tw:p-3" align="start">
         <Calendar
           mode="single"
-          timeZone="UTC"
           weekStartsOn={1}
           selected={selected}
           defaultMonth={selected ?? (min ? dayAt(min) : undefined)}

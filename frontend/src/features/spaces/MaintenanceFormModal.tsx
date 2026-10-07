@@ -140,9 +140,7 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
           <DatePicker id="mt-start-date" value={startDate} min={dayKey(earliest)} onChange={onStartDate} />
         </div>
         <div>
-          <label className="lbl req" htmlFor="mt-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.startTime')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="mt-start">{t('common.startTime')}<RequiredMark /></label>
           <TimePicker id="mt-start" aria-label={t('common.startTime')} value={startTime} min={startDate === dayKey(earliest) ? hm(earliest) : null} onChange={onStartTime} />
           <ErrorLine id="mt-start-error" error={shown['mt-start']} />
         </div>
@@ -153,9 +151,7 @@ export function MaintenanceFormModal({ target }: { target: MaintenanceTarget }) 
           <DatePicker id="mt-end-date" value={endDate} min={startDate} onChange={(v) => { setEndDate(v); edited() }} />
         </div>
         <div>
-          <label className="lbl req" htmlFor="mt-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.endTime')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="mt-end">{t('common.endTime')}<RequiredMark /></label>
           <TimePicker id="mt-end" aria-label={t('common.endTime')} value={endTime} min={start && endDate === startDate ? hm(addMin(start, 15)) : null} onChange={(v) => { setEndTime(v); edited() }} />
           <ErrorLine id="mt-end-error" error={shown['mt-end']} />
         </div>

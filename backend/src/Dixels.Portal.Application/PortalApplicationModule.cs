@@ -1,8 +1,4 @@
-using System.Threading.Tasks;
-using Dixels.Portal.Bookings;
-using Volo.Abp;
 using Volo.Abp.Account;
-using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
@@ -29,10 +25,5 @@ public class PortalApplicationModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddMapperlyObjectMapper<PortalApplicationModule>();
-    }
-
-    public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
-    {
-        await context.AddBackgroundWorkerAsync<BookingGuestCleanupWorker>();
     }
 }

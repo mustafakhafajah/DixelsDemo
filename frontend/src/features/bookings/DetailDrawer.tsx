@@ -8,30 +8,9 @@ import { Loading, StatusPill } from '../../components/bits'
 import { Drawer } from '../../components/Sheet'
 import { dayKey, durationLabel, parseUtc, stamp, stampOffset } from '../../lib/dateUtils'
 import { modals } from '../../state/modalStore'
-import { isInvited } from './schedule/scheduleItems'
 import { useBookingActions } from './useBookingActions'
 
-/* Who is invited: colleagues by name (you as "You"), then the outside guests: their addresses for the owner and
- * admins, otherwise (and once the booking is over and they're wiped) just how many. */
-function Attendees({ b, myId }: { b: Booking; myId: string }) {
-  const { t } = useTranslation()
-  const hiddenGuests = b.guestCount - b.guests.length
-  return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {b.attendees.map((a) => <li key={a.userId}><bdi>{a.userId === myId ? t('common.you') : a.name}</bdi></li>)}
-      {b.guests.map((email) => (
-        <li key={email}><bdi dir="ltr">{email}</bdi> <span className="tag">{t('booking.attendees.guest')}</span></li>
-      ))}
-      {hiddenGuests > 0 && (
-        <li style={{ color: 'var(--slate)', fontWeight: 400 }}>
-          {t(b.guests.length || b.attendees.length ? 'detail.moreGuests' : 'detail.guests', { count: hiddenGuests })}
-        </li>
-      )}
-    </ul>
-  )
-}
-
-function BookingDetail({ b, refuse }: { b: Booking; refuse: boolean }) {
+function BookingDetail({ b }: { b: Booking }) {
   const { t } = useTranslation()
   const session = useSession()
   const spaces = useSpaces()
@@ -39,34 +18,26 @@ function BookingDetail({ b, refuse }: { b: Booking; refuse: boolean }) {
   const space = spaces.data?.find((s) => s.id === b.spaceId)
   const state = lifecycleOf(b)
   const mine = b.ownerUserId === session.userId
-  const invited = isInvited(b, session.userId)
   /* Mirrors the server: someone else's booking needs ViewAll to see who made it, EditAll to change it and
-   * DeleteAll to cancel it, on top of the own-booking Edit / Delete. People invited see who booked it, and may
-   * only take themselves off it. */
-  const seesOwner = mine || invited || session.can(P.Bookings.ViewAll)
+   * DeleteAll to cancel it, on top of the own-booking Edit / Delete. */
+  const seesOwner = mine || session.can(P.Bookings.ViewAll)
   const mayEdit = session.can(P.Bookings.Edit) && (mine || session.can(P.Bookings.EditAll))
   const mayCancel = session.can(P.Bookings.Delete) && (mine || session.can(P.Bookings.DeleteAll))
   const series = useBookings({ from: b.start }, !!b.seriesId)
   const laterInSeries = b.seriesId ? (series.data ?? []).filter((x) => x.seriesId === b.seriesId && x.id !== b.id).length : 0
   const [askSeries, setAskSeries] = useState(false)
-  const open = state === 'scheduled' || state === 'in_progress'
-  const showLeave = invited && open
-  /* From an invitation's Refuse link: ask at once. */
-  const [askLeave, setAskLeave] = useState(refuse && showLeave)
 
   let note = ''
   if (state === 'ended') note = t('detail.note.ended')
   else if (state === 'cancelled') note = t('detail.note.cancelled')
-  else if (invited) note = t('detail.note.invitedBy', { name: b.ownerName })
   else if (state === 'in_progress') note = t('detail.note.inProgress')
   else if (!mine && seesOwner) note = t('detail.note.ownedBy', { name: b.ownerName })
   else if (!mine) note = t('detail.note.someoneElse')
 
   const onCancel = () => (laterInSeries > 0 ? setAskSeries(true) : actions.cancel(b))
-  const leave = (wholeSeries: boolean) => actions.leave(b, wholeSeries).then((ok) => { if (ok) modals.close() })
   const showReschedule = mayEdit && state === 'scheduled'
   const showEndNow = mayEdit && state === 'in_progress'
-  const showCancel = mayCancel && open
+  const showCancel = mayCancel && (state === 'scheduled' || state === 'in_progress')
 
   return (
     <>
@@ -82,28 +53,12 @@ function BookingDetail({ b, refuse }: { b: Booking; refuse: boolean }) {
         <dt>{t('common.start')}</dt><dd className="mono">{stampOffset(b.start)}</dd>
         <dt>{t('common.end')}</dt><dd className="mono">{stampOffset(b.end)}</dd>
         <dt>{t('detail.duration')}</dt><dd>{durationLabel((b.end.getTime() - b.start.getTime()) / 60000)}</dd>
-        {(b.attendees.length > 0 || b.guestCount > 0) && <><dt>{t('detail.attendees')}</dt><dd><Attendees b={b} myId={session.userId} /></dd></>}
         <dt>{t('detail.created')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.creationTime))}</dd>
         {b.lastModificationTime && <><dt>{t('detail.updated')}</dt><dd className="mono" style={{ fontWeight: 400 }}>{stamp(parseUtc(b.lastModificationTime))}</dd></>}
       </dl>
       {note && <p className="muted-box" style={{ margin: '0 0 14px' }}>{note}</p>}
 
-      {askLeave && showLeave ? (
-        <div className="muted-box" style={{ marginBottom: 18 }} role="alert">
-          <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>
-            {laterInSeries > 0 ? t('detail.leaveSeriesQuestion') : t('detail.leaveQuestion', { name: b.ownerName })}
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => leave(false)}>
-              {laterInSeries > 0 ? t('detail.onlyThis') : t('detail.leave')}
-            </button>
-            {laterInSeries > 0 && (
-              <button type="button" className="btn btn-sm btn-danger" disabled={actions.busy} onClick={() => leave(true)}>{t('detail.thisAndLater')}</button>
-            )}
-            <button type="button" className="btn btn-sm" onClick={() => setAskLeave(false)}>{t('detail.stayInvited')}</button>
-          </div>
-        </div>
-      ) : askSeries && showCancel ? (
+      {askSeries && showCancel ? (
         <div className="muted-box" style={{ marginBottom: 18 }}>
           <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>{t('detail.seriesQuestion')}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -117,8 +72,7 @@ function BookingDetail({ b, refuse }: { b: Booking; refuse: boolean }) {
           {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>{t('schedule.reschedule')}</button>}
           {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>{t('schedule.endNow')}</button>}
           {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={onCancel}>{t('detail.cancelBooking')}</button>}
-          {showLeave && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => setAskLeave(true)}>{t('detail.leave')}</button>}
-          {!showReschedule && !showEndNow && !showCancel && !showLeave && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
+          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
         </div>
       )}
     </>
@@ -156,7 +110,7 @@ function MaintenanceDetail({ m }: { m: Maintenance }) {
   )
 }
 
-export function DetailDrawer({ entity, id, refuse = false }: { entity: 'booking' | 'maintenance'; id: string; refuse?: boolean }) {
+export function DetailDrawer({ entity, id }: { entity: 'booking' | 'maintenance'; id: string }) {
   const { t } = useTranslation()
   const booking = useBooking(entity === 'booking' ? id : null)
   const maint = useMaintenanceWindow(entity === 'maintenance' ? id : null)
@@ -168,9 +122,7 @@ export function DetailDrawer({ entity, id, refuse = false }: { entity: 'booking'
 
   return (
     <Drawer title={title} subtitle={subtitle} onClose={modals.close}>
-      {b ? <BookingDetail b={b} refuse={refuse} /> : m ? <MaintenanceDetail m={m} />
-        /* A Refuse link used twice: the first time already took you off it. */
-        : failed ? <p className="muted-box">{refuse ? t('detail.alreadyLeft') : t('detail.loadFailed')}</p> : <Loading />}
+      {b ? <BookingDetail b={b} /> : m ? <MaintenanceDetail m={m} /> : failed ? <p className="muted-box">{t('detail.loadFailed')}</p> : <Loading />}
     </Drawer>
   )
 }

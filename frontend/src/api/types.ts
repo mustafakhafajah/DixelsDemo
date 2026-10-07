@@ -106,28 +106,7 @@ export interface BookingDto {
   seriesId: string | null
   creationTime: string
   lastModificationTime: string | null
-  /* Portal users invited. */
-  attendees: BookingAttendee[]
-  /* Outside guests' addresses: only for the owner and admins, and only until the booking is over. */
-  guests: string[]
-  guestCount: number
 }
-
-export interface BookingAttendee {
-  userId: string
-  name: string
-  email: string | null
-}
-
-/* Someone to invite (GET /api/app/booking-people). */
-export interface BookingPerson {
-  id: string
-  name: string
-  email: string | null
-}
-
-/* One person on the invite list as the form sends it: a picked user, or anyone by email. */
-export type AttendeeInput = { userId: string } | { email: string }
 
 export interface Booking extends Omit<BookingDto, 'startUtc' | 'endUtc' | 'lifecycle'> {
   kind: 'booking'
@@ -210,7 +189,6 @@ export interface Window {
 export const toBusy = (d: BusyWindowDto): Booking => ({
   kind: 'booking', busy: true, id: `busy:${d.spaceId}:${d.startUtc}`, spaceId: d.spaceId, spaceName: '',
   ownerUserId: '', ownerName: i18n.t('schedule.busy'), status: 'Confirmed', version: 0, seriesId: null,
-  attendees: [], guests: [], guestCount: 0,
   creationTime: d.startUtc, lastModificationTime: null, start: parseUtc(d.startUtc), end: parseUtc(d.endUtc),
 })
 

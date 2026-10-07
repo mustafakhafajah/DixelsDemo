@@ -71,49 +71,6 @@ public class BookingEmailsTests
         BookingEmails.Reminder("Sara", Room4, null).Subject.ShouldBe("Starting soon: Room 4 at 10:00");
 
     [Fact]
-    public void A_portal_user_is_invited_with_accept_and_refuse()
-    {
-        var email = BookingEmails.Invited("Abed", "Sara Ali", [Room4],
-            "https://portal.example/app/bookings?booking=1", "https://portal.example/app/bookings?booking=1&respond=refuse");
-
-        email.Subject.ShouldBe("Invitation: Room 4, Tue 6 Oct");
-        email.Html.ShouldContain("Hello Abed,");
-        email.Html.ShouldContain("Sara Ali has invited you to a booking:");
-        email.Html.ShouldContain(">Accept</a>");
-        email.Html.ShouldContain(">Refuse</a>");
-        email.Html.ShouldContain(PortalEmailLayout.Encode("booking=1&respond=refuse"));
-        email.Html.ShouldContain(PortalEmailLayout.Encode("You're down as attending"));
-    }
-
-    [Fact]
-    public void An_outside_guest_gets_the_details_without_buttons()
-    {
-        var email = BookingEmails.Invited(null, "Sara Ali", [Room4], null, null);
-
-        email.Html.ShouldContain("Hello,");
-        email.Html.ShouldNotContain("<a href");
-        email.Html.ShouldNotContain("Refuse");
-    }
-
-    [Fact]
-    public void Taken_off_a_booking_says_who_did_it() =>
-        BookingEmails.Uninvited("Abed", "Sara Ali", [Room4]).Html.ShouldContain("Sara Ali has taken you off this booking:");
-
-    [Fact]
-    public void The_owner_hears_who_refused()
-    {
-        var email = BookingEmails.AttendeeLeft("Sara", "Abed Karim", [Room4], null);
-
-        email.Subject.ShouldBe("Abed Karim can't make it: Room 4, Tue 6 Oct");
-        email.Html.ShouldContain("Hello Sara,");
-    }
-
-    [Fact]
-    public void A_cancelled_invitation_names_the_owner_and_the_reason() =>
-        BookingEmails.InviteCancelled(null, "Sara Ali", [Room4], "the space is blocked at that time").Html
-            .ShouldContain("Sara Ali&#39;s booking you were invited to has been cancelled (the space is blocked at that time).");
-
-    [Fact]
     public void Names_are_html_encoded() =>
         BookingEmails.Confirmed("<b>Sara</b>", [Room4 with { SpaceName = "R&D <lab>" }], null).Html
             .ShouldContain("Hello &lt;b&gt;Sara&lt;/b&gt;,");

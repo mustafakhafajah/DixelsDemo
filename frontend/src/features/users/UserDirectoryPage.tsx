@@ -18,13 +18,13 @@ import './users.css'
 
 const LOCK_LABEL: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }
 
-/* "Locked until 3 Oct 2026 14:00" (UTC); a lockout with no end, or one years away, reads as just "Locked". */
+/* "Locked until 3 Oct 2026 14:00" (the viewer's own clock); a lockout with no end, or one years away, reads as just "Locked". */
 function LockCell({ user }: { user: UserDirectoryItem }) {
   const { t } = useTranslation()
   if (!user.isLocked) return <span className="lock-off">{t('users.notLocked')}</span>
   const end = user.lockoutEnd ? parseUtc(user.lockoutEnd) : null
   const open = !end || Number.isNaN(end.getTime()) || end.getUTCFullYear() >= 9000
-  return <span className="lock-on" title={open ? t('users.untilUnlocked') : t('users.timeInUtc')}>{open ? t('users.locked') : t('users.lockedUntil', { date: formatDate(end, LOCK_LABEL) })}</span>
+  return <span className="lock-on" title={open ? t('users.untilUnlocked') : t('users.timeLocal')}>{open ? t('users.locked') : t('users.lockedUntil', { date: formatDate(end, LOCK_LABEL) })}</span>
 }
 
 /* Every role looks the same; the pill only names it. */

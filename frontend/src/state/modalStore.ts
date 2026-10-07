@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Booking, Building, Floor, MaintenanceScopeType, Space, SpaceType } from '../api/types'
+import type { Booking, Building, Floor, MaintenanceScopeType, Reply, Space, SpaceType } from '../api/types'
 
 export interface BookingPrefill {
   spaceId?: string
@@ -22,11 +22,20 @@ export interface MaintenanceTarget {
   label: string
 }
 
+export interface DetailOptions {
+  respond?: Reply
+  /* The answer covers the series' later dates too (a repeating booking's invitation). */
+  respondSeries?: true
+  cancel?: true
+}
+
 /* Which overlay is open and with what context. Opening one closes the others, like the mock's
  * sequential closeX();openY() calls. */
 type Overlay =
   | { kind: 'booking'; prefill: BookingPrefill; editing: Booking | null }
-  | { kind: 'detail'; entity: 'booking' | 'maintenance'; id: string }
+  /* respond: opened from an invitation email's Accept / Tentative / Decline link, so that answer is recorded at once.
+   * cancel: opened from a Cancel button elsewhere, so it starts on the cancel step (with its email message). */
+  | { kind: 'detail'; entity: 'booking' | 'maintenance'; id: string } & DetailOptions
   | { kind: 'day'; key: string; scheduleId: ScheduleId }
   | { kind: 'building'; editing: Building | null }
   | { kind: 'floor'; editing: Floor | null }
@@ -52,7 +61,8 @@ export const modals = {
     useModalStore.getState().open({ kind: 'booking', prefill, editing }),
   reschedule: (b: Booking) =>
     useModalStore.getState().open({ kind: 'booking', prefill: { spaceId: b.spaceId, start: b.start, end: b.end }, editing: b }),
-  detail: (entity: 'booking' | 'maintenance', id: string) => useModalStore.getState().open({ kind: 'detail', entity, id }),
+  detail: (entity: 'booking' | 'maintenance', id: string, options: DetailOptions = {}) =>
+    useModalStore.getState().open({ kind: 'detail', entity, id, ...options }),
   day: (key: string, scheduleId: ScheduleId) => useModalStore.getState().open({ kind: 'day', key, scheduleId }),
   building: (editing: Building | null = null) => useModalStore.getState().open({ kind: 'building', editing }),
   floor: (editing: Floor | null = null) => useModalStore.getState().open({ kind: 'floor', editing }),

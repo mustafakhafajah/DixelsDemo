@@ -41,7 +41,7 @@ public class BookingController : PortalController, IBookingAppService
     public Task<BookingDto> RescheduleAsync(Guid id, RescheduleBookingDto input) => _bookings.RescheduleAsync(id, input);
 
     [NonAction]
-    public Task<BookingDto> CancelAsync(Guid id) => _bookings.CancelAsync(id);
+    public Task<BookingDto> CancelAsync(Guid id, CancellationMessageDto? message = null) => _bookings.CancelAsync(id, message);
 
     [NonAction]
     public Task<BookingDto> EndEarlyAsync(Guid id) => _bookings.EndEarlyAsync(id);
@@ -60,5 +60,18 @@ public class BookingController : PortalController, IBookingAppService
     public Task<int> GetUpcomingCountAsync(EstateScopeDto input) => _bookings.GetUpcomingCountAsync(input);
 
     [NonAction]
-    public Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input) => _bookings.CancelUpcomingAsync(input);
+    public Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input, CancellationMessageDto? message = null)
+        => _bookings.CancelUpcomingAsync(input, message);
+
+    /* { attendees: [{ userId } | { email }] }: the whole new list of people invited. */
+    [HttpPut("{id}/attendees")]
+    public Task<BookingDto> SetAttendeesAsync(Guid id, [FromBody] SetBookingAttendeesDto input) => _bookings.SetAttendeesAsync(id, input);
+
+    /* The signed-in person answers an invitation: { response: "accepted" | "tentative" | "declined", wholeSeries }.
+     * Answers with the booking as they now see it. */
+    [HttpPut("{id}/attendees/me/response")]
+    public Task<BookingDto> RespondAsync(Guid id, [FromBody] RespondToBookingDto input) => _bookings.RespondAsync(id, input);
+
+    [NonAction]
+    public Task<ListResultDto<BookingPersonDto>> GetPeopleAsync(BookingPeopleFilterDto input) => _bookings.GetPeopleAsync(input);
 }

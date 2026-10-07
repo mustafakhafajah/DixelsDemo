@@ -16,6 +16,8 @@ public class UpdateBookingDto : IValidatableObject
     /* Optimistic concurrency for a new time: refused if the booking changed after the client loaded it. */
     public int? ExpectedVersion { get; set; }
     public string? Lifecycle { get; set; }
+    /* With "cancelled": an optional subject and note for the cancellation emails. */
+    public CancellationMessageDto? Message { get; set; }
 
     public bool IsReschedule => Lifecycle == null;
 

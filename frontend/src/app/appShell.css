@@ -131,7 +131,6 @@
 .app-shell .inp[disabled] { opacity: .5; }
 .app-shell select.inp { appearance: none; background-image: linear-gradient(45deg,transparent 50%,var(--slate) 50%),linear-gradient(135deg,var(--slate) 50%,transparent 50%); background-position: calc(100% - 15px) 53%,calc(100% - 10px) 53%; background-size: 5px 5px,5px 5px; background-repeat: no-repeat; padding-inline-end: 28px; }
 [dir='rtl'] .app-shell select.inp { background-position: 10px 53%,15px 53%; }
-.app-shell .utcchip { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--slate); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; background: var(--surface-2); }
 .app-shell .err { display: flex; gap: 6px; align-items: baseline; font-size: 12px; color: var(--rust); margin-top: 5px; }
 .app-shell .errcode { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--rust); background: var(--rust-soft); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
 
@@ -227,6 +226,8 @@
 .app-shell .chip { font-size: 10.5px; font-weight: 600; padding: 2px 5px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 2px solid transparent; }
 .app-shell .chip.mine { background: var(--mine); color: var(--on-accent); }
 .app-shell .chip.other { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--accent); }
+/* A booking you're invited to: your colour, but outlined rather than solid, since it isn't yours to change. */
+.app-shell .chip.attending { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--mine); outline: 1px dashed var(--accent); outline-offset: -1px; }
 .app-shell .chip.inprog { background: var(--copper-soft); color: var(--copper); border-inline-start-color: var(--copper); }
 .app-shell .chip.ended { background: var(--surface-2); color: var(--slate); border-inline-start-color: var(--slate-2); }
 .app-shell .more-link { font-size: 10px; font-weight: 600; color: var(--slate); }
@@ -269,8 +270,12 @@
 .app-shell .tg-block.compact b { display: inline; }
 .app-shell .tg-block.mine { background: var(--mine); color: var(--on-accent); border-inline-start-color: var(--mine-edge); }
 .app-shell .tg-block.other { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--accent); }
+.app-shell .tg-block.attending { background: var(--accent-soft); color: var(--accent-dark); border-inline-start-color: var(--mine); outline: 1px dashed var(--accent); outline-offset: -1px; }
 .app-shell .tg-block.inprog { background: var(--copper-soft); color: var(--copper); border-inline-start-color: var(--copper); }
 .app-shell .tg-block.ended { background: var(--surface-2); color: var(--slate); border-inline-start-color: var(--slate-2); }
+/* Not answered yet, or tentative: striped like a tentative meeting in Teams. Declined: faded and struck through. */
+.app-shell .chip.tentative, .app-shell .tg-block.tentative { background: repeating-linear-gradient(135deg, var(--accent-soft) 0 5px, var(--surface) 5px 10px); }
+.app-shell .chip.declined, .app-shell .tg-block.declined { background: var(--surface); color: var(--slate); text-decoration: line-through; opacity: .75; }
 .app-shell .tg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px solid var(--rust); z-index: 2; pointer-events: none; }
 .app-shell .tg-now::before { content: ''; position: absolute; inset-inline-start: -3px; top: -4.5px; width: 7px; height: 7px; border-radius: 999px; background: var(--rust); }
 .app-shell .tg-hint { font-size: 11.5px; color: var(--slate-2); margin: 9px 2px 0; }
@@ -298,7 +303,7 @@
 .app-shell .rt-ruler { position: relative; height: 26px; border-bottom: 1px solid var(--line); background: var(--surface-2); flex-shrink: 0; }
 .app-shell .rt-tick { position: absolute; top: 0; bottom: 0; border-inline-start: 1px solid var(--line); font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--slate); padding: 5px 0 0; padding-inline-start: 4px; }
 .app-shell .rt-group-head { padding: 7px 12px; font-size: 11.5px; font-weight: 700; color: var(--slate); background: var(--surface-2); border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
-/* A building on another clock: its own ruler in local time, under the UTC one the grid runs on. */
+/* A building on another clock: its own ruler in local time, under the viewer's one the grid runs on. */
 .app-shell .rt-local { display: flex; }
 .app-shell .rt-local-name { padding: 3px 12px; font-size: 10.5px; font-weight: 600; color: var(--accent-dark); }
 .app-shell .rt-local-ruler { height: 20px; background: var(--surface); }
@@ -350,6 +355,23 @@
 .app-shell .closed-label { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--slate); }
 .app-shell .tg-colhead.closed, .app-shell .tg-colhead.closed:hover { background: var(--surface-3); color: var(--slate-2); cursor: not-allowed; }
 .app-shell .tg-col.closed .tg-slot.inert, .app-shell .tg-col.closed .tg-slot.inert:hover { background: none; cursor: not-allowed; }
+
+/* ── PEOPLE INVITED ── The search box's matches sit right under it (in the form, not floating, so the scrolling
+ * form never cuts them off); the people picked are chips below. */
+.app-shell .people-suggest { list-style: none; margin: 6px 0 0; padding: 4px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-menu); }
+.app-shell .people-suggest li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.app-shell .people-suggest li.active { background: var(--accent-soft); }
+.app-shell .people-suggest li.people-empty { cursor: default; color: var(--slate); font-size: 12.5px; }
+.app-shell .person-who { display: flex; flex-direction: column; min-width: 0; }
+.app-shell .person-who small { font-size: 11.5px; color: var(--slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .avatar.person-avatar { width: 24px; height: 24px; font-size: 10px; }
+.app-shell .avatar.person-avatar.guest, .app-shell .person-chip:has(.tag) .avatar { background: var(--surface-3); color: var(--slate); }
+.app-shell .people-chips { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.app-shell .person-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 4px; padding-inline-start: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); font-size: 12.5px; color: var(--ink); }
+.app-shell .person-chip bdi { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .person-remove { display: inline-flex; border: none; background: none; color: var(--slate); padding: 2px; border-radius: 999px; cursor: pointer; }
+.app-shell .person-remove:hover { background: var(--surface-3); color: var(--ink); }
+.app-shell .person-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 
 /* ── RESPONSIVE ── desktop is the design above; tablets and phones adapt it below. */
 .app-shell .menu-btn { display: none; }

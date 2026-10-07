@@ -36,6 +36,7 @@ public class PortalDbContext :
     public DbSet<SpaceType> SpaceTypes { get; set; }
     public DbSet<Space> Spaces { get; set; }
     public DbSet<Booking> Bookings { get; set; }
+    public DbSet<BookingAttendee> BookingAttendees { get; set; }
     public DbSet<MaintenanceWindow> MaintenanceWindows { get; set; }
 
     #region Entities from the modules
@@ -101,6 +102,7 @@ public class PortalDbContext :
         builder.ApplyConfiguration(new SpaceTypeTranslationConfiguration());
         builder.ApplyConfiguration(new SpaceTranslationConfiguration());
         builder.ApplyConfiguration(new BookingConfiguration());
+        builder.ApplyConfiguration(new BookingAttendeeConfiguration());
         builder.ApplyConfiguration(new MaintenanceWindowConfiguration());
     }
 }

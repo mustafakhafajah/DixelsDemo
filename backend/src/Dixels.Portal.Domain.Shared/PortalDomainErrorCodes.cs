@@ -52,6 +52,16 @@ public static class PortalDomainErrorCodes
     public const string BookingLocked = "booking.locked";
     public const string BookingInProgress = "booking.in_progress";
     public const string BookingNotInProgress = "booking.not_in_progress";
+    /* The owner plus the people invited don't fit the room. */
+    public const string BookingOverCapacity = "booking.over_capacity";
+    /* Someone who can't be invited: an unknown or inactive user, the owner, a bad email address, or listed twice. */
+    public const string BookingInvalidAttendee = "booking.invalid_attendee";
+    /* Leaving a booking you aren't invited to. */
+    public const string BookingNotAttendee = "booking.not_attendee";
+    /* Answering an invitation with something other than "accepted", "tentative" or "declined". */
+    public const string BookingInvalidResponse = "booking.invalid_response";
+    /* A guest's answer link whose secret is unknown, replaced, or wiped because the booking is over. */
+    public const string BookingInvitationNotFound = "booking.invitation_not_found";
     public const string VersionMismatch = "conflict.version_mismatch";
     public const string MaintenanceNotFound = "maintenance.not_found";
 
@@ -98,6 +108,11 @@ public static class PortalDomainErrorCodes
         [BookingLocked] = HttpStatusCode.Conflict,
         [BookingInProgress] = HttpStatusCode.Conflict,
         [BookingNotInProgress] = HttpStatusCode.Conflict,
+        [BookingOverCapacity] = HttpStatusCode.BadRequest,
+        [BookingInvalidAttendee] = HttpStatusCode.BadRequest,
+        [BookingNotAttendee] = HttpStatusCode.Conflict,
+        [BookingInvalidResponse] = HttpStatusCode.BadRequest,
+        [BookingInvitationNotFound] = HttpStatusCode.NotFound,
         [VersionMismatch] = HttpStatusCode.Conflict,
         [MaintenanceNotFound] = HttpStatusCode.NotFound,
     };

@@ -2,17 +2,23 @@ import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { errorText } from '../../api/client'
 import { useSetBookable, useUpcomingCount, type EstateKind, type EstateScope } from '../../api/hooks'
+import { CancelMessageFields, type CancelMessageValue } from '../../components/CancelMessageFields'
+import { bulkCancelDefaults } from '../../components/cancelMessage'
 import { Modal } from '../../components/Sheet'
 import { modals, type BookableTarget } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
 import { scopeTypeOf, useCancelUpcomingAfterSave } from './useCancelUpcomingAfterSave'
 
 /* What happens to bookings that already exist when something stops being bookable: they are kept,
- * and the admin can choose to cancel them. Shown in the forms and in the "Make not bookable" dialog. */
-function UpcomingWarning({ scope, cancel, onCancelChange }: {
+ * and the admin can choose to cancel them, with the email everyone on them gets. Shown in the forms and in the
+ * "Make not bookable" dialog. message is null until edited, showing the ready-made text for label. */
+function UpcomingWarning({ scope, label, cancel, onCancelChange, message, onMessageChange }: {
   scope: EstateScope
+  label: string
   cancel: boolean
   onCancelChange: (v: boolean) => void
+  message: CancelMessageValue | null
+  onMessageChange: (v: CancelMessageValue) => void
 }) {
   const { t } = useTranslation()
   const count = useUpcomingCount(scope)
@@ -26,21 +32,29 @@ function UpcomingWarning({ scope, cancel, onCancelChange }: {
         <input type="checkbox" checked={cancel} onChange={(e) => onCancelChange(e.target.checked)} />
         {t('bookable.alsoCancel', { count: n })}
       </label>
+      {cancel && (
+        <div style={{ marginTop: 10 }}>
+          <CancelMessageFields idPrefix={`cancel-${scope.scopeId}`} value={message ?? bulkCancelDefaults(label)} onChange={onMessageChange} />
+        </div>
+      )}
     </div>
   )
 }
 
 /* The "Bookable" tick in the building, floor and space forms. When an existing, bookable item is
- * unticked, it warns about the bookings already made there. */
-export function BookableField({ idPrefix, kind, value, onChange, existingId, wasBookable, cancelUpcoming, onCancelUpcomingChange }: {
+ * unticked, it warns about the bookings already made there. label names the item in the cancellation email. */
+export function BookableField({ idPrefix, kind, label, value, onChange, existingId, wasBookable, cancelUpcoming, onCancelUpcomingChange, cancelMessage, onCancelMessageChange }: {
   idPrefix: string
   kind: EstateKind
+  label: string
   value: boolean
   onChange: (v: boolean) => void
   existingId?: string
   wasBookable?: boolean
   cancelUpcoming: boolean
   onCancelUpcomingChange: (v: boolean) => void
+  cancelMessage: CancelMessageValue | null
+  onCancelMessageChange: (v: CancelMessageValue) => void
 }) {
   const { t } = useTranslation()
   const turningOff = !!existingId && !!wasBookable && !value
@@ -57,8 +71,8 @@ export function BookableField({ idPrefix, kind, value, onChange, existingId, was
       </label>
       {turningOff && (
         <div style={{ marginTop: 10 }}>
-          <UpcomingWarning scope={{ scopeType: scopeTypeOf(kind), scopeId: existingId! }}
-            cancel={cancelUpcoming} onCancelChange={onCancelUpcomingChange} />
+          <UpcomingWarning scope={{ scopeType: scopeTypeOf(kind), scopeId: existingId! }} label={label}
+            cancel={cancelUpcoming} onCancelChange={onCancelUpcomingChange} message={cancelMessage} onMessageChange={onCancelMessageChange} />
         </div>
       )}
     </div>
@@ -71,11 +85,12 @@ export function NotBookableModal({ target }: { target: BookableTarget }) {
   const setBookable = useSetBookable()
   const cancelAfter = useCancelUpcomingAfterSave()
   const [cancel, setCancel] = useState(false)
+  const [message, setMessage] = useState<CancelMessageValue | null>(null)
 
   const confirm = async () => {
     try {
       await setBookable.mutateAsync({ kind: target.kind, id: target.id, isBookable: false })
-      if (cancel) await cancelAfter(target.kind, target.id, target.label)
+      if (cancel) await cancelAfter(target.kind, target.id, target.label, message)
       toast('warn', t('bookable.toast.notBookable', { name: target.label }), t(`bookable.cantTake.${target.kind}`))
       modals.close()
     } catch (e) {
@@ -93,7 +108,8 @@ export function NotBookableModal({ target }: { target: BookableTarget }) {
         </>
       )}>
       <p style={{ fontSize: 13 }}>{t('bookable.nobodyWillBook')} {t(`bookable.blockedToo.${target.kind}`)}</p>
-      <UpcomingWarning scope={{ scopeType: scopeTypeOf(target.kind), scopeId: target.id }} cancel={cancel} onCancelChange={setCancel} />
+      <UpcomingWarning scope={{ scopeType: scopeTypeOf(target.kind), scopeId: target.id }} label={target.label}
+        cancel={cancel} onCancelChange={setCancel} message={message} onMessageChange={setMessage} />
     </Modal>
   )
 }

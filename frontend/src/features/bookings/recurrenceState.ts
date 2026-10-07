@@ -18,7 +18,7 @@ export function defaultRecurrence(start: Date, defaultCount: number): Recurrence
   return {
     repeat: 'none',
     interval: 1,
-    byDay: [start.getUTCDay()],
+    byDay: [start.getDay()],
     endMode: 'count',
     count: defaultCount,
     until: dayKey(addDays(start, 90)),

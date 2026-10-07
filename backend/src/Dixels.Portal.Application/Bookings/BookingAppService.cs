@@ -18,33 +18,43 @@ namespace Dixels.Portal.Bookings;
 
 /* Each action needs its own-booking permission (Create / Edit / Delete). Acting on someone else's booking also
  * needs the matching "everyone's" permission (EditAll / DeleteAll); that depends on the booking, so it is checked
- * in code (EnsureCanActAsync). Seeing other people's bookings and names needs ViewAll. */
+ * in code (EnsureCanActAsync). Seeing other people's bookings and names needs ViewAll.
+ *
+ * People the owner invites see the booking as their own on their schedule, but the only thing they can do with it
+ * is answer: accept, tentative or decline (RespondAsync). Once declined it leaves their schedule. */
 [Authorize]
 public class BookingAppService : PortalAppService, IBookingAppService
 {
+    private const int PeopleListSize = 20;
+    private const string PeopleSorting = nameof(IdentityUser.Name) + ", " + nameof(IdentityUser.Surname) + ", " + nameof(IdentityUser.UserName);
+
     private readonly IRepository<Booking, Guid> _bookings;
+    private readonly IRepository<BookingAttendee, Guid> _attendees;
     private readonly IRepository<Space, Guid> _spaces;
     private readonly IIdentityUserRepository _users;
     private readonly BookingManager _manager;
+    private readonly BookingAttendeeManager _attendeeManager;
     private readonly MaintenanceScopeResolver _scopes;
     private readonly BookingNotifier _notifier;
     private readonly IBookingLocks _locks;
 
-    public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<Space, Guid> spaces,
-        IIdentityUserRepository users, BookingManager manager, MaintenanceScopeResolver scopes, BookingNotifier notifier,
-        IBookingLocks locks)
+    public BookingAppService(IRepository<Booking, Guid> bookings, IRepository<BookingAttendee, Guid> attendees,
+        IRepository<Space, Guid> spaces, IIdentityUserRepository users, BookingManager manager,
+        BookingAttendeeManager attendeeManager, MaintenanceScopeResolver scopes, BookingNotifier notifier, IBookingLocks locks)
     {
         _bookings = bookings;
+        _attendees = attendees;
         _spaces = spaces;
         _users = users;
         _manager = manager;
+        _attendeeManager = attendeeManager;
         _scopes = scopes;
         _notifier = notifier;
         _locks = locks;
     }
 
-    /* With Bookings.ViewAll you list anyone's bookings; everyone else only ever gets their own,
-     * whatever owner they ask for. Other people's time comes from GetBusyListAsync instead. */
+    /* With Bookings.ViewAll you list anyone's bookings; everyone else only ever gets their own and the ones they are
+     * invited to, whatever owner they ask for. Other people's time comes from GetBusyListAsync instead. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<ListResultDto<BookingDto>> GetListAsync(BookingListFilterDto input)
     {
@@ -53,30 +63,37 @@ public class BookingAppService : PortalAppService, IBookingAppService
         if (!input.IncludeCancelled) query = query.Where(b => b.Status == BookingStatus.Confirmed);
         if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
         query = await OnSpacesOfAsync(query, input.BuildingId, input.FloorId);
-        if (ownerId.HasValue) query = query.Where(b => b.OwnerUserId == ownerId.Value);
+        if (ownerId.HasValue)
+        {
+            var invited = await InvitedBookingIdsAsync(ownerId.Value);
+            query = query.Where(b => b.OwnerUserId == ownerId.Value || invited.Contains(b.Id));
+        }
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
         if (input.ToUtc.HasValue) query = query.Where(b => b.StartUtc < input.ToUtc.Value);
         var list = await AsyncExecuter.ToListAsync(query.OrderBy(b => b.StartUtc));
         return new ListResultDto<BookingDto>(await MapListAsync(list));
     }
 
-    /* Without Bookings.ViewAll, someone else's booking is "not found", exactly like a booking that doesn't exist. */
+    /* Without Bookings.ViewAll, a booking that is neither yours nor one you're invited to is "not found", exactly like
+     * a booking that doesn't exist. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<BookingDto> GetAsync(Guid id)
     {
         var b = await GetBookingAsync(id);
-        if (b.OwnerUserId != CurrentUser.Id && !await SeesAllBookingsAsync())
+        if (b.OwnerUserId != CurrentUser.Id && !await SeesAllBookingsAsync() && await FindMyInviteAsync(b.Id) == null)
             throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotFound, message: L["Error:BookingNotFound"]);
         return await MapAsync(b);
     }
 
-    /* Only when and where: enough to show a grey "Busy" block and to know a time is taken. */
+    /* Only when and where: enough to show a grey "Busy" block and to know a time is taken. Bookings you're invited
+     * to come with your own list, so they aren't repeated here; one you declined is busy time like any other. */
     [Authorize(PortalPermissions.Bookings.Default)]
     public async Task<ListResultDto<BusyWindowDto>> GetBusyListAsync(BusyListFilterDto input)
     {
         var me = CurrentUser.Id;
+        var invited = await InvitedBookingIdsAsync(me);
         var query = (await _bookings.GetQueryableAsync())
-            .Where(b => b.Status == BookingStatus.Confirmed && b.OwnerUserId != me);
+            .Where(b => b.Status == BookingStatus.Confirmed && b.OwnerUserId != me && !invited.Contains(b.Id));
         if (input.SpaceId.HasValue) query = query.Where(b => b.SpaceId == input.SpaceId.Value);
         query = await OnSpacesOfAsync(query, input.BuildingId, input.FloorId);
         if (input.FromUtc.HasValue) query = query.Where(b => b.EndUtc > input.FromUtc.Value);
@@ -99,6 +116,20 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private Task<bool> SeesAllBookingsAsync() => AuthorizationService.IsGrantedAsync(PortalPermissions.Bookings.ViewAll);
 
+    /* A subquery (not run on its own): the bookings this user is invited to and hasn't declined. A declined booking
+     * leaves their schedule and shows as busy like anyone else's; they can still open it (GetAsync) and change
+     * their answer. */
+    private async Task<IQueryable<Guid>> InvitedBookingIdsAsync(Guid? userId)
+        => (await _attendees.GetQueryableAsync())
+            .Where(a => a.UserId == userId && a.Response != AttendeeResponse.Declined)
+            .Select(a => a.BookingId);
+
+    private async Task<BookingAttendee?> FindMyInviteAsync(Guid bookingId)
+    {
+        var me = CurrentUser.Id;
+        return me == null ? null : await _attendees.FirstOrDefaultAsync(a => a.BookingId == bookingId && a.UserId == me);
+    }
+
     [Authorize(PortalPermissions.Bookings.Create)]
     public async Task<BookingDto> CreateAsync(CreateBookingDto input)
     {
@@ -117,6 +148,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         }
 
         var booking = await NewBookingAsync(input.SpaceId, input.StartUtc, input.EndUtc, null, key);
+        var invited = await ResolveAttendeesAsync(input.SpaceId, me, input.Attendees);
         try
         {
             await InsertAsync(booking);
@@ -131,6 +163,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
             if (first == null) throw;
             return await MapAsync(first);
         }
+        await InviteAsync([booking], invited);
         await _notifier.BookingsCreatedAsync([booking]);
         return await MapAsync(booking);
     }
@@ -146,6 +179,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         var seriesId = input.Occurrences.Count > 1 ? GuidGenerator.Create() : (Guid?)null;
         var created = new List<Booking>();
         var skipped = new List<BookingWindowFailureDto>();
+        var invited = await ResolveAttendeesAsync(input.SpaceId, CurrentUser.GetId(), input.Attendees);
         await LockAsync(CurrentUser.GetId(), input.SpaceId);
         foreach (var o in input.Occurrences.OrderBy(o => o.StartUtc))
         {
@@ -166,7 +200,8 @@ public class BookingAppService : PortalAppService, IBookingAppService
             }
         }
 
-        /* One confirmation listing every date that was booked. */
+        /* One confirmation listing every date that was booked, and one invitation per person invited. */
+        await InviteAsync(created, invited);
         await _notifier.BookingsCreatedAsync(created);
 
         return new CreateBookingSeriesResultDto
@@ -217,10 +252,10 @@ public class BookingAppService : PortalAppService, IBookingAppService
     }
 
     [Authorize(PortalPermissions.Bookings.Delete)]
-    public async Task<BookingDto> CancelAsync(Guid id)
+    public async Task<BookingDto> CancelAsync(Guid id, CancellationMessageDto? message = null)
     {
         var b = await GetBookingAsync(id);
-        if (await CancelOneAsync(b)) await _notifier.BookingsCancelledAsync([b]);
+        if (await CancelOneAsync(b)) await _notifier.BookingsCancelledAsync([b], message: message);
         return await MapAsync(b);
     }
 
@@ -232,7 +267,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
         {
             case UpdateBookingDto.Cancelled:
                 await AuthorizationService.CheckAsync(PortalPermissions.Bookings.Delete);
-                return await CancelAsync(id);
+                return await CancelAsync(id, input.Message);
             case UpdateBookingDto.Ended:
                 await AuthorizationService.CheckAsync(PortalPermissions.Bookings.Edit);
                 return await EndEarlyAsync(id);
@@ -265,7 +300,7 @@ public class BookingAppService : PortalAppService, IBookingAppService
             if (await CancelOneAsync(b)) cancelled.Add(b);
         }
         /* One email listing every cancelled date. */
-        await _notifier.BookingsCancelledAsync(cancelled);
+        await _notifier.BookingsCancelledAsync(cancelled, message: input.Message);
         return new CancelSeriesResultDto { SeriesId = seriesId, CancelledCount = cancelled.Count };
     }
 
@@ -291,14 +326,81 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     /* Cancel every upcoming booking in a scope, e.g. after making it not bookable: cancelling other people's, so DeleteAll. */
     [Authorize(PortalPermissions.Bookings.DeleteAll)]
-    public async Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input)
+    public async Task<CancelUpcomingResultDto> CancelUpcomingAsync(EstateScopeDto input, CancellationMessageDto? message = null)
     {
         var upcoming = await AsyncExecuter.ToListAsync(await UpcomingInScopeAsync(input));
         foreach (var b in upcoming) b.Cancel();
         await _bookings.UpdateManyAsync(upcoming, autoSave: true);
         /* Each person gets one email listing their cancelled bookings. */
-        await _notifier.BookingsCancelledAsync(upcoming);
+        await _notifier.BookingsCancelledAsync(upcoming, message: message);
         return new CancelUpcomingResultDto { CancelledCount = upcoming.Count };
+    }
+
+    /* The owner (or someone with EditAll) sets who is invited, until the booking is over. */
+    [Authorize(PortalPermissions.Bookings.Edit)]
+    public async Task<BookingDto> SetAttendeesAsync(Guid id, SetBookingAttendeesDto input)
+    {
+        var b = await GetBookingAsync(id);
+        await EnsureCanActAsync(b, PortalPermissions.Bookings.EditAll, L["Error:OnlyOwnInvite"]);
+        EnsureNotOver(b);
+        var current = await _attendees.GetListAsync(a => a.BookingId == b.Id);
+        var wanted = await ResolveAttendeesAsync(b.SpaceId, b.OwnerUserId, input.Attendees, current);
+        var (added, removed) = _attendeeManager.Diff(b.Id, current, wanted);
+        if (removed.Count > 0) await _attendees.DeleteManyAsync(removed, autoSave: true);
+        if (added.Count > 0) await _attendees.InsertManyAsync(added, autoSave: true);
+        await _notifier.AttendeesChangedAsync(b, added, removed);
+        return await MapAsync(b);
+    }
+
+    /* Answering an invitation, as in Teams: accepted, tentative or declined, for this date and, with wholeSeries, for
+     * the series' later dates still to come that they're invited to. Declining keeps them on the list (they can change
+     * their mind) but takes the booking off their schedule and frees their seat. The owner gets an email when the
+     * answer changes; giving the same answer again changes nothing and sends nothing. Accepting again after declining
+     * is allowed even if the room has filled up since: the owner chose to invite them. Needs no booking permission
+     * beyond seeing bookings: it only ever changes your own answer. */
+    [Authorize(PortalPermissions.Bookings.Default)]
+    public async Task<BookingDto> RespondAsync(Guid id, RespondToBookingDto input)
+    {
+        if (!AttendeeResponseExtensions.TryParseAnswer(input.Response, out var response))
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingInvalidResponse, message: L["Error:InvalidResponse"]).ForField("response");
+        var me = CurrentUser.GetId();
+        var b = await GetBookingAsync(id);
+        var invite = await FindMyInviteAsync(b.Id)
+            ?? throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingNotAttendee, message: L["Error:NotAnAttendee"]);
+        EnsureNotOver(b);
+
+        var answered = new List<(Booking Booking, BookingAttendee Row)> { (b, invite) };
+        if (input.WholeSeries && b.SeriesId.HasValue)
+        {
+            var now = Clock.Now;
+            var later = (await _bookings.GetListAsync(x => x.SeriesId == b.SeriesId && x.Id != b.Id && x.StartUtc > b.StartUtc))
+                .Where(x => x.GetLifecycle(now) is TimeWindowState.Scheduled or TimeWindowState.InProgress)
+                .ToDictionary(x => x.Id);
+            var laterIds = later.Keys.ToList();
+            var mine = await _attendees.GetListAsync(a => a.UserId == me && laterIds.Contains(a.BookingId));
+            answered.AddRange(mine.Select(a => (later[a.BookingId], a)));
+        }
+
+        var changed = answered.Where(x => x.Row.Respond(response, Clock.Now)).ToList();
+        if (changed.Count > 0)
+        {
+            await _attendees.UpdateManyAsync(changed.Select(x => x.Row), autoSave: true);
+            await _notifier.AttendeeRespondedAsync(changed.Select(x => x.Booking).ToList(), me, response);
+        }
+        return await MapAsync(b);
+    }
+
+    /* Anyone who may book may invite, so they can search active people without seeing the admin user list. */
+    [Authorize(PortalPermissions.Bookings.Create)]
+    public async Task<ListResultDto<BookingPersonDto>> GetPeopleAsync(BookingPeopleFilterDto input)
+    {
+        var filter = string.IsNullOrWhiteSpace(input.Filter) ? null : input.Filter.Trim();
+        var users = await _users.GetListAsync(PeopleSorting, PeopleListSize + 1, 0, filter, notActive: false);
+        return new ListResultDto<BookingPersonDto>(users
+            .Where(u => u.Id != CurrentUser.Id)
+            .Take(PeopleListSize)
+            .Select(u => new BookingPersonDto { Id = u.Id, Name = u.GetDisplayName(), Email = u.Email })
+            .ToList());
     }
 
     private async Task<Booking> GetBookingAsync(Guid id)
@@ -310,6 +412,29 @@ public class BookingAppService : PortalAppService, IBookingAppService
     {
         if (b.OwnerUserId != CurrentUser.Id && !await AuthorizationService.IsGrantedAsync(everyonesPermission))
             throw new UserFriendlyException(code: PortalDomainErrorCodes.AccessForbidden, message: message);
+    }
+
+    /* Who is invited can change until the booking has ended or been cancelled. */
+    private void EnsureNotOver(Booking b)
+    {
+        var state = b.GetLifecycle(Clock.Now);
+        if (state is TimeWindowState.Ended or TimeWindowState.Cancelled)
+            throw new UserFriendlyException(code: PortalDomainErrorCodes.BookingLocked, message: L[$"Error:BookingLocked:{state.ToApiValue()}"]);
+    }
+
+    private async Task<List<AttendeeKey>> ResolveAttendeesAsync(Guid spaceId, Guid ownerId, List<AttendeeInputDto>? people,
+        IReadOnlyCollection<BookingAttendee>? current = null)
+    {
+        if (people == null || people.Count == 0) return new();
+        var ctx = await _manager.GetSpaceContextAsync(spaceId);
+        return await _attendeeManager.ResolveAsync(ctx, ownerId, people.Select(p => (p.UserId, p.Email)).ToList(), current);
+    }
+
+    /* Rows only; the invitation emails go out with the booking confirmation (BookingNotifier.BookingsCreatedAsync). */
+    private async Task InviteAsync(IReadOnlyCollection<Booking> bookings, IReadOnlyCollection<AttendeeKey> people)
+    {
+        if (bookings.Count == 0 || people.Count == 0) return;
+        await _attendees.InsertManyAsync(bookings.SelectMany(b => people.Select(k => _attendeeManager.New(b.Id, k))), autoSave: true);
     }
 
     /* The owner's bookings and the space's bookings and blocked time are checked next, so no other request may
@@ -353,26 +478,49 @@ public class BookingAppService : PortalAppService, IBookingAppService
 
     private async Task<BookingDto> MapAsync(Booking booking) => (await MapListAsync(new List<Booking> { booking }))[0];
 
-    /* ObjectMapper copies the booking; the space and owner names come from one query each for the whole list.
-     * Only with Bookings.ViewAll does anyone see who booked what; everyone else sees their own name and
-     * "Booked" (HiddenOwnerName, in their language) on the rest, so another person's name never leaves the server. */
+    /* ObjectMapper copies the booking; the space names, attendees and people's names come from one query each for
+     * the whole list. Only with Bookings.ViewAll does anyone see who booked what; everyone else sees the names on
+     * their own bookings and the ones they're invited to, and "Booked" (HiddenOwnerName, in their language) on the
+     * rest, so another person's name never leaves the server. Guests' addresses are for the owner (and ViewAll) only. */
     private async Task<List<BookingDto>> MapListAsync(List<Booking> list)
     {
         if (list.Count == 0) return new();
         var spaceIds = list.Select(b => b.SpaceId).Distinct().ToList();
         var spaces = (await _spaces.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id, s => s.GetName());
-        var userIds = list.Select(b => b.OwnerUserId).Distinct().ToList();
-        var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id, u => u.GetDisplayName());
+        var bookingIds = list.Select(b => b.Id).ToList();
+        var attendees = (await _attendees.GetListAsync(a => bookingIds.Contains(a.BookingId))).ToLookup(a => a.BookingId);
+        var userIds = list.Select(b => b.OwnerUserId)
+            .Concat(attendees.SelectMany(g => g).Where(a => a.UserId.HasValue).Select(a => a.UserId!.Value))
+            .Distinct().ToList();
+        var users = (await _users.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id);
         var now = Clock.Now;
+        var me = CurrentUser.Id;
         var seesNames = await SeesAllBookingsAsync();
         return list.Select(b =>
         {
             var dto = ObjectMapper.Map<Booking, BookingDto>(b);
+            var invited = attendees[b.Id].ToList();
+            var isOwner = b.OwnerUserId == me;
             dto.SpaceName = spaces.GetValueOrDefault(b.SpaceId) ?? L["UnknownSpace"];
-            dto.OwnerName = seesNames || b.OwnerUserId == CurrentUser.Id
-                ? users.GetValueOrDefault(b.OwnerUserId) ?? L["FormerUser"]
+            dto.OwnerName = seesNames || isOwner || invited.Any(a => a.UserId == me)
+                ? users.GetValueOrDefault(b.OwnerUserId)?.GetDisplayName() ?? L["FormerUser"]
                 : L["HiddenOwnerName"];
             dto.Lifecycle = b.GetLifecycle(now).ToApiValue();
+            dto.Attendees = invited.Where(a => a.UserId.HasValue).Select(a =>
+            {
+                var user = users.GetValueOrDefault(a.UserId!.Value);
+                return new BookingAttendeeDto
+                {
+                    UserId = a.UserId.Value, Name = user?.GetDisplayName() ?? L["FormerUser"], Email = user?.Email,
+                    Response = a.Response.ToApiValue(), RespondedAt = a.RespondedAt,
+                };
+            }).OrderBy(a => a.Name).ToList();
+            var guests = invited.Where(a => a.IsGuest).ToList();
+            dto.GuestCount = guests.Count;
+            dto.Guests = seesNames || isOwner
+                ? guests.Where(a => a.Email != null).OrderBy(a => a.Email)
+                    .Select(a => new BookingGuestDto { Email = a.Email!, Response = a.Response.ToApiValue(), RespondedAt = a.RespondedAt }).ToList()
+                : new();
             return dto;
         }).ToList();
     }

@@ -59,7 +59,6 @@
   },
   "time": {
     "localRange": "{{from}}–{{to}} {{zone}} time",
-    "zoneOffset": "{{zone}} time · {{offset}}",
     "zoneClock": "{{zone}} time",
     "hoursShort_one": "{{count}}h",
     "hoursShort_other": "{{count}}h",
@@ -77,7 +76,7 @@
     "startInPast": "Start must not be in the past.",
     "buildingClosed": "{{space}}'s building is closed {{when}}.",
     "outsideHours": "{{space}} can only be booked between {{open}} and {{close}}.",
-    "outsideHoursZone": "{{space}} can only be booked between {{open}} and {{close}} {{zone}} time ({{openUtc}}–{{closeUtc}} UTC).",
+    "outsideHoursZone": "{{space}} can only be booked between {{open}} and {{close}} {{zone}} time ({{openHere}}–{{closeHere}} your time).",
     "durationBelowMin_one": "Minimum booking length here is {{count}} minute.",
     "durationBelowMin_other": "Minimum booking length here is {{count}} minutes.",
     "durationAboveMax_one": "Maximum booking length here is {{count}} hour.",
@@ -557,11 +556,29 @@
   "booking": {
     "newTitle": "New booking",
     "newSubtitle": "Reserve one space for one window of time.",
-    "rescheduleTitle": "Reschedule booking",
-    "rescheduleSubtitle": "{{space}} · moving the window only",
-    "rescheduleSubtitleOnBehalf": "{{space}} · owned by {{owner}} · moving the window only",
+    "rescheduleTitle": "Change booking",
+    "rescheduleSubtitle": "{{space}} · change the time or who is invited",
+    "rescheduleSubtitleOnBehalf": "{{space}} · owned by {{owner}} · change the time or who is invited",
     "make": "Make a booking",
-    "saveWindow": "Save new window",
+    "saveWindow": "Save changes",
+    "attendees": {
+      "label": "People invited",
+      "placeholder": "Type a name, or a whole email address for someone outside",
+      "suggestions": "Matching people",
+      "invited": "People invited",
+      "inviteByEmail": "Invite by email",
+      "guest": "Guest",
+      "remove": "Remove {{name}}",
+      "searching": "Searching…",
+      "noMatch": "No one matches. Type a whole email address to invite someone from outside.",
+      "alreadyAdded": "Already on the list.",
+      "seats_one": "{{count, number}} of {{capacity, number}} seats, counting you",
+      "seats_other": "{{count, number}} of {{capacity, number}} seats, counting you",
+      "hint": "Everyone invited gets an email. Colleagues also see it on their schedule.",
+      "overCapacity_one": "{{space}} seats {{count, number}}, counting you. Take someone off the list.",
+      "overCapacity_other": "{{space}} seats {{count, number}}, counting you. Take someone off the list.",
+      "guestsHidden": "Only the person who booked can change who is invited."
+    },
     "chooseSpace": "Choose a space",
     "noFreeSpaces": "No free spaces at this time",
     "pickBuilding": "Pick a building.",
@@ -593,8 +610,8 @@
       "alreadyBooked": "already booked"
     },
     "conflict": {
-      "byOwner": "{{space}} is already booked by {{owner}} from {{from}} to {{to}} UTC. Bookings on one space may never overlap.",
-      "taken": "{{space}} is already booked from {{from}} to {{to}} UTC. Bookings on one space may never overlap."
+      "byOwner": "{{space}} is already booked by {{owner}} from {{from}} to {{to}}. Bookings on one space may never overlap.",
+      "taken": "{{space}} is already booked from {{from}} to {{to}}. Bookings on one space may never overlap."
     },
     "toast": {
       "confirmed": "Booking confirmed",
@@ -605,14 +622,16 @@
       "seriesConfirmed_other": "{{count, number}} bookings confirmed",
       "seriesOn": "Series on {{space}}.",
       "seriesOnSkipped_one": "Series on {{space}} · {{count, number}} skipped.",
-      "seriesOnSkipped_other": "Series on {{space}} · {{count, number}} skipped."
+      "seriesOnSkipped_other": "Series on {{space}} · {{count, number}} skipped.",
+      "peopleSaved": "Invitations updated",
+      "peopleSavedMessage": "{{space}} · the people added or taken off get an email."
     }
   },
   "schedule": {
     "busy": "Busy",
     "blocked": "Blocked",
     "closed": "Closed",
-    "reschedule": "Reschedule",
+    "reschedule": "Change",
     "endNow": "End now",
     "more_one": "+{{count, number}} more",
     "more_other": "+{{count, number}} more",
@@ -641,7 +660,7 @@
       "bookable": "Click an empty slot to book it, or drag over empty slots to choose the time",
       "notBookable": "This space cannot be booked, so slots are inert",
       "noPermission": "You do not have permission to book",
-      "rest": "click a block for its detail · click a date for the whole day. Times are UTC; a building on another clock also shows its own time."
+      "rest": "click a block for its detail · click a date for the whole day. Times are in your own time zone; a building on another clock also shows its own time."
     }
   },
   "detail": {
@@ -652,6 +671,11 @@
     "spacePlace": "{{building}} · Floor {{floor}} · {{tz}}",
     "bookedBy": "Booked by",
     "someoneElse": "Someone else",
+    "attendees": "Invited",
+    "guests_one": "{{count, number}} outside guest",
+    "guests_other": "{{count, number}} outside guests",
+    "moreGuests_one": "+ {{count, number}} outside guest",
+    "moreGuests_other": "+ {{count, number}} outside guests",
     "duration": "Duration",
     "created": "Created",
     "updated": "Updated",
@@ -666,7 +690,8 @@
       "cancelled": "Cancelled. The record is kept and the window is bookable again.",
       "inProgress": "This booking has already started, so it can only be cancelled or ended early.",
       "ownedBy": "Owned by {{name}}. As the space administrator you can reschedule or cancel it.",
-      "someoneElse": "Someone else booked this. You can only change your own bookings."
+      "someoneElse": "Someone else booked this. You can only change your own bookings.",
+      "invitedBy": "{{name}} invited you."
     },
     "seriesQuestion": "This booking is part of a repeating series. What should be cancelled?",
     "onlyThis": "Only this one",
@@ -674,7 +699,31 @@
     "keepIt": "Keep it",
     "cancelBooking": "Cancel booking",
     "unblock": "Unblock this time",
-    "noActions": "No actions available."
+    "noActions": "No actions available.",
+    "cancelQuestion": "Cancel this booking?",
+    "cantRespond": "This booking can't be opened. It may have been cancelled, or you're no longer invited.",
+    "response": {
+      "accepted": "Accepted",
+      "tentative": "Maybe",
+      "declined": "Declined",
+      "none": "No response"
+    },
+    "reply": {
+      "notAnswered": "Not answered yet.",
+      "notAnsweredShort": "Not answered",
+      "yourAnswer": "Your answer: {{answer}}.",
+      "viaEmail": "To answer or change your answer, use the Accept, Maybe or Decline buttons in your invitation email."
+    },
+    "replySummary": {
+      "accepted_one": "{{count, number}} accepted",
+      "accepted_other": "{{count, number}} accepted",
+      "tentative_one": "{{count, number}} maybe",
+      "tentative_other": "{{count, number}} maybe",
+      "declined_one": "{{count, number}} declined",
+      "declined_other": "{{count, number}} declined",
+      "none_one": "{{count, number}} no response",
+      "none_other": "{{count, number}} no response"
+    }
   },
   "actions": {
     "cancelled": "Booking cancelled",
@@ -684,10 +733,29 @@
     "seriesCancelled_other": "{{count, number}} occurrences cancelled",
     "seriesCancelledMessage": "Series from {{from}} onward.",
     "ended": "Booking ended",
-    "endedMessage": "Ended at {{time}} UTC. The rest of the window is free.",
+    "endedMessage": "Ended at {{time}}. The rest of the window is free.",
     "endFailed": "Could not end booking",
     "unblocked": "Time unblocked",
-    "unblockedMessage": "It can be booked again."
+    "unblockedMessage": "It can be booked again.",
+    "replied": {
+      "accepted": "Accepted",
+      "tentative": "Maybe",
+      "declined": "Declined"
+    },
+    "repliedMessage": "{{space}} · {{owner}} has been told.",
+    "repliedSeriesMessage": "{{space}} · this and later dates · {{owner}} has been told.",
+    "replyFailed": "Could not send your answer"
+  },
+  "cancelMessage": {
+    "subject": "Subject",
+    "message": "Message",
+    "hint": "Sent to the owner and everyone invited.",
+    "bookingSubject": "Canceled: {{space}} – {{date}}",
+    "bookingMessage": "{{name}} has cancelled this booking.",
+    "bulkSubject": "Canceled: bookings at {{scope}}",
+    "notBookableMessage": "Bookings at {{scope}} have been cancelled because it is no longer bookable.",
+    "blockedMessage": "Bookings at {{scope}} have been cancelled because the time is blocked: {{note}}",
+    "blockedPlainMessage": "Bookings at {{scope}} have been cancelled because the time is blocked."
   },
   "find": {
     "when": "When",
@@ -730,7 +798,7 @@
     "notLocked": "Not locked",
     "lockedUntil": "Locked until {{date}}",
     "untilUnlocked": "Until someone unlocks it",
-    "timeInUtc": "Time in UTC",
+    "timeLocal": "In your own time zone",
     "youMark": "(you)",
     "viewBookings": "View bookings",
     "col": {
@@ -857,5 +925,18 @@
       "title": "No room is free at this time",
       "text": "Try another time or length, or clear the filters to see every room."
     }
+  },
+  "respond": {
+    "loading": "Loading your invitation…",
+    "problem": "This link doesn't work",
+    "notAnswered": "You haven't answered yet",
+    "yourAnswer": "Your answer: {{answer}}",
+    "invitedBy": "{{name}} invited you to this booking.",
+    "time": "Time",
+    "yourTime": "your time",
+    "howToChange": "To change your answer, use the Accept, Maybe or Decline buttons in your invitation email.",
+    "cancelled": "This booking has been cancelled.",
+    "ended": "This booking is over.",
+    "told": "{{name}} has been told."
   }
 }

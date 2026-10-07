@@ -95,11 +95,17 @@ public partial class BookingToBookingDtoMapper : MapperBase<Booking, BookingDto>
     [MapperIgnoreTarget(nameof(BookingDto.SpaceName))]
     [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
     [MapperIgnoreTarget(nameof(BookingDto.Lifecycle))]
+    [MapperIgnoreTarget(nameof(BookingDto.Attendees))]
+    [MapperIgnoreTarget(nameof(BookingDto.Guests))]
+    [MapperIgnoreTarget(nameof(BookingDto.GuestCount))]
     public override partial BookingDto Map(Booking source);
 
     [MapperIgnoreTarget(nameof(BookingDto.SpaceName))]
     [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
     [MapperIgnoreTarget(nameof(BookingDto.Lifecycle))]
+    [MapperIgnoreTarget(nameof(BookingDto.Attendees))]
+    [MapperIgnoreTarget(nameof(BookingDto.Guests))]
+    [MapperIgnoreTarget(nameof(BookingDto.GuestCount))]
     public override partial void Map(Booking source, BookingDto destination);
 }
 

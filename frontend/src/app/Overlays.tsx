@@ -27,7 +27,7 @@ export function Overlays() {
     case 'booking':
       return <BookingModal key={overlay.editing?.id ?? 'new'} prefill={overlay.prefill} editing={overlay.editing} />
     case 'detail':
-      return <DetailDrawer key={overlay.id} entity={overlay.entity} id={overlay.id} />
+      return <DetailDrawer key={overlay.id} entity={overlay.entity} id={overlay.id} respond={overlay.respond} respondSeries={overlay.respondSeries} cancel={overlay.cancel} />
     case 'day':
       return <DayDrawer dayKeyValue={overlay.key} scheduleId={overlay.scheduleId} />
     case 'building':

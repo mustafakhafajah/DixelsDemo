@@ -106,7 +106,66 @@ export interface BookingDto {
   seriesId: string | null
   creationTime: string
   lastModificationTime: string | null
+  /* Portal users invited. */
+  attendees: BookingAttendee[]
+  /* Outside guests (address and answer): only for the owner and admins, and only until the booking is over. */
+  guests: BookingGuest[]
+  guestCount: number
 }
+
+/* An outside guest as the owner sees them; they answer through the private link in their invitation. */
+export interface BookingGuest {
+  email: string
+  response: AttendeeResponse
+}
+
+/* What an outside guest's public answer page shows (GET /api/app/booking-invitations/{secret}). */
+export interface BookingInvitation {
+  spaceName: string
+  buildingName: string
+  floorName: string | null
+  startUtc: string
+  endUtc: string
+  /* The building's zone, for "= 14:30 Warsaw time" when it differs from the guest's own clock. */
+  timeZone: string
+  ownerName: string
+  response: AttendeeResponse
+  lifecycle: Lifecycle
+}
+
+/* How an invited colleague answered, as in a Teams meeting: 'none' until they reply. Someone who declined stays on the list. */
+export type AttendeeResponse = 'none' | 'accepted' | 'tentative' | 'declined'
+/* The answers a person can give; there is no going back to 'none'. */
+export type Reply = Exclude<AttendeeResponse, 'none'>
+
+export interface BookingAttendee {
+  userId: string
+  name: string
+  email: string | null
+  response: AttendeeResponse
+}
+
+/* Your own answer to a booking you're invited to; null when you're not on its list. */
+export const myResponse = (b: { attendees: BookingAttendee[] }, userId: string): AttendeeResponse | null => {
+  const me = b.attendees.find((a) => a.userId === userId)
+  return me ? me.response ?? 'none' : null
+}
+
+/* The subject and words emailed to everyone on a booking when it is cancelled. A blank part gets the server's own text. */
+export interface CancelMessage {
+  subject?: string
+  message?: string
+}
+
+/* Someone to invite (GET /api/app/booking-people). */
+export interface BookingPerson {
+  id: string
+  name: string
+  email: string | null
+}
+
+/* One person on the invite list as the form sends it: a picked user, or anyone by email. */
+export type AttendeeInput = { userId: string } | { email: string }
 
 export interface Booking extends Omit<BookingDto, 'startUtc' | 'endUtc' | 'lifecycle'> {
   kind: 'booking'
@@ -189,6 +248,7 @@ export interface Window {
 export const toBusy = (d: BusyWindowDto): Booking => ({
   kind: 'booking', busy: true, id: `busy:${d.spaceId}:${d.startUtc}`, spaceId: d.spaceId, spaceName: '',
   ownerUserId: '', ownerName: i18n.t('schedule.busy'), status: 'Confirmed', version: 0, seriesId: null,
+  attendees: [], guests: [], guestCount: 0,
   creationTime: d.startUtc, lastModificationTime: null, start: parseUtc(d.startUtc), end: parseUtc(d.endUtc),
 })
 

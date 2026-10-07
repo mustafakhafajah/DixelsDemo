@@ -16,6 +16,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 
 /* Each page is downloaded the first time it is opened, so the first screen does not wait for all of them. */
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RespondPage = lazy(() => import('./pages/RespondPage'))
 const BookingsPage = lazy(() => import('./features/bookings/BookingsPage').then((m) => ({ default: m.BookingsPage })))
 const FindSpacePage = lazy(() => import('./features/find/FindSpacePage').then((m) => ({ default: m.FindSpacePage })))
 const MyProfilePage = lazy(() => import('./features/profile/MyProfilePage').then((m) => ({ default: m.MyProfilePage })))
@@ -49,6 +50,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<LoginPage />} />
                   <Route path="/callback" element={<AuthCallbackPage />} />
+                  {/* Public: an outside guest answering an invitation from its private link (no sign-in). */}
+                  <Route path="/respond/:token" element={<RespondPage />} />
                   <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
                     <Route index element={<HomeRedirect />} />
                     <Route path="find" element={<RequirePermission any={[P.Spaces.Default]}><FindSpacePage /></RequirePermission>} />

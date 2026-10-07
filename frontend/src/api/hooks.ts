@@ -7,13 +7,17 @@ import {
   toBusy,
   type BusyWindowDto,
   toMaintenance,
+  type AttendeeInput,
   type Booking,
   type BookingDto,
+  type BookingPerson,
   type Building,
+  type CancelMessage,
   type CurrentUser,
   type Floor,
   type ListResult,
   type PagedResult,
+  type Reply,
   type Maintenance,
   type MaintenanceDto,
   type MaintenanceScopeType,
@@ -339,6 +343,7 @@ export interface CreateBookingInput {
   startUtc: string
   endUtc: string
   idempotencyKey?: string
+  attendees?: AttendeeInput[]
 }
 
 export function useCreateBooking() {
@@ -360,9 +365,49 @@ export function useCreateBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: { spaceId: string; occurrences: Window[] }) =>
+    mutationFn: (input: { spaceId: string; occurrences: Window[]; attendees?: AttendeeInput[] }) =>
       api<SeriesResult>('POST', '/api/app/booking-series', input),
     onSuccess: () => invalidate(BOOKING_KEYS),
+  })
+}
+
+/* The owner replaces who is invited; the server emails the people added and the people taken off. */
+export function useSetAttendees() {
+  const api = useApi()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, attendees }: { id: string; attendees: AttendeeInput[] }) =>
+      api<BookingDto>('PUT', `/api/app/bookings/${id}/attendees`, { attendees }).then(toBooking),
+    onSettled: () => invalidate(BOOKING_KEYS),
+  })
+}
+
+/* An invited person answers (Accept / Tentative / Decline), for this booking or with wholeSeries for its later
+ * dates too; the owner is emailed. A declined booking stays on their list, so it is refreshed, not dropped. */
+export function useRespondToBooking() {
+  const api = useApi()
+  const qc = useQueryClient()
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, response, wholeSeries }: { id: string; response: Reply; wholeSeries: boolean }) =>
+      api<BookingDto>('PUT', `/api/app/bookings/${id}/attendees/me/response`, { response, wholeSeries }).then(toBooking),
+    /* The open details show the new answer at once, before the refetch below comes back. */
+    onSuccess: (b) => qc.setQueryData(['booking', b.id], b),
+    onSettled: () => invalidate(BOOKING_KEYS),
+  })
+}
+
+/* People to invite, searched on the server (at most 20, never yourself). */
+export function useBookingPeople(filter: string, enabled = true) {
+  const api = useApi()
+  const ok = useEnabled()
+  const q = filter.trim()
+  return useQuery({
+    queryKey: ['booking-people', q],
+    queryFn: async () => (await api<ListResult<BookingPerson>>('GET', '/api/app/booking-people', undefined, q ? { filter: q } : undefined)).items,
+    enabled: ok && enabled,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -376,11 +421,19 @@ export function useRescheduleBooking() {
   })
 }
 
+/* The cancellation email's subject and words as sent: trimmed, and left out when both are blank. */
+function messageBody(m?: CancelMessage) {
+  const subject = m?.subject?.trim()
+  const message = m?.message?.trim()
+  return subject || message ? { subject: subject || undefined, message: message || undefined } : undefined
+}
+
 export function useCancelBooking() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (id: string) => api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'cancelled' }).then(toBooking),
+    mutationFn: ({ id, message }: { id: string; message?: CancelMessage }) =>
+      api<BookingDto>('PATCH', `/api/app/bookings/${id}`, { lifecycle: 'cancelled', message: messageBody(message) }).then(toBooking),
     onSettled: () => invalidate(BOOKING_KEYS),
   })
 }
@@ -390,12 +443,12 @@ export function useCancelBookingSeries() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: async (b: Pick<Booking, 'id' | 'seriesId' | 'start'>): Promise<{ seriesId: string | null; cancelledCount: number }> => {
+    mutationFn: async ({ message, ...b }: Pick<Booking, 'id' | 'seriesId' | 'start'> & { message?: CancelMessage }): Promise<{ seriesId: string | null; cancelledCount: number }> => {
       if (!b.seriesId) {
-        await api<BookingDto>('PATCH', `/api/app/bookings/${b.id}`, { lifecycle: 'cancelled' })
+        await api<BookingDto>('PATCH', `/api/app/bookings/${b.id}`, { lifecycle: 'cancelled', message: messageBody(message) })
         return { seriesId: null, cancelledCount: 1 }
       }
-      return api('PATCH', `/api/app/booking-series/${b.seriesId}`, { lifecycle: 'cancelled', fromUtc: b.start.toISOString() })
+      return api('PATCH', `/api/app/booking-series/${b.seriesId}`, { lifecycle: 'cancelled', fromUtc: b.start.toISOString(), message: messageBody(message) })
     },
     onSettled: () => invalidate(BOOKING_KEYS),
   })
@@ -432,9 +485,9 @@ export function useScheduleMaintenance() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (input: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean }) =>
+    mutationFn: ({ message, ...input }: MaintenanceScopeInput & { note?: string; cancelAffectedBookings?: boolean; message?: CancelMessage }) =>
       api<{ seriesId: string | null; created: number; affectedBookingsCount: number; cancelledBookingsCount: number }>(
-        'POST', '/api/app/maintenance-windows', input),
+        'POST', '/api/app/maintenance-windows', { ...input, message: input.cancelAffectedBookings ? messageBody(message) : undefined }),
     /* Blocking can cancel bookings, so booking views refresh too. */
     onSuccess: () => invalidate([['maintenance'], ['maintenance-window'], ...BOOKING_KEYS]),
   })
@@ -543,7 +596,8 @@ export function useCancelUpcoming() {
   const api = useApi()
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: (scope: EstateScope) => api<{ cancelledCount: number }>('PATCH', upcomingPath(scope), { lifecycle: 'cancelled' }),
+    mutationFn: ({ message, ...scope }: EstateScope & { message?: CancelMessage }) =>
+      api<{ cancelledCount: number }>('PATCH', upcomingPath(scope), { lifecycle: 'cancelled', message: messageBody(message) }),
     onSettled: () => invalidate([...BOOKING_KEYS, ['upcoming-count']]),
   })
 }

@@ -1,17 +1,19 @@
 import i18n from 'i18next'
 import { intlLocale } from '../i18n/languages'
 
-/* UTC-only helpers ported from mock/js/utils.js. The whole app reasons in UTC. */
+/* Date helpers ported from mock/js/utils.js. Like Teams or Outlook, the app shows and picks every time on the
+ * viewer's own clock (the browser's time zone); the server still stores and sends UTC instants. */
 
 export const pad = (n: number) => String(n).padStart(2, '0')
 
 export function dayKey(d: Date): string {
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/* The instant a wall-clock time happens on the viewer's day; minutes past 59 (or 1440 = midnight after) roll over. */
 export function dayAt(key: string, h = 0, m = 0): Date {
   const [y, mo, d] = key.split('-').map(Number)
-  return new Date(Date.UTC(y, mo - 1, d, h, m, 0, 0))
+  return new Date(y, mo - 1, d, h, m, 0, 0)
 }
 
 export function fromDateTime(dateStr: string, timeStr: string): Date | null {
@@ -20,22 +22,22 @@ export function fromDateTime(dateStr: string, timeStr: string): Date | null {
   return dayAt(dateStr, h, mi)
 }
 
-export const hm = (d: Date) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
+export const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 export const stamp = (d: Date) => `${dayKey(d)} ${hm(d)}`
-export const stampOffset = (d: Date) => `${dayKey(d)} ${hm(d)} +00:00`
-export const isoZ = (d: Date) => `${dayKey(d)}T${hm(d)}:00+00:00`
-export const minOfDay = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes()
+
+export const minOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes()
 export const minLabel = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`
 
+/* The same wall-clock time n days later, even across a clock change (so not always n × 24 hours). */
 export function addDays(d: Date, n: number): Date {
   const x = new Date(d)
-  x.setUTCDate(x.getUTCDate() + n)
+  x.setDate(x.getDate() + n)
   return x
 }
 
 export const addMin = (d: Date, n: number) => new Date(d.getTime() + n * 60000)
 
-/* Dates in words, in the chosen language (Intl decides the order, names and digits). Always the UTC day,
+/* Dates in words, in the chosen language (Intl decides the order, names and digits), on the viewer's own clock
  * like everything else in the app. One formatter per language and set of options. */
 const formatters = new Map<string, Intl.DateTimeFormat>()
 function dateFormat(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
@@ -43,7 +45,7 @@ function dateFormat(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   const key = `${locale}|${JSON.stringify(opts)}`
   let f = formatters.get(key)
   if (!f) {
-    f = new Intl.DateTimeFormat(locale, { ...opts, timeZone: 'UTC' })
+    f = new Intl.DateTimeFormat(locale, opts)
     formatters.set(key, f)
   }
   return f
@@ -52,9 +54,10 @@ function dateFormat(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
 export const formatDate = (d: Date, opts: Intl.DateTimeFormatOptions) => dateFormat(opts).format(d)
 export const formatDateRange = (a: Date, b: Date, opts: Intl.DateTimeFormatOptions) => dateFormat(opts).formatRange(a, b)
 
-/* A weekday's name from its getUTCDay() number (0 = Sunday); 1 January 2023 was a Sunday. */
+/* A weekday's name from its getDay() number (0 = Sunday); 1 January 2023 was a Sunday. Noon keeps it clear of
+ * any clock change at midnight. */
 export const weekdayName = (day: number, width: 'long' | 'short' = 'long') =>
-  formatDate(new Date(Date.UTC(2023, 0, 1 + day)), { weekday: width })
+  formatDate(new Date(2023, 0, 1 + day, 12), { weekday: width })
 
 /* "1h 30m", in the chosen language's short units. */
 export function durationLabel(mins: number): string {
@@ -66,9 +69,9 @@ export function durationLabel(mins: number): string {
 
 export function roundUp30(d: Date): Date {
   const x = new Date(d)
-  x.setUTCSeconds(0, 0)
-  const m = x.getUTCMinutes()
-  x.setUTCMinutes(m < 30 ? 30 : 60)
+  x.setSeconds(0, 0)
+  const m = x.getMinutes()
+  x.setMinutes(m < 30 ? 30 : 60)
   return x
 }
 
@@ -84,14 +87,14 @@ export function relative(d: Date): string {
 /* Monday-first week start for a day key. */
 export function weekStart(key: string): string {
   const d = dayAt(key)
-  return dayKey(addDays(d, -((d.getUTCDay() + 6) % 7)))
+  return dayKey(addDays(d, -((d.getDay() + 6) % 7)))
 }
 
 export function monthBounds(key: string): { from: string; to: string } {
   const d = dayAt(key)
-  const y = d.getUTCFullYear()
-  const mo = d.getUTCMonth()
-  return { from: `${y}-${pad(mo + 1)}-01`, to: dayKey(new Date(Date.UTC(y, mo + 1, 0))) }
+  const y = d.getFullYear()
+  const mo = d.getMonth()
+  return { from: `${y}-${pad(mo + 1)}-01`, to: dayKey(new Date(y, mo + 1, 0)) }
 }
 
 export const todayKey = () => dayKey(new Date())
@@ -107,8 +110,8 @@ export const ceilStep = (min: number, step = 15) => Math.ceil(min / step) * step
 /* The earliest start a form may offer: now, rounded up to the next 15 minutes (may be tomorrow). */
 export function earliestStart(now = new Date()): Date {
   const d = new Date(now)
-  d.setUTCSeconds(0, 0)
-  return addMin(d, ceilStep(d.getUTCMinutes()) - d.getUTCMinutes())
+  d.setSeconds(0, 0)
+  return addMin(d, ceilStep(d.getMinutes()) - d.getMinutes())
 }
 
 /* Moves a start/end pair on a day so the start is not before `earliest`, keeping its length.

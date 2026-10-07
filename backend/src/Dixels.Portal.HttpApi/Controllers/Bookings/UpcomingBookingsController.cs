@@ -9,7 +9,8 @@ using Volo.Abp;
 namespace Dixels.Portal.Controllers.Bookings;
 
 /* Admin: the bookings in a building, floor or space that have not started yet, as a sub-collection of that
- * building, floor or space. GET .../count says how many; PATCH { lifecycle: "cancelled" } cancels them all. */
+ * building, floor or space. GET .../count says how many; PATCH { lifecycle: "cancelled" } cancels them all, with an
+ * optional message: { subject, message } for the cancellation emails. */
 [RemoteService(Name = "Default")]
 [Area("app")]
 public class UpcomingBookingsController : PortalController
@@ -32,19 +33,19 @@ public class UpcomingBookingsController : PortalController
 
     [HttpPatch("api/app/buildings/{id}/upcoming-bookings")]
     public Task<CancelUpcomingResultDto> CancelInBuildingAsync(Guid id, [FromBody] CancellationDto input)
-        => CancelAsync(MaintenanceScopeType.Building, id);
+        => CancelAsync(MaintenanceScopeType.Building, id, input.Message);
 
     [HttpPatch("api/app/floors/{id}/upcoming-bookings")]
     public Task<CancelUpcomingResultDto> CancelOnFloorAsync(Guid id, [FromBody] CancellationDto input)
-        => CancelAsync(MaintenanceScopeType.Floor, id);
+        => CancelAsync(MaintenanceScopeType.Floor, id, input.Message);
 
     [HttpPatch("api/app/spaces/{id}/upcoming-bookings")]
     public Task<CancelUpcomingResultDto> CancelInSpaceAsync(Guid id, [FromBody] CancellationDto input)
-        => CancelAsync(MaintenanceScopeType.Space, id);
+        => CancelAsync(MaintenanceScopeType.Space, id, input.Message);
 
     private Task<int> CountAsync(MaintenanceScopeType type, Guid id)
         => _bookings.GetUpcomingCountAsync(new EstateScopeDto { ScopeType = type, ScopeId = id });
 
-    private Task<CancelUpcomingResultDto> CancelAsync(MaintenanceScopeType type, Guid id)
-        => _bookings.CancelUpcomingAsync(new EstateScopeDto { ScopeType = type, ScopeId = id });
+    private Task<CancelUpcomingResultDto> CancelAsync(MaintenanceScopeType type, Guid id, CancellationMessageDto? message)
+        => _bookings.CancelUpcomingAsync(new EstateScopeDto { ScopeType = type, ScopeId = id }, message);
 }

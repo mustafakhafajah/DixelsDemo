@@ -2,20 +2,22 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from 'i18next'
 import { ApiError, errorText } from '../../api/client'
-import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSpaces } from '../../api/hooks'
+import { useAvailability, useCreateBooking, useCreateBookingSeries, useRescheduleBooking, useSetAttendees, useSpaces } from '../../api/hooks'
 import type { Booking, Space } from '../../api/types'
 import { useSession } from '../../app/session'
 import { P } from '../../auth/permissions'
 import { ErrorLine, RequiredMark } from '../../components/bits'
 import { DatePicker, Dropdown, TimePicker } from '../../components/pickers'
 import { Modal } from '../../components/Sheet'
-import { closedReason, isUtcLike, localLabel, openParts, zoneCity } from '../../lib/closedDays'
-import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stampOffset } from '../../lib/dateUtils'
+import { closedReason, localLabel, openParts, sameClockAsViewer, zoneCity } from '../../lib/closedDays'
+import { addDays, addMin, dayAt, dayKey, earliestStart, fromDateTime, hm, keepWindowAhead, roundUp30, stamp } from '../../lib/dateUtils'
 import { findOverlap, validateWindowLocal } from '../../lib/laneLayout'
 import { generateOccurrences } from '../../lib/recurrence'
 import { useFieldErrors, type FieldError, type FieldErrors } from '../../lib/useFieldErrors'
 import { modals, type BookingPrefill } from '../../state/modalStore'
 import { toast } from '../../state/toastStore'
+import { AttendeesField } from './AttendeesField'
+import { inviteesOf, samePeople, toAttendeeInput, type Invitee } from './invitees'
 import { OccurrenceList, RecurrenceFields, type OccurrenceRow } from './Recurrence'
 import { defaultRecurrence, recurrenceErrors, toRule } from './recurrenceState'
 
@@ -38,7 +40,7 @@ const TIME_FIELD: Record<string, string> = {
   'validation.end_before_start': 'm-end',
 }
 /* The server's field names for booking errors -> this form's fields. */
-const SERVER_FIELDS = { date: 'm-date', start: 'm-start', end: 'm-end', window: 'm-window', spaceId: 'm-space' }
+const SERVER_FIELDS = { date: 'm-date', start: 'm-start', end: 'm-end', window: 'm-window', spaceId: 'm-space', attendees: 'm-attendees' }
 const FIELD_IDS = ['m-date', 'm-start', 'm-end', 'm-window', 'm-building', 'm-floor', 'm-space', 'm-occurrences']
 
 /* The server says exactly which level blocks it (space, floor or building). */
@@ -75,6 +77,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const [skipOverrides, setSkipOverrides] = useState<Record<number, boolean>>({})
   const [idempotencyKey] = useState(newKey)
   const [conflict, setConflict] = useState<{ message: string; suggested: { start: Date; end: Date } | null } | null>(null)
+  const [invitees, setInvitees] = useState<Invitee[]>(() => (editing ? inviteesOf(editing) : []))
+  /* Guests' addresses only reach the owner and admins; without them the list can't be edited safely. */
+  const guestsHidden = !!editing && editing.guestCount > editing.guests.length
 
   const start = fromDateTime(date, startTime)
   const end = fromDateTime(date, endTime)
@@ -152,22 +157,28 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const spaceId = options.some((o) => o.space.id === chosenSpaceId) ? chosenSpaceId : ''
   const space = spaces.find((s) => s.id === spaceId) ?? null
   const c = space?.constraints
-  /* Times are picked in UTC. Once a space is chosen, only times inside its building's opening hours (on the
-   * building's clock) are offered, and each pick also shows that clock when it reads differently from UTC.
+  /* Times are picked on the viewer's own clock. Once a space is chosen, only times inside its building's opening
+   * hours (on the building's clock) are offered, and each pick also shows that clock when it reads differently.
    * On a closed day nothing is open; the date's error explains it, so the lists stay whole. */
   const openToday = c ? openParts(c, date) : []
   const startAllowed = openToday.length ? (m: number) => openToday.some((p) => p.start <= m && m < p.end) : undefined
   const endAllowed = openToday.length ? (m: number) => openToday.some((p) => p.start < m && m <= p.end) : undefined
-  const localHint = (d: Date | null) => c && d && !isUtcLike(c.timeZone, d)
+  const localHint = (d: Date | null) => c && d && !sameClockAsViewer(c.timeZone, d)
     ? <p className="card-sub" style={{ margin: '4px 0 0' }}>{t('booking.localTime', { time: localLabel(d, c.timeZone), zone: zoneCity(c.timeZone) })}</p>
     : null
   const timeError = validateWindowLocal(c ?? null, space?.name ?? '', start, end)
   const spaceError = !editing && space ? accessError(space) : null
   const recurErrors = !editing ? recurrenceErrors(recur, start, 'm') : {}
+  /* The room's seats (0 = not set); the person booking takes one. */
+  const capacity = space?.capacity ?? 0
+  const seatsError: FieldError | null = space && capacity > 0 && invitees.length + 1 > capacity
+    ? { code: 'booking.over_capacity', message: t('booking.attendees.overCapacity', { space: space.name, count: capacity }) }
+    : null
   /* Checked as the form is filled in, so these show straight away and keep the button off. */
   const liveErrors: FieldErrors = {
     ...(timeError ? { [TIME_FIELD[timeError.code] ?? 'm-window']: timeError } : {}),
     ...(spaceError ? { 'm-space': spaceError } : {}),
+    ...(seatsError ? { 'm-attendees': seatsError } : {}),
     ...recurErrors,
   }
   const fields = useFieldErrors()
@@ -204,7 +215,8 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
   const create = useCreateBooking()
   const createSeries = useCreateBookingSeries()
   const reschedule = useRescheduleBooking()
-  const busy = create.isPending || createSeries.isPending || reschedule.isPending
+  const setAttendees = useSetAttendees()
+  const busy = create.isPending || createSeries.isPending || reschedule.isPending || setAttendees.isPending
 
   const showError = (e: unknown) => {
     const { message } = errorText(e)
@@ -234,10 +246,20 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
     }
     if (fields.show(found) || !start || !end || !space) return
     setConflict(null)
+    const attendees = invitees.map(toAttendeeInput)
     try {
       if (editing) {
-        await reschedule.mutateAsync({ id: editing.id, startUtc: start.toISOString(), endUtc: end.toISOString(), expectedVersion: editing.version })
-        toast('ok', t('booking.toast.rescheduled'), t('booking.toast.rescheduledMessage', { space: editing.spaceName, start: stampOffset(start), end: hm(end) }))
+        /* Only what changed is saved, so nobody gets an email about a change that didn't happen. People first:
+         * they don't change the booking's version, so a time refused afterwards can simply be tried again. */
+        const timeChanged = start.getTime() !== editing.start.getTime() || end.getTime() !== editing.end.getTime()
+        const peopleChanged = !guestsHidden && !samePeople(invitees, inviteesOf(editing))
+        if (peopleChanged) await setAttendees.mutateAsync({ id: editing.id, attendees })
+        if (timeChanged) {
+          await reschedule.mutateAsync({ id: editing.id, startUtc: start.toISOString(), endUtc: end.toISOString(), expectedVersion: editing.version })
+          toast('ok', t('booking.toast.rescheduled'), t('booking.toast.rescheduledMessage', { space: editing.spaceName, start: stamp(start), end: hm(end) }))
+        } else if (peopleChanged) {
+          toast('ok', t('booking.toast.peopleSaved'), t('booking.toast.peopleSavedMessage', { space: editing.spaceName }))
+        }
         modals.close()
         return
       }
@@ -247,6 +269,7 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
         const r = await createSeries.mutateAsync({
           spaceId: space.id,
           occurrences: wanted.map((o) => ({ startUtc: o.start.toISOString(), endUtc: o.end.toISOString() })),
+          attendees,
         })
         if (r.created.length) {
           toast('ok', t('booking.toast.seriesConfirmed', { count: r.created.length }),
@@ -260,9 +283,9 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       }
       await create.mutateAsync({
         spaceId: space.id, startUtc: start.toISOString(), endUtc: end.toISOString(),
-        idempotencyKey,
+        idempotencyKey, attendees,
       })
-      toast('ok', t('booking.toast.confirmed'), t('booking.toast.confirmedMessage', { space: space.name, start: stampOffset(start), end: hm(end) }))
+      toast('ok', t('booking.toast.confirmed'), t('booking.toast.confirmedMessage', { space: space.name, start: stamp(start), end: hm(end) }))
       modals.close()
     } catch (e) {
       showError(e)
@@ -298,17 +321,13 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
       </div>
       <div className="form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
-          <label className="lbl req" htmlFor="m-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.start')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="m-start">{t('common.start')}<RequiredMark /></label>
           <TimePicker id="m-start" aria-label={t('common.start')} value={startTime} min={startMin} allowed={startAllowed} onChange={onStart} />
           {localHint(start)}
           <ErrorLine id="m-start-error" error={shown['m-start']} />
         </div>
         <div>
-          <label className="lbl req" htmlFor="m-end" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('common.end')}<RequiredMark /></span> <span className="utcchip">UTC +00:00</span>
-          </label>
+          <label className="lbl req" htmlFor="m-end">{t('common.end')}<RequiredMark /></label>
           <TimePicker id="m-end" aria-label={t('common.end')} value={endTime} min={endMin} allowed={endAllowed} onChange={(v) => { setEndTime(v); edited() }} />
           {localHint(end)}
           <ErrorLine id="m-end-error" error={shown['m-end']} />
@@ -386,6 +405,15 @@ export function BookingModal({ prefill, editing }: { prefill: BookingPrefill; ed
             : spacesQ.isLoading ? t('booking.loadingSpaces')
               : floorId && !options.length ? t('booking.noFreeOnFloor') : ''}
         </p>
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+        <label className="lbl" htmlFor="m-attendees">{t('booking.attendees.label')}</label>
+        {guestsHidden
+          ? <p className="muted-box" style={{ margin: 0 }}>{t('booking.attendees.guestsHidden')}</p>
+          : <AttendeesField id="m-attendees" value={invitees} capacity={capacity} describedBy="m-attendees-error"
+              onChange={(v) => { setInvitees(v); fields.clear('m-attendees') }} />}
+        <ErrorLine id="m-attendees-error" error={shown['m-attendees']} />
       </div>
     </Modal>
   )

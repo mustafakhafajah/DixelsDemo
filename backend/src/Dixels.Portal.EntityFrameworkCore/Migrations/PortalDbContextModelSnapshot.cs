@@ -112,6 +112,50 @@ namespace Dixels.Portal.Migrations
                     b.ToTable("AppBookings", (string)null);
                 });
 
+            modelBuilder.Entity("Dixels.Portal.Bookings.BookingAttendee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Response")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResponseTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResponseTokenHash")
+                        .IsUnique()
+                        .HasFilter("\"ResponseTokenHash\" IS NOT NULL");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BookingId", "Email")
+                        .IsUnique()
+                        .HasFilter("\"Email\" IS NOT NULL");
+
+                    b.HasIndex("BookingId", "UserId")
+                        .IsUnique()
+                        .HasFilter("\"UserId\" IS NOT NULL");
+
+                    b.ToTable("AppBookingAttendees", (string)null);
+                });
+
             modelBuilder.Entity("Dixels.Portal.Buildings.Building", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2445,6 +2489,15 @@ namespace Dixels.Portal.Migrations
                         .WithMany()
                         .HasForeignKey("SpaceId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.Portal.Bookings.BookingAttendee", b =>
+                {
+                    b.HasOne("Dixels.Portal.Bookings.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

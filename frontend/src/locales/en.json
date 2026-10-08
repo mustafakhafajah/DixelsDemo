@@ -186,7 +186,7 @@
     },
     "profile": {
       "title": "My Profile",
-      "subtitle": "Everything the portal holds about your account."
+      "subtitle": "Manage your personal details, account access and security."
     }
   },
   "roles": {
@@ -790,8 +790,6 @@
     }
   },
   "profile": {
-    "contact": "Contact",
-    "account": "Account",
     "activity": "Activity",
     "additional": "Additional details",
     "email": "Email",
@@ -809,10 +807,23 @@
     "passwordChanged": "Password last changed",
     "notProvided": "Not provided",
     "never": "Never",
-    "passport": {
-      "label": "Member passport",
-      "heading": "{{name}}'s information",
-      "intro": "Change your details where they are shown. Your email and roles are set by an administrator."
+    "header": {
+      "memberSince": "Member since {{date}}",
+      "lastSignIn": "Last signed in {{date}}"
+    },
+    "personal": {
+      "title": "Personal information",
+      "subtitle": "Your name and how colleagues can reach you."
+    },
+    "completion": "Profile completion",
+    "managed": {
+      "title": "Managed by your administrator",
+      "subtitle": "Ask an administrator to change these."
+    },
+    "security": {
+      "lastChanged": "Last changed {{when}}",
+      "neverChanged": "Not changed yet",
+      "external": "You sign in through another provider, so there is no password to change here."
     },
     "photo": {
       "upload": "Upload photo",
@@ -827,16 +838,14 @@
       "unreadable": "That picture couldn't be read. Try another one."
     },
     "edit": {
-      "editField": "Edit {{field}}",
-      "save": "Save",
-      "fieldSaved": "{{field}} saved",
       "firstNameMissing": "Type your first name.",
       "userNameMissing": "Type a username.",
       "userNameInvalid": "Use only English letters, digits and - . _ @ +, with no spaces.",
       "emailMissing": "Type an email address.",
       "emailInvalid": "Type an email address like name@example.com.",
       "phoneInvalid": "Type the phone number as 6 to 15 digits, optionally starting with +, for example +962790000000.",
-      "setByAdministrator": "Only an administrator can change this."
+      "saved": "Profile saved",
+      "phoneHint": "Include the country code, for example +962790000000."
     },
     "changePassword": {
       "title": "Change password",

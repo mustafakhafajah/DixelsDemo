@@ -13,7 +13,7 @@ import { checkPictureFile, PICTURE_TYPES } from './validation'
 const SERVER_FIELD = 'picture'
 const ERROR_ID = 'profile-photo-error'
 
-/* Upload / Change and Remove for the profile picture, in the header under the name. A problem with the chosen file
+/* Upload / Change and Remove for the profile picture, at the far end of the header. A problem with the chosen file
  * shows under the buttons at once; the file is shrunk in the browser before it is sent, and a new picture replaces
  * the old one. */
 export function ProfilePhoto({ me }: { me: MyProfile }) {

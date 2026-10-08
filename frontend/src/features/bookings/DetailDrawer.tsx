@@ -54,20 +54,22 @@ function Attendees({ b, myId, showReplies }: { b: Booking; myId: string; showRep
   )
 }
 
-/* An invited person's answer, shown only: answering and changing it happen through the Accept / Tentative / Decline
- * buttons in the invitation email. */
+/* An invited person's answer so far; the Accept / Maybe / Decline buttons below change it. */
 function YourAnswer({ current }: { current: AttendeeResponse }) {
   const { t } = useTranslation()
   return (
-    <div className="muted-box" style={{ marginBottom: 18, color: 'var(--ink)' }}>
-      <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <ResponseIcon response={current} />
-        {current === 'none' ? t('detail.reply.notAnswered') : t('detail.reply.yourAnswer', { answer: t(`detail.response.${current}`) })}
-      </p>
-      <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--slate)' }}>{t('detail.reply.viaEmail')}</p>
-    </div>
+    <p className="muted-box" style={{ margin: '0 0 14px', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <ResponseIcon response={current} />
+      {current === 'none' ? t('detail.reply.notAnswered') : t('detail.reply.yourAnswer', { answer: t(`detail.response.${current}`) })}
+    </p>
   )
 }
+
+const REPLY_BUTTONS = [
+  { reply: 'accepted', label: 'accept' },
+  { reply: 'tentative', label: 'maybe' },
+  { reply: 'declined', label: 'decline' },
+] as const satisfies readonly { reply: Reply; label: string }[]
 
 function BookingDetail({ b, respond, respondSeries, startCancel }: { b: Booking; respond?: Reply; respondSeries: boolean; startCancel: boolean }) {
   const { t } = useTranslation()
@@ -97,6 +99,11 @@ function BookingDetail({ b, respond, respondSeries, startCancel }: { b: Booking;
   /* Cancelling always asks first, with the email everyone on the booking gets (and for a series, how much goes). */
   const [askCancel, setAskCancel] = useState(startCancel)
   const [seriesScope, setSeriesScope] = useState<'one' | 'later'>('one')
+  /* The same answers as the invitation email's buttons; for a repeating booking, as in Outlook, for this date or for
+   * the later ones too. Picking the answer you already gave for this date alone sends nothing. */
+  const [replyScope, setReplyScope] = useState<'one' | 'later'>('one')
+  const replyToLater = laterInSeries > 0 && replyScope === 'later'
+  const answer = (r: Reply) => { if (r !== reply || replyToLater) void actions.respond(b, r, replyToLater) }
   /* null until edited, so the ready-made text follows the language in use. */
   const [message, setMessage] = useState<CancelMessageValue | null>(null)
   const shownMessage = message ?? bookingCancelDefaults(b, session.name)
@@ -105,8 +112,8 @@ function BookingDetail({ b, respond, respondSeries, startCancel }: { b: Booking;
     void run.then((ok) => { if (ok) setAskCancel(false) })
   }
 
-  /* From an invitation email's Accept / Tentative / Decline link (the only place to answer): recorded once, for the
-   * later dates too when the invitation was for a repeating booking. */
+  /* From an invitation email's Accept / Tentative / Decline link: recorded once, for the later dates too when the
+   * invitation was for a repeating booking. */
   const replied = useRef(false)
   useEffect(() => {
     if (!respond || replied.current || !showReply) return
@@ -166,12 +173,29 @@ function BookingDetail({ b, respond, respondSeries, startCancel }: { b: Booking;
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>{t('schedule.reschedule')}</button>}
-          {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>{t('schedule.endNow')}</button>}
-          {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => setAskCancel(true)}>{t('detail.cancelBooking')}</button>}
-          {!showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
-        </div>
+        <>
+          {showReply && laterInSeries > 0 && (
+            <fieldset style={RADIO_ROW} aria-label={t('detail.reply.forSeries')}>
+              <span>{t('detail.reply.forSeries')}</span>
+              <label style={RADIO}>
+                <input type="radio" name={`reply-scope-${b.id}`} checked={replyScope === 'one'} onChange={() => setReplyScope('one')} />{t('detail.onlyThis')}
+              </label>
+              <label style={RADIO}>
+                <input type="radio" name={`reply-scope-${b.id}`} checked={replyScope === 'later'} onChange={() => setReplyScope('later')} />{t('detail.thisAndLater')}
+              </label>
+            </fieldset>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+            {showReply && REPLY_BUTTONS.map(({ reply: r, label }) => (
+              <button key={r} type="button" className={reply === r ? 'btn btn-primary' : 'btn'} aria-pressed={reply === r}
+                disabled={actions.busy} onClick={() => answer(r)}>{t(`detail.reply.${label}`)}</button>
+            ))}
+            {showReschedule && <button type="button" className="btn" onClick={() => modals.reschedule(b)}>{t('schedule.reschedule')}</button>}
+            {showEndNow && <button type="button" className="btn" disabled={actions.busy} onClick={() => actions.endEarly(b)}>{t('schedule.endNow')}</button>}
+            {showCancel && <button type="button" className="btn btn-danger" disabled={actions.busy} onClick={() => setAskCancel(true)}>{t('detail.cancelBooking')}</button>}
+            {!showReply && !showReschedule && !showEndNow && !showCancel && <span style={{ fontSize: 12, color: 'var(--slate-2)' }}>{t('detail.noActions')}</span>}
+          </div>
+        </>
       )}
     </>
   )

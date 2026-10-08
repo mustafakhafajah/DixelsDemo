@@ -842,7 +842,10 @@
       "notAnswered": "لم تردّ بعد.",
       "notAnsweredShort": "لم تردّ",
       "yourAnswer": "ردّك: {{answer}}.",
-      "viaEmail": "للرد أو لتغيير ردك، استخدم أزرار القبول أو ربما أو الرفض في بريد الدعوة."
+      "accept": "قبول",
+      "maybe": "ربما",
+      "decline": "رفض",
+      "forSeries": "هذا الحجز متكرر. الرد على:"
     },
     "replySummary": {
       "accepted_zero": "لم يقبل أحد",

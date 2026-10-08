@@ -691,7 +691,10 @@
       "notAnswered": "Not answered yet.",
       "notAnsweredShort": "Not answered",
       "yourAnswer": "Your answer: {{answer}}.",
-      "viaEmail": "To answer or change your answer, use the Accept, Maybe or Decline buttons in your invitation email."
+      "accept": "Accept",
+      "maybe": "Maybe",
+      "decline": "Decline",
+      "forSeries": "This booking repeats. Answer for:"
     },
     "replySummary": {
       "accepted_one": "{{count, number}} accepted",

@@ -180,7 +180,7 @@ html:root:not([data-theme='dark']):has(.login-page) {
   background: radial-gradient(closest-side, #6e3a7a33, #6e3a7a00);
 }
 .login-page .signin-panel .panel-fit { gap: 32px; padding: 48px 72px; }
-.login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .login-page .signin-center { display: flex; justify-content: center; }
 .login-page .signin-form { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 440px; }
 
@@ -189,6 +189,17 @@ html:root:not([data-theme='dark']):has(.login-page) {
   background: #ffffff0a; border-color: #ffffff1a; color: var(--lp-ink);
 }
 :root[data-theme='dark'] .login-page .login-lang button svg { color: var(--lp-slate); }
+
+/* The theme button beside it: a square box as tall as the language picker, with the same border and colours. */
+.login-page .login-theme {
+  display: inline-flex; align-items: center; justify-content: center; align-self: stretch; aspect-ratio: 1;
+  padding: 0; border: 1px solid #d9dbd6; border-radius: 8px; background: #ffffff; color: #5c6670; cursor: pointer;
+}
+.login-page .login-theme:hover { color: var(--lp-ink); }
+.login-page .login-theme:focus-visible { outline: 3px solid #6e3a7a40; outline-offset: 1px; }
+.login-page .login-theme svg { width: 16px; height: 16px; }
+:root[data-theme='dark'] .login-page .login-theme { background: #ffffff0a; border-color: #ffffff1a; color: var(--lp-slate); }
+:root[data-theme='dark'] .login-page .login-theme:hover { color: var(--lp-ink); }
 
 .login-page .signin-heading { display: flex; flex-direction: column; gap: 14px; }
 .login-page .mark {

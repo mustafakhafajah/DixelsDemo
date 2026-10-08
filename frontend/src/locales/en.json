@@ -55,7 +55,8 @@
     "tryAgain": "Try again",
     "type": "Type",
     "until": "Until",
-    "you": "You"
+    "you": "You",
+    "noFreeThen": "no free space then"
   },
   "time": {
     "localRange": "{{from}}–{{to}} {{zone}} time",
@@ -762,7 +763,8 @@
     "bookCell": "Book {{name}} {{from}}–{{to}}",
     "previousDay": "Previous day",
     "nextDay": "Next day",
-    "stats": "{{free, number}} of {{rooms}} free {{from}}–{{to}} · grouped by building and floor."
+    "stats": "{{free, number}} of {{rooms}} free {{from}}–{{to}} · grouped by building and floor.",
+    "busyThen": "Busy"
   },
   "users": {
     "search": "Search",

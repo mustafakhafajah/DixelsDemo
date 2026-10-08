@@ -9,6 +9,7 @@ import {
 import dixelsLogo from '../assets/dixels-logo.png'
 import { useBookings, useBuildings, useFloors, useSpaces, useSpaceTypes } from '../api/hooks'
 import { Loading } from '../components/bits'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { Toasts } from '../components/Toasts'
 import { MyAvatar } from '../features/profile/MyAvatar'
 import { roleLabel } from '../features/users/api'
@@ -240,9 +241,6 @@ function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivEl
   const view = pathname.split('/')[2] || 'bookings'
   const meta = PAGE_META[view as keyof typeof PAGE_META] ?? PAGE_META.bookings
   const title = view === 'bookings' ? (can(P.Bookings.ViewAll) ? t('nav.schedule') : t('nav.mySchedule')) : t(meta[0])
-  const { theme, toggle } = useThemeStore()
-  const dark = theme === 'dark'
-  const themeLabel = dark ? t('nav.themeLight') : t('nav.themeDark')
   return (
     <header className="topbar">
       {/* Only shown on phones and tablets, where the sidebar slides in instead of standing beside the page. */}
@@ -251,12 +249,8 @@ function Topbar({ onMenu, onSlot }: { onMenu: () => void; onSlot: (el: HTMLDivEl
         <h1 style={{ fontSize: 16, letterSpacing: '-.01em' }}>{title}</h1>
         <p style={{ fontSize: 12, color: 'var(--slate)', margin: '2px 0 0' }}>{t(meta[1])}</p>
       </div>
-      {/* Moon in light, sun in dark: the icon shows what a click switches to. */}
-      {/* One click flips light and dark; the account menu offers the same choice. */}
-      <button type="button" aria-pressed={dark} aria-label={themeLabel} title={themeLabel} onClick={toggle}
-        className="tw:inline-flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-muted-foreground tw:cursor-pointer tw:outline-none tw:hover:bg-accent tw:hover:text-accent-foreground tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:[&_svg]:size-[18px]">
-        {dark ? <SunIcon /> : <MoonIcon />}
-      </button>
+      {/* The account menu offers the same choice. */}
+      <ThemeToggle className="tw:inline-flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-muted-foreground tw:cursor-pointer tw:outline-none tw:hover:bg-accent tw:hover:text-accent-foreground tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:[&_svg]:size-[18px]" />
       {/* The page's own main buttons (PageActions) land here, next to New booking. */}
       <div ref={onSlot} className="page-actions" />
       {BOOKING_VIEWS.has(view) && can(P.Bookings.Create) && <button type="button" className="btn btn-primary" onClick={() => modals.booking()}>{t('nav.newBooking')}</button>}

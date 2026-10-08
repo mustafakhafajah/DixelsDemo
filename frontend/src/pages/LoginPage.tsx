@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 import { ArrowRightIcon, LockIcon, MailCheckIcon, MailIcon, MousePointer2Icon, OrbitIcon, ShieldCheckIcon } from 'lucide-react'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { intlLocale } from '../i18n/languages'
 import { UniverseCanvas } from './UniverseCanvas'
 import './LoginPage.css'
@@ -140,6 +141,7 @@ function LoginPage() {
       <FitPanel className="signin-panel">
         <div className="signin-top">
           <LanguageSwitcher className="login-lang" />
+          <ThemeToggle className="login-theme" />
         </div>
         <div className="signin-center">
           <div className="signin-form">

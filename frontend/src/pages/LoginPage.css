@@ -1,5 +1,6 @@
-/* Sign-in page, from the pen.dev frame "Sign in — Booking board": a dark brand panel with a sample booking
- * board, and the light sign-in panel. Values are the frame's. Logical properties throughout, so Arabic mirrors. */
+/* Sign-in page, from the pen.dev frames "Sign in — Resource Universe" (light) and "… (Dark)": a dark brand panel
+ * with a live WebGL scene (UniverseCanvas), and the sign-in panel, which follows the app's light or dark theme.
+ * Logical properties throughout, so Arabic mirrors. */
 .login-page {
   --lp-ink: #161b22;
   --lp-paper: #f2f3f1;
@@ -7,17 +8,20 @@
   --lp-muted: #8a929b;
   --lp-line: #e1e3de;
   --lp-accent: #6e3a7a;
+  --lp-accent-2: #8a4a97;
   --lp-accent-dark: #5c2f66;
+  --lp-step-bg: #6e3a7a14;
+  --lp-step-ink: #6e3a7a;
 
   --bp-bg: #0d0d10;
-  --bp-board: #131317;
   --bp-ink: #ececef;
   --bp-text: #98a2ac;
   --bp-muted: #6b7280;
   --bp-faint: #5b616b;
   --bp-lilac: #b994bf;
-  --bp-yours: #9c6ca4;
   --bp-live: #7ee0a1;
+  --bp-chip: #0d0d10b3;
+  --bp-chip-line: #ffffff14;
 
   /* Latin in the frame's fonts; Arabic letters fall through to Cairo. */
   --font-display: 'Inter Tight Variable', 'Cairo Variable', 'Inter', system-ui, sans-serif;
@@ -38,19 +42,31 @@
   /* Text without its own line height uses the font's natural one, as in the frame (not the app's fixed 26px). */
   line-height: normal;
   -webkit-font-smoothing: antialiased;
-  /* The login page is a branded page in both themes: its own colours, light form controls. */
   color-scheme: light;
 }
 
-/* The page scrollbar and canvas stay light too (beats the theme's inline color-scheme on <html>). */
-:root:has(.login-page) {
-  color-scheme: light !important;
-  background: var(--lp-paper);
+/* Dark theme: only the sign-in panel changes; the brand panel is dark in both. */
+:root[data-theme='dark'] .login-page {
+  --lp-ink: #ececef;
+  --lp-paper: #121216;
+  --lp-slate: #98a2ac;
+  --lp-muted: #6b7280;
+  --lp-line: #ffffff14;
+  --lp-step-bg: #b994bf1a;
+  --lp-step-ink: #b994bf;
+  color-scheme: dark;
 }
 
-/* The language list opens in a portal outside the page; it reads the app's theme tokens, so pin their light values
- * here (html: beats :root[data-theme="dark"]). */
-html:root:has(.login-page) {
+/* In the light theme the page scrollbar and canvas stay light (beats the theme's inline color-scheme on <html>). */
+:root:not([data-theme='dark']):has(.login-page) {
+  color-scheme: light !important;
+  background: var(--lp-paper, #f2f3f1);
+}
+:root[data-theme='dark']:has(.login-page) { background: #121216; }
+
+/* The language list opens in a portal outside the page; it reads the app's theme tokens, so in the light theme pin
+ * their light values here (html: beats :root[data-theme="dark"]). In the dark theme the app's dark tokens apply. */
+html:root:not([data-theme='dark']):has(.login-page) {
   --ink: #18181b; --surface: #ffffff; --surface-2: #fafafa; --surface-3: #f4f4f5; --line: #e4e4e7;
   --accent: #9c6ca4; --accent-dark: #6e3a7a; --accent-soft: #f4ecf5; --btn-purple: #6e3a7a; --on-accent: #ffffff; --slate: #66666e;
 }
@@ -58,11 +74,13 @@ html:root:has(.login-page) {
 .login-page * { box-sizing: border-box; }
 .login-page p, .login-page h1, .login-page h2 { margin: 0; }
 
-/* ── Brand panel ── */
-.login-page .brand-panel, .login-page .signin-panel { height: 100%; min-width: 0; overflow-y: auto; }
+/* ── Panels ── */
+.login-page .brand-panel, .login-page .signin-panel { position: relative; height: 100%; min-width: 0; overflow-y: auto; }
 /* --fit (set by FitPanel) shrinks a panel's content evenly; its height is divided by the same factor, so the
  * shrunk content still spans the whole window. */
 .login-page .panel-fit {
+  position: relative;
+  z-index: 1;
   zoom: var(--fit, 1);
   height: calc(100dvh / var(--fit, 1));
   display: flex;
@@ -70,114 +88,149 @@ html:root:has(.login-page) {
   justify-content: space-between;
 }
 
-.login-page .brand-panel { background: var(--bp-bg); color: var(--bp-text); }
-.login-page .brand-panel .panel-fit { gap: 56px; padding: 48px 64px 56px; }
+/* ── Brand panel ── */
+.login-page .brand-panel { background: var(--bp-bg); color: var(--bp-text); overflow-x: hidden; }
+.login-page .brand-panel .panel-fit { gap: 40px; padding: 44px 64px 48px; }
+/* The live scene sits behind the whole panel. */
+.login-page .universe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 .login-page .brand-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.login-page .brand-logo { height: 53px; width: auto; display: block; }
+.login-page .brand-logo { height: 44px; width: auto; display: block; }
 .login-page .live-chip {
   display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px;
-  border: 1px solid #ffffff1f; border-radius: 999px; font-size: 12px; color: #c9ccd2; white-space: nowrap;
+  background: #ffffff0a; border: 1px solid var(--bp-chip-line); border-radius: 999px;
+  font-size: 12px; color: #c9ccd2; white-space: nowrap;
 }
-.login-page .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bp-live); flex-shrink: 0; }
+.login-page .live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--bp-live); flex-shrink: 0; box-shadow: 0 0 8px var(--bp-live);
+}
 
-.login-page .brand-main { display: flex; flex-direction: column; gap: 64px; min-width: 0; }
-.login-page .hero { display: flex; flex-direction: column; gap: 20px; }
-.login-page .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--bp-lilac); }
+.login-page .hero { display: flex; flex-direction: column; gap: 18px; }
+.login-page .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--bp-lilac); }
 .login-page .hero h1 {
-  font-family: var(--font-display); font-size: 58px; font-weight: 600; letter-spacing: -1.5px; line-height: 1.05;
+  font-family: var(--font-display); font-size: 54px; font-weight: 600; letter-spacing: -1.8px; line-height: 1.05;
   color: #ffffff; white-space: pre-line;
 }
-.login-page .lede { max-width: 520px; font-size: 16px; line-height: 1.6; color: var(--bp-text); }
 
-/* The sample board: a space column, then 18 half-hour columns from 09:00 to 18:00. */
-.login-page .board {
-  display: flex; flex-direction: column; gap: 16px; padding: 20px;
-  background: var(--bp-board); border: 1px solid #ffffff12; border-radius: 14px; min-width: 0;
+/* The area the scene is centred on: it takes the room between the headline and the principles. */
+.login-page .scene {
+  flex: 1 1 auto; min-height: 400px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 16px;
+  pointer-events: none;
 }
-.login-page .board-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.login-page .board-title { display: flex; align-items: center; gap: 10px; }
-.login-page .board-today { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--bp-ink); }
-.login-page .board-count { font-size: 12px; color: var(--bp-muted); }
-.login-page .board-legend { display: flex; align-items: center; gap: 16px; }
-.login-page .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--bp-text); }
-.login-page .swatch { width: 10px; height: 10px; border-radius: 3px; }
-.login-page .swatch.booked { background: #ffffff1a; }
-.login-page .swatch.yours { background: var(--bp-yours); }
-.login-page .swatch.free { background: #b994bf1f; border: 1px solid var(--bp-lilac); }
+.login-page .scene-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.login-page .hud-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px;
+  background: var(--bp-chip); border: 1px solid var(--bp-chip-line); border-radius: 999px;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-size: 11.5px; color: #c9ccd2; white-space: nowrap;
+}
+.login-page .hud-chip.mono { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+.login-page .hud-chip.ready { color: #a9ecc1; }
+.login-page .hud-chip .live-dot { width: 6px; height: 6px; }
+.login-page .hud-icon { width: 12px; height: 12px; flex-shrink: 0; }
+.login-page .hud-icon.lilac { color: var(--bp-lilac); }
+.login-page .hud-icon.green { color: var(--bp-live); }
 
-.login-page .board-grid { --space-col: 136px; position: relative; padding-block-end: 26px; }
-.login-page .board-hours, .login-page .board-row { display: grid; grid-template-columns: var(--space-col) minmax(0, 1fr); align-items: center; }
-.login-page .board-hours { height: 24px; }
-.login-page .board-hours .track { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
-.login-page .hour { font-family: var(--font-mono); font-size: 10px; color: var(--bp-faint); }
-.login-page .board-row { height: 52px; border-top: 1px solid #ffffff0b; }
-.login-page .board-space { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.login-page .space-name { font-size: 13px; font-weight: 500; color: var(--bp-ink); }
-.login-page .space-meta { font-size: 11px; color: var(--bp-muted); }
-.login-page .space-name, .login-page .space-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.login-page .board-row .track { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); height: 36px; }
-.login-page .block {
-  display: flex; align-items: center; min-width: 0; margin-inline: 2px; padding-inline: 10px; overflow: hidden;
-  border-radius: 6px; background: #ffffff0e; color: #8b919a; font-size: 11px;
-}
-.login-page .block.yours { background: var(--bp-yours); color: #ffffff; font-weight: 600; }
-.login-page .block.free { background: #b994bf14; border: 1px solid var(--bp-lilac); color: #e3cfe6; font-weight: 500; }
-/* As in the frame: a long label runs into the padding and is cut at the block's edge. */
-.login-page .block-label { white-space: nowrap; }
+.login-page .hud-chip.legend { gap: 16px; padding: 7px 14px; }
+.login-page .legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.login-page .legend-divider { width: 1px; height: 12px; background: #ffffff1f; }
+/* The orbit shapes, as drawn by the shader. */
+.login-page .kind-shape { flex-shrink: 0; background: var(--bp-ink); }
+.login-page .kind-shape.dot { width: 9px; height: 9px; border-radius: 50%; }
+.login-page .kind-shape.diamond { width: 7px; height: 7px; margin: 1.5px; rotate: 45deg; }
+.login-page .kind-shape.square { width: 8px; height: 8px; border-radius: 1.5px; }
+.login-page .kind-shape.ring { width: 10px; height: 10px; border-radius: 50%; background: none; border: 2.5px solid var(--bp-ink); }
+.login-page .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.login-page .status-dot.ready { background: var(--bp-live); }
+.login-page .status-dot.busy { background: var(--bp-lilac); }
 
-/* The NOW line at the current time (--now is 0..1 across the day), from the hour labels to the last row. */
-.login-page .now-line, .login-page .now-pill {
-  position: absolute;
-  inset-inline-start: calc(var(--space-col) + (100% - var(--space-col)) * var(--now));
+/* The principles take turns: the active one's bar fills over 6 seconds, then the next one takes over. */
+.login-page .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.login-page .principle { display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
+.login-page .principle-bar { display: block; height: 2px; border-radius: 2px; background: #ffffff14; overflow: hidden; }
+.login-page .principle-fill {
+  display: block; width: 0; height: 100%;
+  background: linear-gradient(to right, var(--bp-lilac), var(--bp-live));
 }
-.login-page .now-line { top: 24px; height: calc(5 * 52px + 6px); width: 1.5px; background: var(--bp-live); }
-.login-page .now-pill {
-  top: calc(24px + 5 * 52px + 6px); translate: -50% 0; padding: 3px 6px; border-radius: 4px;
-  background: var(--bp-live); color: var(--bp-bg); font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  text-transform: uppercase; white-space: nowrap;
+[dir='rtl'] .login-page .principle-fill { background: linear-gradient(to left, var(--bp-lilac), var(--bp-live)); }
+.login-page .principle.active .principle-fill { animation: principle-fill 6s linear forwards; }
+.login-page .principles:hover .principle-fill { animation-play-state: paused; }
+@keyframes principle-fill { from { width: 0; } to { width: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .login-page .principle.active .principle-fill { animation: none; width: 100%; }
 }
-[dir='rtl'] .login-page .now-pill { translate: 50% 0; }
-
-.login-page .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
-.login-page .principle { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid #ffffff1a; }
 .login-page .principle-head {
   display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--bp-ink);
+  font-family: var(--font-display); font-size: 14px; font-weight: 600; color: #8b919a; transition: color .3s;
 }
-.login-page .principle-head svg { width: 15px; height: 15px; color: var(--bp-lilac); flex-shrink: 0; }
-.login-page .principle p { font-size: 12.5px; line-height: 1.5; color: #7d8590; }
+.login-page .principle-num { font-family: var(--font-mono); font-size: 10px; font-weight: 400; color: var(--bp-faint); transition: color .3s; }
+.login-page .principle p { font-size: 12.5px; line-height: 1.45; color: var(--bp-faint); transition: color .3s; }
+.login-page .principle.active .principle-head { color: #ffffff; }
+.login-page .principle.active .principle-num { color: var(--bp-live); }
+.login-page .principle.active p { color: var(--bp-text); }
+.login-page .principle:not(.active):hover .principle-head { color: var(--bp-ink); }
 
 /* ── Sign-in panel ── */
-.login-page .signin-panel .panel-fit { gap: 32px; padding: 48px 64px; }
+.login-page .signin-panel { background: var(--lp-paper); }
+:root[data-theme='dark'] .login-page .signin-panel { border-inline-start: 1px solid #ffffff0f; overflow-x: hidden; }
+/* A soft purple light at the top of the dark sign-in panel. */
+:root[data-theme='dark'] .login-page .signin-panel::before {
+  content: ''; position: absolute; top: -260px; inset-inline-end: -180px; width: 640px; height: 640px; pointer-events: none;
+  background: radial-gradient(closest-side, #6e3a7a33, #6e3a7a00);
+}
+.login-page .signin-panel .panel-fit { gap: 32px; padding: 48px 72px; }
 .login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
 .login-page .signin-center { display: flex; justify-content: center; }
-.login-page .signin-form { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 400px; }
+.login-page .signin-form { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 440px; }
 
-.login-page .signin-heading { display: flex; flex-direction: column; gap: 12px; }
-.login-page .mark {
-  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 8px;
-  border-radius: 12px; background: var(--lp-accent); color: #ffffff;
+/* The language picker's trigger is styled for light (LanguageSwitcher); in dark it turns translucent. */
+:root[data-theme='dark'] .login-page .login-lang button {
+  background: #ffffff0a; border-color: #ffffff1a; color: var(--lp-ink);
 }
+:root[data-theme='dark'] .login-page .login-lang button svg { color: var(--lp-slate); }
+
+.login-page .signin-heading { display: flex; flex-direction: column; gap: 14px; }
+.login-page .mark {
+  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 4px;
+  border-radius: 12px; background: var(--lp-accent); color: #ffffff; box-shadow: 0 8px 20px #6e3a7a40;
+}
+:root[data-theme='dark'] .login-page .mark { box-shadow: 0 0 24px #9c6ca466, inset 0 0 0 1px #b994bf4d; }
 .login-page .mark svg { width: 20px; height: 20px; }
 .login-page .signin-heading h2 {
-  font-family: var(--font-display); font-size: 36px; font-weight: 600; letter-spacing: -0.8px; line-height: 1.15; color: var(--lp-ink);
+  font-family: var(--font-display); font-size: 40px; font-weight: 600; letter-spacing: -1.2px; line-height: 1.15; color: var(--lp-ink);
 }
-.login-page .subtitle { font-size: 15px; line-height: 1.55; color: var(--lp-slate); }
+.login-page .subtitle { font-size: 15px; line-height: 1.5; color: var(--lp-slate); }
 
 .login-page .signin-actions { display: flex; flex-direction: column; gap: 14px; }
 .login-page .signin-btn {
-  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px;
-  border: none; border-radius: 10px; background: var(--lp-accent); color: #ffffff;
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 56px;
+  border: none; border-radius: 10px; background: linear-gradient(to right, var(--lp-accent), var(--lp-accent-2)); color: #ffffff;
   font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 6px 18px #6e3a7a33;
+  box-shadow: 0 10px 24px #6e3a7a47; transition: filter .2s, box-shadow .2s;
 }
-.login-page .signin-btn:hover { background: var(--lp-accent-dark); }
+.login-page .signin-btn:hover { filter: brightness(.92); box-shadow: 0 12px 28px #6e3a7a59; }
 .login-page .signin-btn:focus-visible { outline: 3px solid #6e3a7a55; outline-offset: 2px; }
-.login-page .signin-btn svg { width: 16px; height: 16px; color: #ffffffb3; }
-.login-page .signin-btn .signin-mail { width: 17px; height: 17px; color: #ffffff; }
+:root[data-theme='dark'] .login-page .signin-btn { box-shadow: 0 10px 28px #9c6ca44d, inset 0 0 0 1px #b994bf40; }
+:root[data-theme='dark'] .login-page .signin-btn:hover { filter: brightness(1.1); }
+:root[data-theme='dark'] .login-page .signin-btn:focus-visible { outline-color: #b994bf88; }
+.login-page .signin-btn svg { width: 17px; height: 17px; color: #ffffff; }
 .login-page .signin-note { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--lp-muted); }
 .login-page .signin-note svg { width: 12px; height: 12px; }
+
+/* What happens after the button: two short notes under a divider. */
+.login-page .signin-next {
+  display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 20px 0 0; list-style: none;
+  border-top: 1px solid var(--lp-line);
+}
+.login-page .signin-next li { display: flex; align-items: center; gap: 12px; }
+.login-page .next-icon {
+  display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 8px; background: var(--lp-step-bg); color: var(--lp-step-ink);
+}
+.login-page .next-icon svg { width: 15px; height: 15px; }
+.login-page .next-text { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--lp-muted); }
+.login-page .next-text strong { font-size: 13.5px; font-weight: 500; color: var(--lp-ink); }
 
 .login-page .signin-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--lp-muted); }
 

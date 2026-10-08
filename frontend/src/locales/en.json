@@ -193,74 +193,52 @@
     "employee": "Employee"
   },
   "login": {
-    "live": "Live availability · {{date}}",
-    "eyebrow": "Rooms · kits · one shared calendar",
-    "headline": "Every room and every kit,\nbooked once and only once.",
-    "pitch": "Reserve shared spaces across the company. If the space is free and your window fits the rules, it is yours straight away. No approval, no waiting.",
-    "board": {
-      "today": "Today",
-      "count": "{{booked}} of {{total}} spaces",
-      "legend": {
-        "booked": "Booked",
-        "yours": "Yours",
-        "free": "Free"
+    "live": "Live overview · {{date}}",
+    "eyebrow": "People · assets · projects · data — one connected system",
+    "headline": "Everything your team manages,\nin one place, always in sync.",
+    "scene": {
+      "hub": "Your organization · at the center",
+      "stats": "{{total}} items · {{ready}} ready · {{time}}",
+      "kinds": {
+        "people": "People",
+        "assets": "Assets",
+        "projects": "Projects",
+        "data": "Data"
       },
-      "now": "Now {{time}}",
-      "rooms": {
-        "atlas": {
-          "name": "Atlas",
-          "meta": "Boardroom · 12"
-        },
-        "harbor": {
-          "name": "Harbor",
-          "meta": "Meeting room · 6"
-        },
-        "studioKit": {
-          "name": "Studio kit A",
-          "meta": "Camera + lights"
-        },
-        "podcastKit": {
-          "name": "Podcast kit 02",
-          "meta": "2 mics · recorder"
-        },
-        "focusPod": {
-          "name": "Focus pod 3",
-          "meta": "1 seat"
-        }
+      "status": {
+        "ready": "Ready",
+        "inProgress": "In progress"
       },
-      "bookings": {
-        "leadership": "Leadership",
-        "interview": "Interview",
-        "designCrit": "Design crit",
-        "sprintPlanning": "Sprint planning",
-        "sprintReview": "Sprint review",
-        "productShoot": "Product shoot",
-        "bookNow": "+ Book now",
-        "workshop": "Workshop",
-        "recording": "Recording",
-        "editSession": "Edit session",
-        "focus": "Focus",
-        "deepWork": "Deep work"
-      }
+      "hint": "Move to tilt the system"
     },
     "principles": {
-      "instant": {
-        "title": "Instant",
-        "desc": "Free slot plus valid window means it is booked."
+      "realtime": {
+        "title": "Real-time",
+        "desc": "Every change reaches everyone the moment it happens."
       },
-      "exclusive": {
-        "title": "Exclusive",
-        "desc": "One booking per slot. Never double booked."
+      "conflictFree": {
+        "title": "Conflict-free",
+        "desc": "One source of truth. No duplicates, no clashes."
       },
       "roleAware": {
         "title": "Role-aware",
-        "desc": "Rules follow your account role automatically."
+        "desc": "Access follows your account role automatically."
       }
     },
     "welcome": "Welcome",
-    "subtitle": "Sign in with your email and password. What you can book comes from your account role.",
+    "subtitle": "One account for everything your team manages. What you can see and do comes from your account role.",
     "button": "Sign in with email",
     "companyOnly": "Company accounts only",
+    "next": {
+      "form": {
+        "title": "Continue to the secure form",
+        "desc": "Your email and password on the next screen."
+      },
+      "role": {
+        "title": "Your role sets the rules",
+        "desc": "What you can access follows your account."
+      }
+    },
     "footer": {
       "copyright": "© {{year}} Dixels",
       "noAccount": "No account? Ask your workspace admin."

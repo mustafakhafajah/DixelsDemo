@@ -1,45 +1,28 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { useLocation } from 'react-router-dom'
-import {
-  ArrowRightIcon, CalendarCheck2Icon, LockIcon, MailIcon, ShieldCheckIcon,
-  UserCheckIcon, ZapIcon,
-} from 'lucide-react'
+import { ArrowRightIcon, LockIcon, MailCheckIcon, MailIcon, MousePointer2Icon, OrbitIcon, ShieldCheckIcon } from 'lucide-react'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { intlLocale } from '../i18n/languages'
+import { UniverseCanvas } from './UniverseCanvas'
 import './LoginPage.css'
 
-/* The sample "Today" board on the brand panel (pen.dev frame "Sign in — Booking board"). Its bookings are made up;
- * only the date and the NOW line are real. Times run 09:00–18:00 in half-hour steps: 18 columns per row. */
-const FIRST_HOUR = 9
-const HOURS = 9
-type Kind = 'booked' | 'yours' | 'free'
-type RoomKey = 'atlas' | 'harbor' | 'studioKit' | 'podcastKit' | 'focusPod'
-type BookingKey = 'leadership' | 'interview' | 'designCrit' | 'sprintPlanning' | 'sprintReview' | 'productShoot' | 'bookNow' | 'workshop'
-  | 'recording' | 'editSession' | 'focus' | 'deepWork'
-interface Block { start: number; span: number; kind: Kind; label?: BookingKey }
-interface Row { key: RoomKey; blocks: Block[] }
-
-const ROWS: Row[] = [
-  { key: 'atlas', blocks: [{ start: 0, span: 3, kind: 'booked', label: 'leadership' }, { start: 5, span: 2, kind: 'booked', label: 'interview' },
-    { start: 10, span: 4, kind: 'booked', label: 'designCrit' }] },
-  { key: 'harbor', blocks: [{ start: 2, span: 4, kind: 'booked', label: 'sprintPlanning' }, { start: 11, span: 3, kind: 'yours', label: 'sprintReview' }] },
-  { key: 'studioKit', blocks: [{ start: 0, span: 6, kind: 'booked', label: 'productShoot' }, { start: 9, span: 3, kind: 'free', label: 'bookNow' },
-    { start: 14, span: 4, kind: 'booked', label: 'workshop' }] },
-  { key: 'podcastKit', blocks: [{ start: 4, span: 4, kind: 'booked', label: 'recording' }, { start: 12, span: 3, kind: 'booked', label: 'editSession' }] },
-  { key: 'focusPod', blocks: [{ start: 1, span: 2, kind: 'booked', label: 'focus' }, { start: 8, span: 1, kind: 'booked' },
-    { start: 13, span: 4, kind: 'booked', label: 'deepWork' }] },
-]
-
-const PRINCIPLES = [
-  { key: 'instant', Icon: ZapIcon },
-  { key: 'exclusive', Icon: ShieldCheckIcon },
-  { key: 'roleAware', Icon: UserCheckIcon },
+/* The pen.dev frame "Sign in — Resource Universe": a live, pointer-driven scene of everything the organization
+ * manages on the brand panel, and a single way in on the sign-in panel. The scene's numbers are illustrative;
+ * only the date and time are real. */
+const SCENE = { total: 38, ready: 23 }
+/* One shape per orbit, matching the shader (dot, diamond, square, ring from the inside out). */
+const KINDS = [
+  { key: 'people', shape: 'dot' },
+  { key: 'assets', shape: 'diamond' },
+  { key: 'projects', shape: 'square' },
+  { key: 'data', shape: 'ring' },
 ] as const
+const PRINCIPLES = ['realtime', 'conflictFree', 'roleAware'] as const
 
-/* The current time, refreshed every minute, for the live chip and the NOW line. */
+/* The current time, refreshed every minute, for the live chip and the scene's stats. */
 function useNow() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -49,54 +32,53 @@ function useNow() {
   return now
 }
 
-function BookingBoard() {
+/* The labels over the live scene: what sits at the centre, a few numbers, a key to the shapes and colours, and the
+ * hint to move the pointer. The canvas behind is centred on this element. */
+function SceneOverlay({ sceneRef }: { sceneRef: RefObject<HTMLDivElement | null> }) {
   const { t } = useTranslation()
   const now = useNow()
-  const minutes = (now.getHours() - FIRST_HOUR) * 60 + now.getMinutes()
-  /* Where the NOW line sits along the day (0..1); hidden outside the board's hours. */
-  const progress = minutes >= 0 && minutes <= HOURS * 60 ? minutes / (HOURS * 60) : null
   const time = new Intl.DateTimeFormat(intlLocale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)
-  const hours = Array.from({ length: HOURS }, (_, i) => `${String(FIRST_HOUR + i).padStart(2, '0')}:00`)
   return (
-    <div className="board" aria-hidden="true">
-      <div className="board-head">
-        <div className="board-title">
-          <span className="board-today">{t('login.board.today')}</span>
-          <span className="board-count">{t('login.board.count', { booked: 5, total: 14 })}</span>
-        </div>
-        <div className="board-legend">
-          {(['booked', 'yours', 'free'] as const).map((kind) => (
-            <span key={kind} className="legend-item"><span className={`swatch ${kind}`} />{t(`login.board.legend.${kind}`)}</span>
+    <div ref={sceneRef} className="scene" aria-hidden="true">
+      <div className="scene-row">
+        <span className="hud-chip mono"><OrbitIcon className="hud-icon lilac" />{t('login.scene.hub')}</span>
+        <span className="hud-chip mono ready"><span className="live-dot" />{t('login.scene.stats', { ...SCENE, time })}</span>
+      </div>
+      <div className="scene-row">
+        <span className="hud-chip legend">
+          {KINDS.map(({ key, shape }) => (
+            <span key={key} className="legend-item"><span className={`kind-shape ${shape}`} />{t(`login.scene.kinds.${key}`)}</span>
           ))}
-        </div>
+          <span className="legend-divider" />
+          <span className="legend-item"><span className="status-dot ready" />{t('login.scene.status.ready')}</span>
+          <span className="legend-item"><span className="status-dot busy" />{t('login.scene.status.inProgress')}</span>
+        </span>
+        <span className="hud-chip"><MousePointer2Icon className="hud-icon green flip-rtl" />{t('login.scene.hint')}</span>
       </div>
-      <div className="board-grid" style={progress === null ? undefined : { '--now': progress } as CSSProperties}>
-        <div className="board-hours">
-          <span />
-          <div className="track">{hours.map((h) => <span key={h} className="hour">{h}</span>)}</div>
+    </div>
+  )
+}
+
+/* The three principles take turns being highlighted: the active one's bar fills, and when it is full the next one
+ * takes over. Hovering pauses the bar; clicking picks one. With reduced motion the bar never runs, so the first
+ * stays highlighted until another is clicked. */
+function Principles() {
+  const { t } = useTranslation()
+  const [active, setActive] = useState(0)
+  return (
+    <div className="principles">
+      {PRINCIPLES.map((key, i) => (
+        <div key={key} className={`principle${i === active ? ' active' : ''}`} onClick={() => setActive(i)}>
+          <span className="principle-bar">
+            <span className="principle-fill" onAnimationEnd={() => setActive((i + 1) % PRINCIPLES.length)} />
+          </span>
+          <span className="principle-head">
+            <span className="principle-num">{String(i + 1).padStart(2, '0')}</span>
+            {t(`login.principles.${key}.title`)}
+          </span>
+          <p>{t(`login.principles.${key}.desc`)}</p>
         </div>
-        {ROWS.map((row) => (
-          <div key={row.key} className="board-row">
-            <div className="board-space">
-              <span className="space-name">{t(`login.board.rooms.${row.key}.name`)}</span>
-              <span className="space-meta">{t(`login.board.rooms.${row.key}.meta`)}</span>
-            </div>
-            <div className="track">
-              {row.blocks.map((b) => (
-                <span key={b.start} className={`block ${b.kind}`} style={{ gridColumn: `${b.start + 1} / span ${b.span}` }}>
-                  {b.label && <span className="block-label">{t(`login.board.bookings.${b.label}`)}</span>}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-        {progress !== null && (
-          <>
-            <span className="now-line" />
-            <span className="now-pill">{t('login.board.now', { time })}</span>
-          </>
-        )}
-      </div>
+      ))}
     </div>
   )
 }
@@ -106,7 +88,7 @@ function BookingBoard() {
  * MIN_FIT so text stays readable; a window shorter than that scrolls the panel instead. */
 const MIN_FIT = 0.6
 
-function FitPanel({ className, children }: { className: string; children: ReactNode }) {
+function FitPanel({ className, backdrop, children }: { className: string; backdrop?: ReactNode; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const { i18n } = useTranslation()
   useLayoutEffect(() => {
@@ -126,7 +108,7 @@ function FitPanel({ className, children }: { className: string; children: ReactN
     window.addEventListener('resize', fit)
     return () => window.removeEventListener('resize', fit)
   }, [i18n.language])
-  return <section className={className}><div ref={ref} className="panel-fit">{children}</div></section>
+  return <section className={className}>{backdrop}<div ref={ref} className="panel-fit">{children}</div></section>
 }
 
 /* One way in: the real ABP sign-in page (email + password), which returns a token whose role
@@ -138,30 +120,21 @@ function LoginPage() {
   const { t } = useTranslation()
   const now = useNow()
   const today = new Intl.DateTimeFormat(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(now)
+  const sceneRef = useRef<HTMLDivElement>(null)
 
   return (
     <div className="login-page">
-      <FitPanel className="brand-panel">
+      <FitPanel className="brand-panel" backdrop={<UniverseCanvas anchor={sceneRef} />}>
         <div className="brand-top">
           <img className="brand-logo" src={dixelsLogo} alt="Dixels" />
           <span className="live-chip"><span className="live-dot" />{t('login.live', { date: today })}</span>
         </div>
-        <div className="brand-main">
-          <div className="hero">
-            <p className="eyebrow">{t('login.eyebrow')}</p>
-            <h1>{t('login.headline')}</h1>
-            <p className="lede">{t('login.pitch')}</p>
-          </div>
-          <BookingBoard />
+        <div className="hero">
+          <p className="eyebrow">{t('login.eyebrow')}</p>
+          <h1>{t('login.headline')}</h1>
         </div>
-        <div className="principles">
-          {PRINCIPLES.map(({ key, Icon }) => (
-            <div key={key} className="principle">
-              <div className="principle-head"><Icon aria-hidden="true" />{t(`login.principles.${key}.title`)}</div>
-              <p>{t(`login.principles.${key}.desc`)}</p>
-            </div>
-          ))}
-        </div>
+        <SceneOverlay sceneRef={sceneRef} />
+        <Principles />
       </FitPanel>
 
       <FitPanel className="signin-panel">
@@ -171,7 +144,7 @@ function LoginPage() {
         <div className="signin-center">
           <div className="signin-form">
             <div className="signin-heading">
-              <span className="mark" aria-hidden="true"><CalendarCheck2Icon /></span>
+              <span className="mark" aria-hidden="true"><OrbitIcon /></span>
               <h2>{t('login.welcome')}</h2>
               <p className="subtitle">{t('login.subtitle')}</p>
             </div>
@@ -183,6 +156,16 @@ function LoginPage() {
               </button>
               <p className="signin-note"><LockIcon aria-hidden="true" />{t('login.companyOnly')}</p>
             </div>
+            <ul className="signin-next">
+              <li>
+                <span className="next-icon" aria-hidden="true"><MailCheckIcon /></span>
+                <span className="next-text"><strong>{t('login.next.form.title')}</strong>{t('login.next.form.desc')}</span>
+              </li>
+              <li>
+                <span className="next-icon" aria-hidden="true"><ShieldCheckIcon /></span>
+                <span className="next-text"><strong>{t('login.next.role.title')}</strong>{t('login.next.role.desc')}</span>
+              </li>
+            </ul>
           </div>
         </div>
         <footer className="signin-footer">

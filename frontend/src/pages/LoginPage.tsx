@@ -2,9 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { useLocation } from 'react-router-dom'
-import { ArrowRightIcon, LockIcon, MailCheckIcon, MailIcon, MousePointer2Icon, OrbitIcon, ShieldCheckIcon } from 'lucide-react'
+import { ArrowRightIcon, LockIcon, MailIcon, MousePointer2Icon, OrbitIcon } from 'lucide-react'
 import dixelsLogo from '../assets/dixels-logo.png'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { ThemeToggle } from '../components/ThemeToggle'
+import { API_URL } from '../config'
 import { intlLocale } from '../i18n/languages'
 import { UniverseCanvas } from './UniverseCanvas'
 import './LoginPage.css'
@@ -22,7 +24,7 @@ const KINDS = [
 ] as const
 const PRINCIPLES = ['realtime', 'conflictFree', 'roleAware'] as const
 
-/* The current time, refreshed every minute, for the live chip and the scene's stats. */
+/* The current time, refreshed every minute, for the scene's stats and the footer's year. */
 function useNow() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -119,7 +121,6 @@ function LoginPage() {
   const returnTo = (useLocation().state as { returnTo?: string } | null)?.returnTo
   const { t } = useTranslation()
   const now = useNow()
-  const today = new Intl.DateTimeFormat(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short' }).format(now)
   const sceneRef = useRef<HTMLDivElement>(null)
 
   return (
@@ -127,7 +128,6 @@ function LoginPage() {
       <FitPanel className="brand-panel" backdrop={<UniverseCanvas anchor={sceneRef} />}>
         <div className="brand-top">
           <img className="brand-logo" src={dixelsLogo} alt="Dixels" />
-          <span className="live-chip"><span className="live-dot" />{t('login.live', { date: today })}</span>
         </div>
         <div className="hero">
           <p className="eyebrow">{t('login.eyebrow')}</p>
@@ -140,11 +140,11 @@ function LoginPage() {
       <FitPanel className="signin-panel">
         <div className="signin-top">
           <LanguageSwitcher className="login-lang" />
+          <ThemeToggle className="login-theme" />
         </div>
         <div className="signin-center">
           <div className="signin-form">
             <div className="signin-heading">
-              <span className="mark" aria-hidden="true"><OrbitIcon /></span>
               <h2>{t('login.welcome')}</h2>
               <p className="subtitle">{t('login.subtitle')}</p>
             </div>
@@ -156,16 +156,11 @@ function LoginPage() {
               </button>
               <p className="signin-note"><LockIcon aria-hidden="true" />{t('login.companyOnly')}</p>
             </div>
-            <ul className="signin-next">
-              <li>
-                <span className="next-icon" aria-hidden="true"><MailCheckIcon /></span>
-                <span className="next-text"><strong>{t('login.next.form.title')}</strong>{t('login.next.form.desc')}</span>
-              </li>
-              <li>
-                <span className="next-icon" aria-hidden="true"><ShieldCheckIcon /></span>
-                <span className="next-text"><strong>{t('login.next.role.title')}</strong>{t('login.next.role.desc')}</span>
-              </li>
-            </ul>
+            {/* The sign-in server's own reset page: it emails a link to choose a new password. */}
+            <p className="signin-help">
+              {t('login.forgot.question')}{' '}
+              <a href={`${API_URL}/Account/ForgotPassword`}>{t('login.forgot.link')}</a>
+            </p>
           </div>
         </div>
         <footer className="signin-footer">

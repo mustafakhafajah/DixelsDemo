@@ -10,8 +10,7 @@
   --lp-accent: #6e3a7a;
   --lp-accent-2: #8a4a97;
   --lp-accent-dark: #5c2f66;
-  --lp-step-bg: #6e3a7a14;
-  --lp-step-ink: #6e3a7a;
+  --lp-link: #6e3a7a;
 
   --bp-bg: #0d0d10;
   --bp-ink: #ececef;
@@ -52,8 +51,7 @@
   --lp-slate: #98a2ac;
   --lp-muted: #6b7280;
   --lp-line: #ffffff14;
-  --lp-step-bg: #b994bf1a;
-  --lp-step-ink: #b994bf;
+  --lp-link: #b994bf;
   color-scheme: dark;
 }
 
@@ -96,11 +94,6 @@ html:root:not([data-theme='dark']):has(.login-page) {
 
 .login-page .brand-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .login-page .brand-logo { height: 44px; width: auto; display: block; }
-.login-page .live-chip {
-  display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px;
-  background: #ffffff0a; border: 1px solid var(--bp-chip-line); border-radius: 999px;
-  font-size: 12px; color: #c9ccd2; white-space: nowrap;
-}
 .login-page .live-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--bp-live); flex-shrink: 0; box-shadow: 0 0 8px var(--bp-live);
 }
@@ -180,7 +173,7 @@ html:root:not([data-theme='dark']):has(.login-page) {
   background: radial-gradient(closest-side, #6e3a7a33, #6e3a7a00);
 }
 .login-page .signin-panel .panel-fit { gap: 32px; padding: 48px 72px; }
-.login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.login-page .signin-top { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .login-page .signin-center { display: flex; justify-content: center; }
 .login-page .signin-form { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 440px; }
 
@@ -190,13 +183,18 @@ html:root:not([data-theme='dark']):has(.login-page) {
 }
 :root[data-theme='dark'] .login-page .login-lang button svg { color: var(--lp-slate); }
 
-.login-page .signin-heading { display: flex; flex-direction: column; gap: 14px; }
-.login-page .mark {
-  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 4px;
-  border-radius: 12px; background: var(--lp-accent); color: #ffffff; box-shadow: 0 8px 20px #6e3a7a40;
+/* The theme button beside it: a square box as tall as the language picker, with the same border and colours. */
+.login-page .login-theme {
+  display: inline-flex; align-items: center; justify-content: center; align-self: stretch; aspect-ratio: 1;
+  padding: 0; border: 1px solid #d9dbd6; border-radius: 8px; background: #ffffff; color: #5c6670; cursor: pointer;
 }
-:root[data-theme='dark'] .login-page .mark { box-shadow: 0 0 24px #9c6ca466, inset 0 0 0 1px #b994bf4d; }
-.login-page .mark svg { width: 20px; height: 20px; }
+.login-page .login-theme:hover { color: var(--lp-ink); }
+.login-page .login-theme:focus-visible { outline: 3px solid #6e3a7a40; outline-offset: 1px; }
+.login-page .login-theme svg { width: 16px; height: 16px; }
+:root[data-theme='dark'] .login-page .login-theme { background: #ffffff0a; border-color: #ffffff1a; color: var(--lp-slate); }
+:root[data-theme='dark'] .login-page .login-theme:hover { color: var(--lp-ink); }
+
+.login-page .signin-heading { display: flex; flex-direction: column; gap: 14px; }
 .login-page .signin-heading h2 {
   font-family: var(--font-display); font-size: 40px; font-weight: 600; letter-spacing: -1.2px; line-height: 1.15; color: var(--lp-ink);
 }
@@ -218,19 +216,13 @@ html:root:not([data-theme='dark']):has(.login-page) {
 .login-page .signin-note { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--lp-muted); }
 .login-page .signin-note svg { width: 12px; height: 12px; }
 
-/* What happens after the button: two short notes under a divider. */
-.login-page .signin-next {
-  display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 20px 0 0; list-style: none;
-  border-top: 1px solid var(--lp-line);
+/* The usual "Forgot your password?" line under a divider, linking to the sign-in server's reset page. */
+.login-page .signin-help {
+  padding-top: 20px; border-top: 1px solid var(--lp-line); text-align: center; font-size: 13px; color: var(--lp-slate);
 }
-.login-page .signin-next li { display: flex; align-items: center; gap: 12px; }
-.login-page .next-icon {
-  display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0;
-  border-radius: 8px; background: var(--lp-step-bg); color: var(--lp-step-ink);
-}
-.login-page .next-icon svg { width: 15px; height: 15px; }
-.login-page .next-text { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--lp-muted); }
-.login-page .next-text strong { font-size: 13.5px; font-weight: 500; color: var(--lp-ink); }
+.login-page .signin-help a { color: var(--lp-link); font-weight: 600; text-decoration: none; text-underline-offset: 3px; }
+.login-page .signin-help a:hover { text-decoration: underline; }
+.login-page .signin-help a:focus-visible { outline: 2px solid var(--lp-link); outline-offset: 2px; border-radius: 2px; }
 
 .login-page .signin-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--lp-muted); }
 

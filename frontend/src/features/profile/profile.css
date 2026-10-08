@@ -1,80 +1,87 @@
-/* My Profile page: a member's passport on one side, the details in groups on the other. */
-.app-shell .my-profile { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; }
-.app-shell .my-profile .profile-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 36px; align-items: start; }
-
-/* ── PASSPORT, with Activity beneath; the pair stays in view while the details scroll ── */
-.app-shell .my-profile .profile-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; min-width: 0; }
-.app-shell .my-profile .passport { display: flex; flex-direction: column; overflow: hidden; border-radius: 18px; }
-.app-shell .my-profile .passport-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 22px 0; }
-.app-shell .my-profile .passport-label { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--slate-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.app-shell .my-profile .passport-id { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px 24px; }
-.app-shell .my-profile .passport-photo { display: flex; align-items: center; gap: 14px; }
-.app-shell .my-profile .passport-photo .avatar { width: 64px; height: 64px; font-size: 22px; }
-.app-shell .my-profile .profile-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.app-shell .my-profile .profile-photo-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
-.app-shell .my-profile .profile-photo-actions svg { width: 14px; height: 14px; }
-.app-shell .my-profile .profile-name { font-size: 40px; font-weight: 600; line-height: 1.15; color: var(--ink); margin: 0; overflow-wrap: anywhere; }
-.app-shell .my-profile .profile-sub { font-size: 12.5px; color: var(--slate); margin: 6px 0 0; overflow-wrap: anywhere; }
-.app-shell .my-profile .passport-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.app-shell .my-profile .passport-tag { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--slate); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; }
-.app-shell .my-profile .passport-tag.strong { background: var(--neutral-soft); border-color: transparent; color: var(--ink-2); }
-/* Arabic letters join up, so spacing them out would break every word apart. */
-.app-shell .my-profile :is(.passport-label, .passport-tag, .profile-intro-title):lang(ar) { letter-spacing: normal; }
-
-/* ── DETAILS ── */
-.app-shell .my-profile .profile-details { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
-.app-shell .my-profile .profile-intro-title { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
-.app-shell .my-profile .profile-intro-sub { font-size: 14.5px; color: var(--slate); margin-top: 8px; }
-.app-shell .my-profile .profile-section-title { display: flex; align-items: center; gap: 12px; font-size: 14.5px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
-.app-shell .my-profile .profile-section-title.plain { border-bottom: none; padding-bottom: 14px; }
-/* Each row is a label and a value with a rule beneath, the pencil at the far end. */
-/* No column gap, so the rule runs unbroken under label and value; the label's own padding spaces them. */
-.app-shell .my-profile .kv { grid-template-columns: 196px minmax(0, 1fr); gap: 0; font-size: 14px; }
-.app-shell .my-profile .kv dt, .app-shell .my-profile .kv dd { padding: 13px 0; border-bottom: 1px solid var(--line); }
-.app-shell .my-profile .kv dt { padding-inline-end: 16px; }
-.app-shell .my-profile .kv dd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; overflow-wrap: anywhere; }
+/* My Profile page: who you are in a header, the details you change on the left, what the administrator holds on the right. */
+.app-shell .my-profile { display: flex; flex-direction: column; gap: 20px; max-width: 1180px; }
 .app-shell .my-profile .missing { color: var(--slate-2); font-weight: 400; font-style: italic; }
 
-/* Activity under the passport: a rail of dots, the latest filled. */
-.app-shell .my-profile .profile-activity { padding: 18px 22px 22px; border-radius: 18px; }
-.app-shell .my-profile .timeline { list-style: none; margin: 0; padding: 0; }
-.app-shell .my-profile .timeline li { position: relative; display: flex; flex-direction: column; gap: 3px; padding-inline-start: 26px; padding-bottom: 18px; }
-.app-shell .my-profile .timeline li:last-child { padding-bottom: 0; }
-.app-shell .my-profile .timeline li::before { content: ''; position: absolute; inset-inline-start: 0; top: 3px; width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid var(--slate-2); background: var(--paper); }
-.app-shell .my-profile .timeline li::after { content: ''; position: absolute; inset-inline-start: 5px; top: 17px; bottom: 0; width: 1px; background: var(--line); }
-.app-shell .my-profile .timeline li:last-child::after { display: none; }
-.app-shell .my-profile .timeline li.latest::before { background: var(--accent); border-color: var(--accent); }
-.app-shell .my-profile .timeline-title { font-size: 14px; font-weight: 500; color: var(--ink); }
-.app-shell .my-profile .timeline-date { font-size: 11.5px; color: var(--slate); }
+/* ── HEADER: picture, name and roles, how to reach you; the photo buttons at the far end ── */
+.app-shell .my-profile .profile-header { display: flex; align-items: center; gap: 24px; padding: 24px 28px; border-radius: 16px; }
+.app-shell .my-profile .profile-avatar { width: 88px; height: 88px; font-size: 30px; font-weight: 600; }
+.app-shell .my-profile .profile-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.app-shell .my-profile .profile-name-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.app-shell .my-profile .profile-name { font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); margin: 0; overflow-wrap: anywhere; }
+.app-shell .my-profile .profile-role { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent-dark); white-space: nowrap; }
+.app-shell .my-profile .profile-meta { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13.5px; color: var(--slate); }
+.app-shell .my-profile .profile-meta li { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
+.app-shell .my-profile .profile-meta svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--slate-2); }
+.app-shell .my-profile .profile-photo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.app-shell .my-profile .profile-photo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell .my-profile .profile-photo-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.app-shell .my-profile .profile-photo-actions svg { width: 14px; height: 14px; }
 
-/* A quiet note: why a value can't be changed, or what changing it means. */
-.app-shell .profile-hint { font-size: 11.5px; font-weight: 400; color: var(--slate); margin: 0; }
-.app-shell .my-profile .kv dd .profile-hint { flex-basis: 100%; }
+/* ── TWO COLUMNS: the form and activity, then a narrower column of what only an administrator changes ── */
+.app-shell .my-profile .profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+.app-shell .my-profile :is(.profile-main, .profile-aside) { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 
-/* Change in place: a pencil at the end of the row; editing, an input with Save and Cancel where the value was. */
-.app-shell .my-profile .inline-edit-btn { display: inline-flex; padding: 4px; margin-inline-start: auto; color: var(--slate-2); }
-.app-shell .my-profile .inline-edit-btn:hover { color: var(--ink); }
-.app-shell .my-profile .inline-edit-btn svg { width: 14px; height: 14px; }
-.app-shell .my-profile .kv dd.inline-editing { display: block; padding: 8px 0; }
-.app-shell .my-profile .inline-edit-row { display: flex; align-items: center; gap: 6px; }
-.app-shell .my-profile .inline-edit-row .inp { flex: 1; min-width: 0; padding: 7px 10px; font-size: 13px; }
-.app-shell .my-profile .inline-edit-action { display: inline-flex; align-items: center; justify-content: center; padding: 7px; }
-.app-shell .my-profile .inline-edit-action svg { width: 15px; height: 15px; }
-.app-shell .my-profile .inline-editing .profile-hint { margin-top: 5px; }
-.app-shell .my-profile .kv dt label { font: inherit; color: inherit; }
-/* The label lines up with the input's text, not the top of its box. */
-.app-shell .my-profile .kv dt:has(+ dd.inline-editing) { padding-top: 16px; }
+/* A panel: a head (icon, title, a line under it, something at the far end), then its content. */
+.app-shell .my-profile .profile-card { border-radius: 16px; overflow: hidden; }
+.app-shell .my-profile .profile-card-head { display: flex; align-items: center; gap: 12px; padding: 20px 24px; }
+.app-shell .my-profile .profile-card-head.divided { border-bottom: 1px solid var(--line); }
+.app-shell .my-profile .profile-card-copy { flex: 1; min-width: 0; }
+.app-shell .my-profile .profile-card-title { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0; }
+.app-shell .my-profile .profile-card-sub { font-size: 13px; color: var(--slate); margin: 4px 0 0; }
+.app-shell .my-profile .profile-card-body { padding: 0 24px 24px; }
+.app-shell .my-profile .profile-icon-box { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-3); color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.app-shell .my-profile .profile-icon-box.round { border-radius: 999px; }
+.app-shell .my-profile .profile-icon-box svg { width: 16px; height: 16px; }
 
-/* Narrower screens: the passport sits above the details. */
+/* How complete the profile is: a label and percentage over a thin bar. */
+.app-shell .my-profile .profile-completion { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+.app-shell .my-profile .profile-completion-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--slate); }
+.app-shell .my-profile .profile-completion-row strong { color: var(--ink); font-weight: 600; }
+.app-shell .my-profile .profile-track { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.app-shell .my-profile .profile-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
+/* The form: two fields a row, Cancel and Save under a rule. */
+.app-shell .my-profile .profile-form-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; padding: 24px; }
+.app-shell .my-profile .profile-form-body .wide { grid-column: 1 / -1; }
+.app-shell .my-profile .profile-form-body .lbl { color: var(--ink-2); }
+.app-shell .my-profile .profile-form-body .profile-hint { margin-top: 6px; }
+.app-shell .my-profile .profile-form-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid var(--line); }
+
+/* Read-only rows: icon and label, the value at the far end, a rule between rows. */
+.app-shell .my-profile .profile-rows { margin: 0; padding: 0 24px 8px; }
+.app-shell .my-profile .profile-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.app-shell .my-profile .profile-row dt { display: inline-flex; align-items: center; gap: 10px; color: var(--slate); flex-shrink: 0; }
+.app-shell .my-profile .profile-row dt svg { width: 15px; height: 15px; color: var(--slate-2); }
+.app-shell .my-profile .profile-row dd { margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; font-weight: 500; color: var(--ink); text-align: end; overflow-wrap: anywhere; }
+.app-shell .my-profile .profile-wide-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; }
+.app-shell .my-profile .profile-wide-btn svg { width: 15px; height: 15px; }
+
+/* Activity: an icon, what happened and when, how long ago at the far end. */
+.app-shell .my-profile .profile-activity { list-style: none; margin: 0; padding: 4px 24px 8px; }
+.app-shell .my-profile .profile-activity li { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+.app-shell .my-profile .profile-activity li + li { border-top: 1px solid var(--line); }
+.app-shell .my-profile .profile-activity-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.app-shell .my-profile .profile-activity-title { font-size: 14px; font-weight: 500; color: var(--ink); }
+.app-shell .my-profile .profile-activity-date { font-size: 12.5px; color: var(--slate); }
+.app-shell .my-profile .profile-activity-when { font-size: 12.5px; color: var(--slate-2); white-space: nowrap; }
+
+/* A quiet note: what a field is for, or why something can't be changed. */
+.app-shell .profile-hint { font-size: 12px; font-weight: 400; color: var(--slate); margin: 0; }
+
+/* Narrower screens: one column, the administrator's panels under the form. */
 @media (max-width: 1100px) {
-  .app-shell .my-profile .profile-layout { grid-template-columns: minmax(0, 1fr); }
-  .app-shell .my-profile .profile-side { position: static; max-width: 460px; }
+  .app-shell .my-profile .profile-grid { grid-template-columns: minmax(0, 1fr); }
 }
-/* Phones: each label sits above its value. */
+/* Tablets: the photo buttons go under the name. */
+@media (max-width: 760px) {
+  .app-shell .my-profile .profile-header { flex-wrap: wrap; padding: 20px; }
+  .app-shell .my-profile .profile-photo { align-items: flex-start; width: 100%; }
+  .app-shell .my-profile .profile-card-head:has(.profile-completion) { flex-wrap: wrap; }
+  .app-shell .my-profile .profile-completion { width: 100%; }
+}
+/* Phones: one field a row, a smaller picture. */
 @media (max-width: 640px) {
-  .app-shell .my-profile .kv { grid-template-columns: 1fr; }
-  .app-shell .my-profile .kv dt { padding-bottom: 0; border-bottom: none; }
-  .app-shell .my-profile .kv dd { padding-top: 4px; }
-  .app-shell .my-profile .profile-name { font-size: 32px; }
+  .app-shell .my-profile .profile-form-body { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+  .app-shell .my-profile .profile-avatar { width: 64px; height: 64px; font-size: 22px; }
+  .app-shell .my-profile .profile-name { font-size: 22px; }
 }

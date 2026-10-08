@@ -55,7 +55,8 @@
     "tryAgain": "أعد المحاولة",
     "type": "النوع",
     "until": "حتى",
-    "you": "أنت"
+    "you": "أنت",
+    "noFreeThen": "لا مساحة متاحة حينها"
   },
   "time": {
     "localRange": "{{from}}–{{to}} بتوقيت {{zone}}",
@@ -953,7 +954,8 @@
     "bookCell": "احجز {{name}} {{from}}–{{to}}",
     "previousDay": "اليوم السابق",
     "nextDay": "اليوم التالي",
-    "stats": "{{free, number}} متاحة من {{rooms}} بين {{from}} و{{to}} · مجمّعة حسب المبنى والطابق."
+    "stats": "{{free, number}} متاحة من {{rooms}} بين {{from}} و{{to}} · مجمّعة حسب المبنى والطابق.",
+    "busyThen": "مشغولة"
   },
   "users": {
     "search": "بحث",

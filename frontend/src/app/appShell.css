@@ -313,6 +313,11 @@
 .app-shell .rt-roominfo { width: 236px; flex-shrink: 0; padding: 8px 12px; border-inline-end: 1px solid var(--line); background: var(--surface); position: sticky; inset-inline-start: 0; z-index: 2; }
 .app-shell .rt-roomname { font-size: 12.5px; font-weight: 600; }
 .app-shell .rt-roommeta { font-size: 11px; color: var(--slate); margin-top: 2px; }
+/* A room taken (or closed) for the chosen time: greyed, so the free ones stand out. */
+.app-shell .rt-row.rt-busy .rt-roominfo { background: var(--surface-3); }
+.app-shell .rt-row.rt-busy .rt-roomname { color: var(--slate); }
+.app-shell .rt-row.rt-busy .rt-track { background-color: var(--inert); }
+.app-shell .rt-busy-tag { margin-inline-start: 6px; font-size: 10.5px; padding: 0 5px; vertical-align: 1px; }
 .app-shell .rt-track { position: relative; height: 54px; flex-shrink: 0; background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
 [dir='rtl'] .app-shell .rt-track { background-image: repeating-linear-gradient(to left, var(--line) 0, var(--line) 1px, transparent 1px, transparent 64px); }
 .app-shell .rt-band { position: absolute; top: 0; bottom: 0; background: var(--band); border-left: 1px solid var(--accent); border-right: 1px solid var(--accent); pointer-events: none; z-index: 1; }

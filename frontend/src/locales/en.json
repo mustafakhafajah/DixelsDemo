@@ -194,7 +194,6 @@
     "employee": "Employee"
   },
   "login": {
-    "live": "Live overview · {{date}}",
     "eyebrow": "People · assets · projects · data — one connected system",
     "headline": "Everything your team manages,\nin one place, always in sync.",
     "scene": {
@@ -230,15 +229,9 @@
     "subtitle": "One account for everything your team manages. What you can see and do comes from your account role.",
     "button": "Sign in with email",
     "companyOnly": "Company accounts only",
-    "next": {
-      "form": {
-        "title": "Continue to the secure form",
-        "desc": "Your email and password on the next screen."
-      },
-      "role": {
-        "title": "Your role sets the rules",
-        "desc": "What you can access follows your account."
-      }
+    "forgot": {
+      "question": "Forgot your password?",
+      "link": "Reset it"
     },
     "footer": {
       "copyright": "© {{year}} Dixels",
